@@ -1,0 +1,321 @@
+{
+  "206000": {
+    "categoria": "Aplicaciones informáticas",
+    "permitidos": ["software", "programa", "licencia", "aplicacion", "informatica", "instalacion software"]
+  },
+  "211000": {
+    "categoria": "Edificios y otras construcciones",
+    "permitidos": ["construccion", "obra", "estructuras", "edificio", "techo", "paredes"]
+  },
+  "213000": {
+    "categoria": "Maquinaria",
+    "permitidos": ["lavadora", "frigorifico", "vitro", "secadora", "electrodomestico"]
+  },
+  "214000": {
+    "categoria": "Utillaje",
+    "permitidos": ["robot cocina", "herramienta", "utillaje", "aparato pequeño"]
+  },
+  "215000": {
+    "categoria": "Instalaciones",
+    "permitidos": ["electricidad", "agua", "gas", "telefonia", "instalacion"]
+  },
+  "216000": {
+    "categoria": "Mobiliario y enseres",
+    "permitidos": ["cama", "sofa", "televisor", "video", "equipo musica", "mueble"]
+  },
+  "217000": {
+    "categoria": "Equipos informáticos",
+    "permitidos": ["ordenador", "pc", "impresora", "portatil", "fotocopiadora"]
+  },
+
+  "400": {
+    "categoria": "Proveedores",
+    "permitidos": ["proveedor", "compra material", "factura", "suministro"]
+  },
+  "410": {
+    "categoria": "Acreedores",
+    "permitidos": ["acreedor", "suministro", "servicio", "mantenimiento"]
+  },
+
+  "550000": {
+    "categoria": "Cuentas corrientes con provincia",
+    "permitidos": ["provincia", "transferencia", "traspaso"]
+  },
+  "551000": {
+    "categoria": "Cuentas corrientes con el centro",
+    "permitidos": ["centro", "prestamo interno", "saldo interno"]
+  },
+  "555000": {
+    "categoria": "Partidas pendientes de aplicación",
+    "permitidos": ["pendiente aplicacion", "ajuste", "error banco", "regularizacion"]
+  },
+  "570000": {
+    "categoria": "Caja de comunidad",
+    "permitidos": ["caja", "efectivo"]
+  },
+  "572000": {
+    "categoria": "Banco",
+    "permitidos": ["transferencia", "cargo", "abono", "banco"]
+  },
+  "574": {
+    "categoria": "Cuentas ahorro",
+    "permitidos": ["ahorro", "libreta", "interes"]
+  },
+
+  "600000": {
+    "categoria": "Farmacia y material sanitario",
+    "permitidos": [
+      "medic", "ibuprofeno", "paracetamol", "venda", "gasas",
+      "tiritas", "crema", "pomada", "farmacia", "material sanitario",
+      "jarabe", "vitamin", "antibiotico"
+    ]
+  },
+
+  "602100": {
+    "categoria": "Combustibles",
+    "permitidos": ["gasolina", "diesel", "combustible", "carburante"]
+  },
+
+  "602300": {
+    "categoria": "Reposición y conservación",
+    "permitidos": [
+      "bombilla", "madera", "metal", "repuesto", "maceta", "planta",
+      "material reparacion", "pilas"
+    ]
+  },
+
+  "602400": {
+    "categoria": "Material de limpieza",
+    "permitidos": ["limpieza", "lejia", "detergente", "desinfectante", "escoba", "fregona"]
+  },
+
+  "620401": {
+    "categoria": "Lavandería",
+    "permitidos": ["detergente", "suavizante", "lavanderia", "lejia"]
+  },
+
+  "602402": {
+    "categoria": "Aseo personal",
+    "permitidos": ["jabón", "gel", "colonia", "compresa", "champu"]
+  },
+
+  "602403": {
+    "categoria": "Peluquería",
+    "permitidos": ["peluqueria", "tinte", "peine", "corte pelo"]
+  },
+
+  "602500": {
+    "categoria": "Material oficina e informática",
+    "permitidos": [
+      "papel", "boligrafo", "toner", "lapiz", "cuaderno", "carpeta",
+      "impresora", "material oficina"
+    ]
+  },
+
+  "603000": {
+    "categoria": "Comestibles y bebidas",
+    "permitidos": [
+      "huevo", "leche", "pan", "verdura", "carne", "pollo", "arroz",
+      "cafe", "azucar", "fruta", "bebida", "yogur", "pasta"
+    ]
+  },
+
+  "605000": {
+    "categoria": "Utillaje, vajilla, adorno",
+    "permitidos": ["vajilla", "tostador", "cafetera", "cuberteria", "adorno"]
+  },
+
+  "606000": {
+    "categoria": "Ropería y objetos personales",
+    "permitidos": ["sabanas", "mantas", "ropa", "cortinas", "costura", "calzado"]
+  },
+
+  "607000": {
+    "categoria": "Trabajo externo",
+    "permitidos": ["trabajo", "servicio", "profesional", "contratado"]
+  },
+
+  "607400": {
+    "categoria": "Empresa cocina",
+    "permitidos": ["cocina", "menu", "alimento", "catering"]
+  },
+
+  "607500": {
+    "categoria": "Empresa limpieza",
+    "permitidos": ["limpieza", "cristales", "jardin", "empresa limpieza"]
+  },
+
+  "607900": {
+    "categoria": "Lavandería",
+    "permitidos": ["lavanderia", "tintoreria", "plancha"]
+  },
+
+  "622000": {
+    "categoria": "Reparaciones y conservación",
+    "permitidos": [
+      "carpinter", "pintu", "albañil", "electric", "fontaner",
+      "mantenimiento", "arreglo", "itv", "electrodomestico"
+    ]
+  },
+
+  "622150": {
+    "categoria": "Mantenimiento instalaciones",
+    "permitidos": [
+      "mantenimiento", "instalacion", "ascensor", "calefaccion", "extintor"
+    ]
+  },
+
+  "623000": {
+    "categoria": "Servicios profesionales",
+    "permitidos": ["abogado", "notario", "medico", "asesoria"]
+  },
+
+  "625000": {
+    "categoria": "Seguros",
+    "permitidos": ["seguro", "prima", "aseguradora", "vehiculo"]
+  },
+
+  "628010": {
+    "categoria": "Suministro gas",
+    "permitidos": ["gas"]
+  },
+  "628020": {
+    "categoria": "Suministro agua",
+    "permitidos": ["agua", "canon", "factura agua"]
+  },
+  "628030": {
+    "categoria": "Suministro electricidad",
+    "permitidos": ["luz", "electricidad", "energia"]
+  },
+
+  "629100": {
+    "categoria": "Viajes",
+    "permitidos": ["viaje", "transporte", "taxi", "bus", "tren", "hotel"]
+  },
+
+  "629200": {
+    "categoria": "Telefonía e internet",
+    "permitidos": ["telefono", "internet", "movil", "correo", "mensajeria"]
+  },
+
+  "629990": {
+    "categoria": "Gastos comunidad vecinos",
+    "permitidos": ["comunidad vecinos", "cuota comunidad"]
+  },
+
+  "631000": {
+    "categoria": "Tributos varios",
+    "permitidos": ["impuesto", "tasa", "circulacion", "basura", "vado"]
+  },
+
+  "640000": {
+    "categoria": "Sueldos y salarios",
+    "permitidos": ["nomina", "salario", "pago trabajador"]
+  },
+
+  "642000": {
+    "categoria": "Seguridad social",
+    "permitidos": ["seguridad social", "cuota ss"]
+  },
+
+  "650110": { "categoria": "Odontología", "permitidos": ["dentista", "protesis", "implante"] },
+  "650120": { "categoria": "Oftalmología", "permitidos": ["gafa", "optica", "ocular"] },
+  "650130": { "categoria": "Prótesis", "permitidos": ["protesis", "silla ruedas", "audifono"] },
+  "650140": { "categoria": "Consultas médicas", "permitidos": ["medico", "analisis", "laboratorio"] },
+  "650160": { "categoria": "Hospitalización", "permitidos": ["hospital", "internamiento"] },
+
+  "650300": { "categoria": "Atenciones comunitarias", "permitidos": ["obsequio", "atencion"] },
+  "650310": { "categoria": "Celebraciones comunitarias", "permitidos": ["fiesta", "celebracion"] },
+  "650320": { "categoria": "Salidas comunitarias", "permitidos": ["excursion", "cine", "teatro"] },
+  "650330": { "categoria": "Regalos comunitarios", "permitidos": ["regalo", "onomastico", "reyes"] },
+  "650400": { "categoria": "Vacaciones", "permitidos": ["vacacion", "viaje"] },
+  "650510": { "categoria": "Gastos hermanas otras provincias", "permitidos": ["formacion", "estancia"] },
+  "650530": { "categoria": "Formación permanente", "permitidos": ["curso", "formacion"] },
+  "650560": { "categoria": "Ejercicios y retiros", "permitidos": ["retiro", "ejercicio espiritual"] },
+  "650570": { "categoria": "Libros y suscripciones", "permitidos": ["libro", "revista", "periodico"] },
+
+  "652000": {
+    "categoria": "Pastoral juvenil y vocacional",
+    "permitidos": ["reunion", "vocacional", "publicidad"]
+  },
+
+  "658000": {
+    "categoria": "Donativos y obras sociales",
+    "permitidos": ["donativo", "caridad", "obra social"]
+  },
+
+  "659010": {
+    "categoria": "Cuotas y afiliaciones",
+    "permitidos": ["cuota", "afiliacion"]
+  },
+
+  "659020": {
+    "categoria": "Culto",
+    "permitidos": ["misa", "vela", "flor", "capellan", "objeto liturgico"]
+  },
+
+  "659030": {
+    "categoria": "Servicios funerarios",
+    "permitidos": ["funeraria", "entierro"]
+  },
+
+  "659034": {
+    "categoria": "Documentación y audiovisuales",
+    "permitidos": ["documento", "foto", "video", "pasaporte", "dni"]
+  },
+
+  "659060": {
+    "categoria": "Presupuesto personal solidario",
+    "permitidos": ["personal", "gasto personal"]
+  },
+
+  "659090": {
+    "categoria": "Otros gastos",
+    "permitidos": ["multa", "robo", "gasto varios"]
+  },
+
+  "669000": {
+    "categoria": "Gastos financieros",
+    "permitidos": ["gasto bancario", "comision banco"]
+  },
+
+  "750000": {
+    "categoria": "Pensiones de jubilación",
+    "permitidos": ["pension"]
+  },
+
+  "750100": {
+    "categoria": "Prestación servicios internos",
+    "permitidos": ["servicio interno"]
+  },
+
+  "750200": {
+    "categoria": "Sueldos y salarios",
+    "permitidos": ["salario", "nomina"]
+  },
+
+  "750600": {
+    "categoria": "Norma 9.2",
+    "permitidos": ["norma 9.2", "salario hermana"]
+  },
+
+  "75330X": {
+    "categoria": "Comunicación bienes provincia",
+    "permitidos": ["traspaso provincia"]
+  },
+
+  "758000": {
+    "categoria": "Donativos",
+    "permitidos": ["donativo", "aportacion"]
+  },
+
+  "759100": {
+    "categoria": "Otros ingresos",
+    "permitidos": ["ingreso", "venta", "chatarra"]
+  },
+
+  "769000": {
+    "categoria": "Ingresos financieros",
+    "permitidos": ["interes", "banco", "rendimiento"]
+  }
+}

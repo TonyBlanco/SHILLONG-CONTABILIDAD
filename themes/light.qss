@@ -1,0 +1,94 @@
+
+/* ============================================================
+   GLASSMORPHISM THEME — LIGHT MODE
+   ============================================================ */
+
+QMainWindow {
+    background: #f0f2f5;
+}
+
+/* TÍTULO PRINCIPAL */
+QLabel#tituloPrincipal {
+    font-size: 26px;
+    font-weight: 800;
+    color: #333;
+}
+
+/* SUBTÍTULOS */
+QLabel#subtitulo {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* TARJETA CRISTAL */
+QFrame#glassCard {
+    background: rgba(255, 255, 255, 0.42);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.4);
+    backdrop-filter: blur(25px);
+    padding: 20px;
+}
+
+/* INPUTS GLASS */
+QLineEdit#glassInput, QDateEdit#glassInput, QComboBox#glassInput {
+    background: rgba(255,255,255,0.35);
+    border: 1px solid rgba(140,0,82,0.25);
+    border-radius: 10px;
+    padding: 10px;
+    color: #333;
+}
+
+/* TARJETAS DE DEBE/HABER */
+QFrame#glassCardValor {
+    background: rgba(255,255,255,0.30);
+    border-radius: 14px;
+    padding: 12px;
+    border: 1px solid rgba(0,127,148,0.25);
+}
+
+/* ESTILO DEBE */
+QLineEdit#glassInputDebe {
+    background: rgba(255,0,0,0.15);
+    border: 1px solid rgba(255,0,0,0.35);
+    padding: 10px;
+    border-radius: 10px;
+    color: #333;
+}
+
+/* ESTILO HABER */
+QLineEdit#glassInputHaber {
+    background: rgba(0,127,148,0.18);
+    border: 1px solid rgba(0,127,148,0.40);
+    padding: 10px;
+    border-radius: 10px;
+    color: #333;
+}
+
+/* CHIP (MONEDA / ESTADO) */
+QPushButton#chip {
+    background: rgba(255,255,255,0.35);
+    border-radius: 14px;
+    padding: 6px 18px;
+    border: 1px solid rgba(0,0,0,0.18);
+    color: #333;
+}
+
+QPushButton#chip:checked {
+    background: #007f94;
+    color: white;
+    font-weight: bold;
+}
+
+/* BOTÓN PRINCIPAL */
+QPushButton#btnPrincipal {
+    background: #8C0052;
+    border-radius: 12px;
+    padding: 10px 20px;
+    color: white;
+    font-size: 16px;
+}
+
+QPushButton#btnPrincipal:hover {
+    background: #a3005e;
+}

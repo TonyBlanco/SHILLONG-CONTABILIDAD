@@ -1,0 +1,14 @@
+{
+  "mes": 11,
+  "año": 2026,
+  "total_gasto": 116832.0,
+  "total_ingreso": 1681584.0,
+  "saldo_final": 1564752.0,
+  "anomalías": [
+    "Documentos duplicados: CIERRE-2026-11-REG",
+    "Movimiento pendiente: "
+  ],
+  "resumen": "Cierre mensual generado automáticamente",
+  "asientos_cierre": [],
+  "bloqueado": false
+}
