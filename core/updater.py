@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QMessageBox
 from core.version import APP_VERSION
 
 # URLS DEL REPOSITORIO GITHUB
-VERSION_URL = "https://raw.githubusercontent.com/TonyBlanco/SHILLONG-CONTABILIDAD/main/update/version.json"
+VERSION_URL = "https://raw.githubusercontent.com/TonyBlanco/SHILLONG-CONTABILIDAD/main/core/version.json"
 INSTALLER_URL = "https://raw.githubusercontent.com/TonyBlanco/SHILLONG-CONTABILIDAD/main/update/SHILLONG_v3_PRO_Setup_Final.exe"
 INSTALLER_LOCAL = "SHILLONG_v3_PRO_Setup_Final.exe"
 
