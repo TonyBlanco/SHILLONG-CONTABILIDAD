@@ -1,94 +1,49 @@
+/* =======================================
+   FIX PARA SIDEBAR — SHILLONG LIGHT
+   =======================================*/
 
-/* ============================================================
-   GLASSMORPHISM THEME — LIGHT MODE
-   ============================================================ */
-
-QMainWindow {
-    background: #f0f2f5;
+/* Sidebar contenedor general */
+#Sidebar {
+    background: #eef2f7;
+    border-right: 1px solid #d0d7e3;
 }
 
-/* TÍTULO PRINCIPAL */
-QLabel#tituloPrincipal {
-    font-size: 26px;
+/* Título */
+#Sidebar QLabel#titulo {
+    color: #1e293b;
+    font-size: 22px;
     font-weight: 800;
-    color: #333;
 }
 
-/* SUBTÍTULOS */
-QLabel#subtitulo {
+/* Texto "MENÚ" */
+#Sidebar QLabel#menu_label {
+    color: #475569;
     font-size: 15px;
-    font-weight: 600;
-    color: #333;
-}
-
-/* TARJETA CRISTAL */
-QFrame#glassCard {
-    background: rgba(255, 255, 255, 0.42);
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,0.4);
-    backdrop-filter: blur(25px);
-    padding: 20px;
-}
-
-/* INPUTS GLASS */
-QLineEdit#glassInput, QDateEdit#glassInput, QComboBox#glassInput {
-    background: rgba(255,255,255,0.35);
-    border: 1px solid rgba(140,0,82,0.25);
-    border-radius: 10px;
-    padding: 10px;
-    color: #333;
-}
-
-/* TARJETAS DE DEBE/HABER */
-QFrame#glassCardValor {
-    background: rgba(255,255,255,0.30);
-    border-radius: 14px;
-    padding: 12px;
-    border: 1px solid rgba(0,127,148,0.25);
-}
-
-/* ESTILO DEBE */
-QLineEdit#glassInputDebe {
-    background: rgba(255,0,0,0.15);
-    border: 1px solid rgba(255,0,0,0.35);
-    padding: 10px;
-    border-radius: 10px;
-    color: #333;
-}
-
-/* ESTILO HABER */
-QLineEdit#glassInputHaber {
-    background: rgba(0,127,148,0.18);
-    border: 1px solid rgba(0,127,148,0.40);
-    padding: 10px;
-    border-radius: 10px;
-    color: #333;
-}
-
-/* CHIP (MONEDA / ESTADO) */
-QPushButton#chip {
-    background: rgba(255,255,255,0.35);
-    border-radius: 14px;
-    padding: 6px 18px;
-    border: 1px solid rgba(0,0,0,0.18);
-    color: #333;
-}
-
-QPushButton#chip:checked {
-    background: #007f94;
-    color: white;
     font-weight: bold;
 }
 
-/* BOTÓN PRINCIPAL */
-QPushButton#btnPrincipal {
-    background: #8C0052;
+/* Botones del menú */
+#Sidebar QPushButton {
+    background: #ffffff;
+    color: #1e293b;
+    border: 2px solid #d4dce6;
     border-radius: 12px;
-    padding: 10px 20px;
-    color: white;
-    font-size: 16px;
+    text-align: left;
+    padding: 14px 18px;
+    font-size: 15px;
+    font-weight: 600;
 }
 
-QPushButton#btnPrincipal:hover {
-    background: #a3005e;
+/* Hover */
+#Sidebar QPushButton:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+/* Botón activo/seleccionado */
+#Sidebar QPushButton:checked,
+#Sidebar QPushButton:pressed {
+    background: #3b82f6;
+    color: white;
+    border: 2px solid #2563eb;
 }

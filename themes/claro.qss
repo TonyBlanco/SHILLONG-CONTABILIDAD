@@ -1,0 +1,50 @@
+/* SHILLONG V3 PRO — Tema LIGHT */
+
+* {
+    font-family: "Segoe UI", sans-serif;
+}
+
+/* Inputs */
+QLineEdit, QDateEdit, QComboBox {
+    padding: 10px 14px;
+    border: 2px solid #d0d7e2;
+    border-radius: 10px;
+    font-size: 15px;
+    background: white;
+}
+
+/* Tabla */
+QHeaderView::section {
+    background: #e0e7ff;
+    padding: 8px;
+    border: none;
+    font-weight: bold;
+}
+
+/* Scroll */
+QScrollBar:vertical {
+    width: 12px;
+    background: #e5e7eb;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical {
+    background: #9ca3af;
+    border-radius: 6px;
+}
+
+/* ====== FIX UNIVERSAL QMessageBox — LIGHT ====== */
+QMessageBox QPushButton {
+    min-width: 110px;
+    padding: 10px 20px;
+    font-size: 15px;
+    color: #ffffff;
+    background-color: #2563eb;   /* AZUL PROFESIONAL */
+    border: none;
+    border-radius: 8px;
+}
+QMessageBox QPushButton:hover {
+    background-color: #1d4ed8;
+}
+QMessageBox QPushButton:pressed {
+    background-color: #1e40af;
+}

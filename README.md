@@ -1,149 +1,234 @@
-SHILLONG CONTABILIDAD v3 PRO
+# ✅ **README.md — SHILLONG CONTABILIDAD v3 PRO (versión final)**
 
-Sistema contable completo en PySide6 + JSON + Excel, diseñado para comunidades, ONGs o pequeñas instituciones con necesidades reales de contabilidad, multimoneda y reportes profesionales.
+```markdown
+# SHILLONG CONTABILIDAD v3 PRO  
+Sistema contable profesional en **PySide6 + JSON + Excel**, diseñado para comunidades, ONGs, centros educativos y pequeñas instituciones que requieren un sistema ágil, rápido, multimoneda y con reportes contables claros y modernos.
 
-📌 Características principales
-✔ Interfaz moderna y modular (PySide6)
+---
 
-Dashboard dinámico
+## 📌 Características principales
 
-Registro de movimientos con autocompletado inteligente de cuentas
+### ✔ Interfaz moderna (PySide6)
+- Dashboard dinámico  
+- Registro de movimientos con **autocompletado inteligente**  
+- Validación semántica concepto ↔ cuenta  
+- Libro mensual multimoneda  
+- Vista de pendientes  
+- Informes con exportación a Excel  
+- Cierres contables automáticos  
+- Herramientas del sistema (temas, backup, archivos)
 
-Libro mensual multimoneda
+### ✔ Motor contable profesional
+- Plan contable completo v3  
+- Motor de cuentas con inteligencia semántica  
+- Reglas automáticas basadas en `reglas_conceptos.json`  
+- Aprendizaje automático de conceptos nuevos  
 
-Vista de pendientes (cuentas por pagar)
+### ✔ Importación y exportación Excel PRO
+- Detección automática de cabeceras  
+- Limpieza de filas basura  
+- Validación de cuentas y conceptos  
+- Corrección automática de fechas  
+- Importación segura sin duplicados  
+- Exportador profesional estilizado  
 
-Informes diarios con exportación a Excel
+### ✔ Sistema de datos robusto
+- Archivo contable JSON con soporte **multimoneda (INR / EUR / USD)**  
+- Cálculos avanzados:  
+  - top cuentas anuales  
+  - análisis trimestral  
+  - ingresos por moneda  
+  - totales de bancos  
+  - resumen mensual profesional  
 
-Cierres y ajustes contables
+---
 
-Herramientas del sistema (cambios de archivo, backup, temas)
+## 📁 Estructura oficial del proyecto
 
-✔ Motor contable profesional
+```
 
-Plan contable completo v3
+📁 ShillongV3/
+│
+├── main.py
+│
+├── 📁 ui/
+│     ├── MainWindow.py
+│     ├── RegistrarView.py
+│     ├── LibroMensualView.py
+│     ├── CierreMensualView.py
+│     ├── PendientesView.py
+│     ├── DashboardView.py
+│     ├── InformesView.py
+│     ├── Sidebar.py
+│     ├── HeaderBar.py
+│     └── ToolsView.py
+│
+├── 📁 models/
+│     ├── ContabilidadData.py
+│     ├── BankManager.py
+│     ├── CuentasMotor.py
+│     ├── importador_excel.py
+│     ├── exportador_excel.py
+│     └── plan_contable_v3.json
+│
+├── 📁 data/
+│     ├── shillong_2026.json
+│     ├── bancos.json
+│     ├── plan_contable_v3.json
+│     ├── reglas_conceptos.json
+│     └── (otros JSON necesarios)
+│
+├── 📁 themes/
+│     ├── light.qss
+│     ├── dark.qss
+│
+├── 📁 core/
+│     ├── updater.py
+│     ├── styles.qss
+│     └── **init**.py
+│
+├── 📁 utils/
+│     └── rutas.py
+│
+└── requirements.txt
 
-Motor de cuentas con validación semántica concepto ↔ cuenta
 
-Reglas automáticas para conceptos contables (inteligencia semántica)
+## 🚀 Instalación
 
-✔ Importación y exportación Excel
-
-Importador Excel con detección de cabeceras, validación y limpieza automática
-
-Exportador general y exportador profesional con estilo PRO
-
-✔ Sistema de datos robusto
-
-Archivo contable en JSON con soporte multimoneda (INR / EUR / USD)
-
-Funciones avanzadas: top cuentas anuales, trimestres, ingresos por moneda, etc.
-
-🗂 Estructura del Proyecto
-/ui
-   ├── MainWindow.py
-   ├── Sidebar.py
-   ├── HeaderBar.py
-   ├── DashboardView.py
-   ├── RegistrarView.py
-   ├── LibroMensualView.py
-   ├── PendientesView.py
-   ├── InformesView.py
-   ├── CierreView.py
-   ├── ToolsView.py
-   └── Dialogs/
-         └── ImportarExcelDialog.py
-
-/models
-   ├── ContabilidadData.py
-   ├── cuentas_motor.py
-   ├── importador_excel.py
-   ├── exportador_excel.py
-   └── ...
-
-/data
-   ├── bancos.json
-   ├── plan_contable_v3.json
-   ├── reglas_conceptos.json
-   └── shillong_2026.json
-
-main.py
-requirements.txt
-README.md
-
-🚀 Instalación
-1. Clonar el repositorio
+### 1️⃣ Clonar el repositorio
+```bash
 git clone https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD.git
 cd shillong-contabilidad-v3
+````
 
-2. Instalar dependencias
+### 2️⃣ Instalar dependencias
+
+```bash
 pip install -r requirements.txt
+```
 
+Requiere:
 
-(Usa PySide6, pandas, openpyxl según requirements.txt )
+* PySide6
+* pandas
+* openpyxl
+* json
+* pathlib
 
-3. Ejecutar la aplicación
+### 3️⃣ Ejecutar la aplicación
+
+```bash
 python main.py
 
-🧠 Cómo funciona el sistema
-🔹 MainWindow – el núcleo del programa
 
-Registra todas las vistas, carga el archivo contable y gestiona temas visuales, backups, importación/exportación y navegación .
+## 🧠 Cómo funciona el sistema
 
-🔹 ContabilidadData – modelo de datos multimoneda
+### 🔹 MainWindow — El núcleo
 
-Se encarga de cargar el JSON, registrar movimientos y generar estadísticas contables profesionales .
+Gestiona:
 
-🔹 Motor de Cuentas
+* navegación entre vistas
+* carga de JSON
+* temas light/dark
+* backup y restauración
+* importación/exportación Excel
 
-Autocompletado inteligente y validación semántica usando reglas_conceptos.json .
+### 🔹 ContabilidadData — Motor de datos
 
-🔹 Importador Excel PRO
+* carga JSON
+* registra movimientos
+* calcula totales
+* soporta multimoneda
+* genera estadísticas profesionales
 
-El módulo más avanzado:
+### 🔹 MotorCuentas — Inteligencia semántica
 
-detecta cabeceras reales,
+* autocompletado inteligente
+* validación de conceptos
+* aprendizaje automático
+* uso de `reglas_conceptos.json`
 
-corrige filas basura,
+### 🔹 Importador Excel PRO
 
-valida cuentas y conceptos,
+* detecta encabezados reales
+* limpia datos sucios
+* valida conceptos y cuentas
+* convierte fechas
+* evita duplicados
 
-rellena fechas automáticamente,
+### 🔹 Vistas de usuario
 
-importa solo movimientos limpios.
+Cada vista es independiente (MVC):
 
+* RegistrarView
+* LibroMensualView
+* CierreMensualView
+* PendientesView
+* DashboardView
+* InformesView
+* ToolsView
 
-🔹 Vistas de usuario
+---
 
-Cada vista tiene su módulo independiente: Dashboard, Libro Mensual, Pendientes, Informes, Herramientas…
+## 📦 Archivos JSON incluidos
 
-📦 JSONs incluidos
+| Archivo                 | Descripción                      |
+| ----------------------- | -------------------------------- |
+| `bancos.json`           | Listado de bancos + Caja         |
+| `plan_contable_v3.json` | Plan contable oficial v3         |
+| `reglas_conceptos.json` | Reglas de validación semántica   |
+| `shillong_2026.json`    | Archivo contable real de ejemplo |
 
-bancos.json: listado de bancos + caja
+---
 
-plan_contable_v3.json: plan contable completo v3
+## 🛠 Build para EXE (PyInstaller)
 
-reglas_conceptos.json: reglas automáticas de validación
+Ejemplo PRO:
 
-shillong_2026.json: archivo contable de ejemplo con movimientos reales
+```bash
+pyinstaller main.py ^
+ --clean ^
+ --windowed ^
+ --noconfirm ^
+ --onefile ^
+ --name "SHILLONG_CONTABILIDAD_v3_PRO" ^
+ --add-data "ui;ui" ^
+ --add-data "models;models" ^
+ --add-data "core;core" ^
+ --add-data "themes;themes" ^
+ --add-data "data;data"
+```
 
-🛠 Build para EXE (PyInstaller)
+---
 
-Ejemplo de comando:
+## 📜 Licencia
 
-pyinstaller --noconfirm --clean ^
-  --add-data "data;data" ^
-  --add-data "themes;themes" ^
-  --add-data "core;core" ^
-  --windowed ^
-  main.py
+**MIT License** — Libre uso personal y comercial.
 
-📜 Licencia
+---
 
-MIT License — Libre uso comercial y privado.
+## 🧑‍💻 Author / Autor
 
-🧑‍💻 Author / Autor
+**SHILLONG v3 PRO**
+Designed & Developed by **Tony Blanco**
 
-SHILLONG v3 PRO
-Designed & Developed by Tony Blanco
+````
+
+---
+
+# ✅ ¿AHORA QUÉ HACES?
+
+1️⃣ Crea un archivo nuevo:  
+`README.md`
+
+2️⃣ Copia todo este contenido.  
+
+3️⃣ Haz commit y push:
+
+```bash
+git add README.md
+git commit -m "Actualizado README profesional"
+git push
+````
+
 

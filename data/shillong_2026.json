@@ -1,0 +1,26 @@
+[
+    {
+        "fecha": "27/11/2025",
+        "documento": "SIN-DOC-34126",
+        "concepto": "Lavadora",
+        "cuenta": "213000",
+        "debe": 53.6,
+        "haber": 0.0,
+        "moneda": "INR",
+        "estado": "pagado",
+        "banco": "Federal Bank",
+        "saldo": -53.6
+    },
+    {
+        "fecha": "27/11/2025",
+        "documento": "1",
+        "concepto": "traspaso",
+        "cuenta": "550000",
+        "debe": 0.0,
+        "haber": 1500.0,
+        "moneda": "INR",
+        "estado": "pagado",
+        "banco": "SBI",
+        "saldo": 1500.0
+    }
+]

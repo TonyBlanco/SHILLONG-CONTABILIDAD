@@ -1,0 +1,138 @@
+/* ========================================================
+   SHILLONG — DARK THEME (Qt Compatible)
+   ======================================================== */
+
+QWidget {
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-family: "Segoe UI", sans-serif;
+}
+
+/* ----------------------------------
+   Labels
+---------------------------------- */
+QLabel {
+    color: #e2e8f0;
+    font-size: 14px;
+}
+
+/* ----------------------------------
+   Inputs
+---------------------------------- */
+QLineEdit, QDateEdit, QComboBox, QTextEdit {
+    background: #1e293b;
+    border: 2px solid #334155;
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #e2e8f0;
+}
+
+QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
+    border-color: #3b82f6;
+}
+
+/* ----------------------------------
+   Buttons
+---------------------------------- */
+QPushButton {
+    background: #3b82f6;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-weight: bold;
+    color: white;
+}
+
+QPushButton:hover {
+    background: #60a5fa;
+}
+
+/* Buttons alternos */
+QPushButton#warning {
+    background: #f59e0b;
+}
+
+QPushButton#error {
+    background: #dc2626;
+}
+
+/* ----------------------------------
+   GroupBox
+---------------------------------- */
+QGroupBox {
+    border: 2px solid #334155;
+    border-radius: 10px;
+    margin-top: 16px;
+    padding-top: 12px;
+}
+
+QGroupBox::title {
+    color: #e2e8f0;
+    font-weight: bold;
+    left: 10px;
+    padding: 0 6px;
+}
+
+/* ----------------------------------
+   Radio Buttons
+---------------------------------- */
+QRadioButton {
+    color: #e2e8f0;
+    spacing: 6px;
+    font-size: 14px;
+}
+
+/* ----------------------------------
+   Table
+---------------------------------- */
+QTableWidget {
+    background: #0f172a;
+    alternate-background-color: #1e293b;
+    gridline-color: #334155;
+}
+
+QHeaderView::section {
+    background: #1e293b;
+    color: #e2e8f0;
+    font-weight: bold;
+    padding: 8px;
+}
+
+QTableWidget::item {
+    padding: 5px;
+}
+
+QScrollBar:vertical {
+    background: #1e293b;
+    width: 10px;
+}
+
+QScrollBar::handle:vertical {
+    background: #3b82f6;
+    min-height: 20px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* ----------------------------------
+   StatusBar
+---------------------------------- */
+QStatusBar {
+    background: #1e293b;
+    color: white;
+}
+
+/* Tabs */
+QTabBar::tab {
+    background: #1e293b;
+    padding: 8px 14px;
+    color: #e2e8f0;
+    border-radius: 6px;
+}
+
+QTabBar::tab:selected {
+    background: #3b82f6;
+    color: white;
+}

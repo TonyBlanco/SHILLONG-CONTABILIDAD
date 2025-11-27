@@ -223,3 +223,25 @@ class MainWindow(QMainWindow):
         for vista in self.views.values():
             if hasattr(vista, "actualizar"):
                 vista.actualizar()
+    # ============================================================
+    # APLICAR TEMA GLOBAL (QSS)
+    # ============================================================
+    def aplicar_tema(self, nombre_tema):
+        """
+        Carga un archivo QSS desde /themes/ y lo aplica al sistema.
+        nombre_tema: 'light', 'dark', 'glass', 'glass_dark', etc.
+        """
+        ruta = Path("themes") / f"{nombre_tema}.qss"
+
+        if not ruta.exists():
+            QMessageBox.warning(self, "Tema no encontrado",
+                                f"No se encontró el archivo:\n{ruta}")
+            return
+
+        try:
+            with open(ruta, "r", encoding="utf-8") as f:
+                qss = f.read()
+                self.setStyleSheet(qss)
+                self.set_status(f"Tema aplicado: {nombre_tema}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error al aplicar tema", str(e))

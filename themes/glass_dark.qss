@@ -1,82 +1,39 @@
+/* SHILLONG V3 — Tema GLASS DARK */
 
-/* ============================================================
-   GLASS DARK THEME
-   ============================================================ */
-
-QMainWindow {
-    background: #1a1a1a;
+QWidget {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(22px);
+    color: #e2e8f0;
 }
 
-QLabel#tituloPrincipal {
-    font-size: 26px;
-    font-weight: 800;
-    color: #f2f2f2;
-}
-
-QLabel#subtitulo {
-    font-size: 15px;
-    font-weight: 600;
-    color: #f2f2f2;
-}
-
-/* TARJETA GLASS OSCURO */
-QFrame#glassCard {
-    background: rgba(40,40,40,0.42);
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(25px);
-    padding: 20px;
-}
-
-/* INPUTS DARK GLASS */
-QLineEdit#glassInput, QDateEdit#glassInput {
-    background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.20);
-    border-radius: 10px;
+/* Inputs */
+QLineEdit, QDateEdit, QComboBox {
     padding: 10px;
-    color: #fff;
+    border-radius: 10px;
+    border: 1px solid #465169;
+    background: rgba(30,41,59,0.6);
+    color: #e2e8f0;
 }
 
-/*Tarjetas */
-QFrame#glassCardValor {
-    background: rgba(255,255,255,0.08);
-    border-radius: 14px;
-    padding: 12px;
-    border: 1px solid rgba(255,255,255,0.18);
+/* ====== FIX QMessageBox — GLASS DARK ====== */
+QMessageBox {
+    background-color: rgba(30,41,59,0.85);
 }
-
-QLineEdit#glassInputDebe {
-    background: rgba(255,60,60,0.20);
-    border: 1px solid rgba(255,60,60,0.35);
-    color: #fff;
-}
-
-QLineEdit#glassInputHaber {
-    background: rgba(0,127,148,0.30);
-    border: 1px solid rgba(0,127,148,0.45);
-    color: #fff;
-}
-
-/* CHIPS */
-QPushButton#chip {
-    background: rgba(255,255,255,0.12);
-    border-radius: 14px;
-    padding: 6px 18px;
-    border: 1px solid rgba(255,255,255,0.18);
-    color: #fff;
-}
-
-QPushButton#chip:checked {
-    background: #007f94;
+QMessageBox QLabel {
     color: white;
-    font-weight: bold;
 }
-
-/* Guardar */
-QPushButton#btnPrincipal {
-    background: #8C0052;
+QMessageBox QPushButton {
+    min-width: 110px;
     padding: 10px 20px;
-    border-radius: 12px;
+    font-size: 15px;
+
     color: white;
-    font-size: 16px;
+    background-color: #3b82f6;    /* PERFECTO PARA OSCURO */
+    border-radius: 8px;
+}
+QMessageBox QPushButton:hover {
+    background-color: #2563eb;
+}
+QMessageBox QPushButton:pressed {
+    background-color: #1d4ed8;
 }
