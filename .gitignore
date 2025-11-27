@@ -1,0 +1,23 @@
+# Ignore all build files
+build/*
+
+# Except the update package (keep this file)
+!build/SHILLONG CONTABILIDAD v3 PRO/SHILLONG CONTABILIDAD v3 PRO.pkg
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+
+# PyInstaller
+dist/
+*.spec
+
+# OS system junk
+.DS_Store
+Thumbs.db
