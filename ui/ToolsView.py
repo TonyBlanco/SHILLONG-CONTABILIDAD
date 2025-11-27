@@ -55,6 +55,15 @@ class ToolsView(QWidget):
         # ==================================================================
         layout.addWidget(self._card_archivo_actual())
 
+        # ==================================================================
+        # BOTÓN: Buscar actualización
+        # ==================================================================
+        btn_update = QPushButton("🔄 Buscar actualización")
+        btn_update.setCursor(Qt.PointingHandCursor)
+        btn_update.setStyleSheet(self._btn_blue())
+        btn_update.clicked.connect(lambda: self.main.check_for_updates())
+        layout.addWidget(btn_update)
+
         layout.addStretch()
 
     # --------------------------------------------------------------------

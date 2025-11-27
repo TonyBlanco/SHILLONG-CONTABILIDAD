@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from pathlib import Path
 import os
+import threading  # ← IMPORTANTE para actualización automática
 
 # ===============================================
 # IMPORTAR TODAS LAS VISTAS
@@ -77,7 +78,7 @@ class MainWindow(QMainWindow):
             "informes": InformesView(self.data),
             "libro_mensual": LibroMensualView(self.data),
             "cierre": CierreMensualView(self.data),
-            "herramientas": ToolsView(self),
+            "herramientas": ToolsView(self),   # ← AQUÍ YA EXISTE EL BOTÓN
         }
 
         for vista in self.views.values():
@@ -89,6 +90,18 @@ class MainWindow(QMainWindow):
         # Cargar vista inicial
         self.cargar_vista("dashboard")
 
+        # ============================================================
+        # CHECK AUTOMÁTICO DE ACTUALIZACIÓN (modo silencioso)
+        # ============================================================
+        try:
+            from core.updater import check_update
+            threading.Thread(
+                target=lambda: check_update(self, silent=True),
+                daemon=True
+            ).start()
+        except Exception as e:
+            print("Updater error:", e)
+
     # ============================================================
     # CAMBIAR VISTA
     # ============================================================
@@ -96,6 +109,16 @@ class MainWindow(QMainWindow):
         if nombre in self.views:
             self.stack.setCurrentWidget(self.views[nombre])
             self.header.actualizar_titulo(nombre)
+
+    # ============================================================
+    # MÉTODO PÚBLICO PARA EL BOTÓN "BUSCAR ACTUALIZACIÓN"
+    # ============================================================
+    def check_for_updates(self):
+        try:
+            from core.updater import check_update
+            check_update(self, silent=False)
+        except Exception as e:
+            QMessageBox.warning(self, "Actualización", f"Error:\n{e}")
 
     # ============================================================
     # IMPORTAR EXCEL
