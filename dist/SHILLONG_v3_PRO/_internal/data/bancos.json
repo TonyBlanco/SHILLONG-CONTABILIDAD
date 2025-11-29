@@ -1,0 +1,29 @@
+{
+  "banks": [
+    {
+      "id": 1,
+      "nombre": "Federal Bank",
+      "saldo": 0.0
+    },
+    {
+      "id": 2,
+      "nombre": "SBI",
+      "saldo": 0.0
+    },
+    {
+      "id": 3,
+      "nombre": "Union Bank",
+      "saldo": 50000.0
+    },
+    {
+      "id": 4,
+      "nombre": "Otro",
+      "saldo": 0.0
+    },
+    {
+      "id": 5,
+      "nombre": "Caja",
+      "saldo": -20000.0
+    }
+  ]
+}

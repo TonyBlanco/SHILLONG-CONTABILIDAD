@@ -1,205 +1,122 @@
-# ✅ **README.md — SHILLONG CONTABILIDAD v3 PRO (versión final)**
+✅ SHILLONG CONTABILIDAD v3.6 PRO (Final Release)
 
-```markdown
-# SHILLONG CONTABILIDAD v3 PRO  
-Sistema contable profesional en **PySide6 + JSON + Excel**, diseñado para comunidades, ONGs, centros educativos y pequeñas instituciones que requieren un sistema ágil, rápido, multimoneda y con reportes contables claros y modernos.
+Sistema contable profesional de gestión comunitaria. Diseñado para comunidades, ONGs y centros educativos que requieren un sistema ágil, multimoneda y con reportes financieros de alto nivel, pero con una interfaz humana y accesible.
 
----
+🌟 Novedades de la Versión 3.6.0 PRO
 
-## 📌 Características principales
+Esta versión introduce una arquitectura blindada y funcionalidades de Inteligencia de Negocio (BI):
 
-### ✔ Interfaz moderna (PySide6)
-- Dashboard dinámico  
-- Registro de movimientos con **autocompletado inteligente**  
-- Validación semántica concepto ↔ cuenta  
-- Libro mensual multimoneda  
-- Vista de pendientes  
-- Informes con exportación a Excel  
-- Cierres contables automáticos  
-- Herramientas del sistema (temas, backup, archivos)
+1. 📊 Inteligencia de Negocio (BI) y Reportes
 
-### ✔ Motor contable profesional
-- Plan contable completo v3  
-- Motor de cuentas con inteligencia semántica  
-- Reglas automáticas basadas en `reglas_conceptos.json`  
-- Aprendizaje automático de conceptos nuevos  
+Cierre Anual Evolutivo ("La Sábana"): Generación automática de matrices Excel con la evolución de gastos mes a mes (Enero-Diciembre).
 
-### ✔ Importación y exportación Excel PRO
-- Detección automática de cabeceras  
-- Limpieza de filas basura  
-- Validación de cuentas y conceptos  
-- Corrección automática de fechas  
-- Importación segura sin duplicados  
-- Exportador profesional estilizado  
+Control Presupuestario: Comparativa visual (Semáforos Rojo/Verde) entre lo presupuestado y la realidad.
 
-### ✔ Sistema de datos robusto
-- Archivo contable JSON con soporte **multimoneda (INR / EUR / USD)**  
-- Cálculos avanzados:  
-  - top cuentas anuales  
-  - análisis trimestral  
-  - ingresos por moneda  
-  - totales de bancos  
-  - resumen mensual profesional  
+Top Gastos (Pareto): Ranking automático de las cuentas con mayor impacto financiero.
 
----
+Exportador Nativo: Motor propio basado en openpyxl que genera Excels estilizados con colores corporativos, fórmulas y formatos de moneda.
 
-## 📁 Estructura oficial del proyecto
+2. ✨ Módulo "Herramientas & Luz"
 
-```
+Un toque único para humanizar el software:
 
-📁 ShillongV3/
+Inspiración Diaria: Widget integrado que ofrece Salmos aleatorios y los 72 Nombres de Dios en hebreo para meditación diaria.
+
+Gestión de Sistema: Copias de seguridad (Backup/Restore) y gestión de temas (Claro/Oscuro) en un clic.
+
+3. 🆘 Centro de Ayuda Integrado
+
+Guía Interactiva: Manual de usuario completo dentro de la aplicación (HelpView), con secciones desplegables explicativas.
+
+Onboarding: Explicación paso a paso de cómo registrar, cerrar mes y gestionar datos.
+
+🚀 Características Principales
+
+🔹 Gestión Contable
+
+Dashboard Dinámico: KPIs en tiempo real (Ingresos, Gastos, Saldo) y gráficos de distribución (Donut Charts).
+
+Registro Inteligente: Autocompletado de cuentas y validación semántica (ej: escribir "luz" sugiere la cuenta correcta).
+
+Libros Oficiales: Diario General, Libro Mensual y Gestión de Pendientes.
+
+🔹 Importación/Exportación
+
+Importador Excel Blindado: Detecta cabeceras, limpia datos sucios y valida duplicados antes de importar.
+
+Salida Profesional: Todos los informes se exportan a Excel (.xlsx) listos para imprimir o auditar.
+
+🔹 Arquitectura Técnica (Robusta)
+
+Rutas Inteligentes (utils/rutas.py): Sistema híbrido que detecta si corre en script .py o ejecutable .exe compilado, evitando errores de data/data o pérdida de recursos.
+
+DPI Safe: Interfaz escalable que se ve nítida en pantallas 4K y monitores antiguos.
+
+Datos JSON: Base de datos ligera, portable y fácil de respaldar (shillong_2026.json).
+
+📂 Estructura del Proyecto
+
+D:\ShillongV3\
 │
-├── main.py
+├── main.py                 # Punto de entrada (Launcher)
+├── importador_excel.py     # Helper de importación (Raíz)
 │
-├── 📁 ui/
-│     ├── MainWindow.py
-│     ├── RegistrarView.py
-│     ├── LibroMensualView.py
-│     ├── CierreMensualView.py
-│     ├── PendientesView.py
-│     ├── DashboardView.py
-│     ├── InformesView.py
-│     ├── Sidebar.py
-│     ├── HeaderBar.py
-│     └── ToolsView.py
+├── core/                   # Configuraciones globales y versión
+├── data/                   # Base de datos JSON (Persistente)
+│   ├── shillong_2026.json
+│   ├── bancos.json
+│   └── plan_contable_v3.json
 │
-├── 📁 models/
-│     ├── ContabilidadData.py
-│     ├── BankManager.py
-│     ├── CuentasMotor.py
-│     ├── importador_excel.py
-│     ├── exportador_excel.py
-│     └── plan_contable_v3.json
+├── models/                 # Lógica de Negocio
+│   ├── ContabilidadData.py # Motor de datos (CRUD)
+│   ├── ExportadorExcel...  # Motor de reportes openpyxl
+│   └── ...
 │
-├── 📁 data/
-│     ├── shillong_2026.json
-│     ├── bancos.json
-│     ├── plan_contable_v3.json
-│     ├── reglas_conceptos.json
-│     └── (otros JSON necesarios)
+├── ui/                     # Interfaz Gráfica (Vistas)
+│   ├── MainWindow.py       # Ventana Principal (Coordinador)
+│   ├── Sidebar.py          # Menú Lateral Inteligente
+│   ├── HelpView.py         # Centro de Ayuda
+│   ├── ToolsView.py        # Módulo Espiritual y Sistema
+│   └── ...
 │
-├── 📁 themes/
-│     ├── light.qss
-│     ├── dark.qss
+├── utils/                  # Utilidades
+│   └── rutas.py            # Gestor de rutas (Dev vs Prod)
 │
-├── 📁 core/
-│     ├── updater.py
-│     ├── styles.qss
-│     └── **init**.py
-│
-├── 📁 utils/
-│     └── rutas.py
-│
-└── requirements.txt
+└── assets/                 # Iconos y recursos gráficos
 
 
-## 🚀 Instalación
+🛠 Compilación (Build)
 
-### 1️⃣ Clonar el repositorio
-```bash
-git clone https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD.git
-cd shillong-contabilidad-v3
-````
+El proyecto incluye un script de automatización para generar el instalador final (.exe).
 
-### 2️⃣ Instalar dependencias
+Requisitos
 
-```bash
-pip install -r requirements.txt
-```
+Python 3.10+
 
-Requiere:
+pip install -r requirements.txt (PySide6, pandas, openpyxl)
 
-* PySide6
-* pandas
-* openpyxl
-* json
-* pathlib
+Inno Setup 6 (para el instalador)
 
-### 3️⃣ Ejecutar la aplicación
+Generar Ejecutable
 
-```bash
-python main.py
+Ejecutar el script de PowerShell en la raíz:
+
+.\build_full.ps1
 
 
-## 🧠 Cómo funciona el sistema
+Este script:
 
-### 🔹 MainWindow — El núcleo
+Limpia compilaciones anteriores.
 
-Gestiona:
+Ejecuta PyInstaller usando SHILLONG_v3_PRO.spec (configuración blindada).
 
-* navegación entre vistas
-* carga de JSON
-* temas light/dark
-* backup y restauración
-* importación/exportación Excel
+Empaqueta carpetas data, assets y themes.
 
-### 🔹 ContabilidadData — Motor de datos
+Ejecuta Inno Setup para crear el instalador final en Output/.
 
-* carga JSON
-* registra movimientos
-* calcula totales
-* soporta multimoneda
-* genera estadísticas profesionales
+👨‍💻 Autor y Créditos
 
-### 🔹 MotorCuentas — Inteligencia semántica
-
-* autocompletado inteligente
-* validación de conceptos
-* aprendizaje automático
-* uso de `reglas_conceptos.json`
-
-### 🔹 Importador Excel PRO
-
-* detecta encabezados reales
-* limpia datos sucios
-* valida conceptos y cuentas
-* convierte fechas
-* evita duplicados
-
-### 🔹 Vistas de usuario
-
-Cada vista es independiente (MVC):
-
-* RegistrarView
-* LibroMensualView
-* CierreMensualView
-* PendientesView
-* DashboardView
-* InformesView
-* ToolsView
-
----
-
-## 📦 Archivos JSON incluidos
-
-| Archivo                 | Descripción                      |
-| ----------------------- | -------------------------------- |
-| `bancos.json`           | Listado de bancos + Caja         |
-| `plan_contable_v3.json` | Plan contable oficial v3         |
-| `reglas_conceptos.json` | Reglas de validación semántica   |
-| `shillong_2026.json`    | Archivo contable real de ejemplo |
-
----
-
-## 🛠 Build para EXE (PyInstaller)
-
-Ejemplo PRO:
-
-```bash
-pyinstaller main.py ^
- --clean ^
- --windowed ^
- --noconfirm ^
- --onefile ^
- --name "SHILLONG_CONTABILIDAD_v3_PRO" ^
- --add-data "ui;ui" ^
- --add-data "models;models" ^
- --add-data "core;core" ^
- --add-data "themes;themes" ^
- --add-data "data;data"
-```
-
----
+Desarrollado con ❤️ y mucho código por "Mr. Ego" . Versión 3.6.0 PRO - Edición Especial 2026.
 
 ## 📜 Licencia
 

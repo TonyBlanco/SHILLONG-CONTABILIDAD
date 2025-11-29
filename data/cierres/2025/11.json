@@ -1,0 +1,13 @@
+{
+  "mes": 11,
+  "año": 2025,
+  "total_gasto": 100.0,
+  "total_ingreso": 0.0,
+  "saldo_final": -100.0,
+  "anomalías": [
+    "Ninguna anomalía detectada"
+  ],
+  "resumen": "Cierre mensual generado automáticamente",
+  "asientos_cierre": [],
+  "bloqueado": false
+}

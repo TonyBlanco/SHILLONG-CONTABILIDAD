@@ -1,219 +1,233 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QPushButton, QFrame, QHBoxLayout
-)
-from PySide6.QtCore import Qt
+"""
+ToolsView.py — SHILLONG CONTABILIDAD v3.6 PRO
+Incluye:
+- Selector de Tema
+- Utilidades de Sistema
+- ✨ Módulo "Inspiración Diaria" (Salmos + 72 Nombres de Dios)
+"""
 
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QFileDialog, QMessageBox, QFrame, QGraphicsDropShadowEffect
+)
+from PySide6.QtGui import QIcon, QFont, QColor
+from PySide6.QtCore import Qt, QSize
+import os
+import random
 
 class ToolsView(QWidget):
-    """
-    Vista de Herramientas del Sistema – SHILLONG v3 Pro
-    """
 
-    def __init__(self, mainwindow):
+    # Base de datos de Inspiración (Salmos + Nombres de Dios)
+    INSPIRACION = [
+        # --- SALMOS ---
+        ("Salmo 23:1", "El Señor es mi pastor, nada me falta: en verdes praderas me hace recostar.", ""),
+        ("Salmo 27:1", "El Señor es mi luz y mi salvación, ¿a quién temeré?", ""),
+        ("Salmo 91:4", "Con sus plumas te cubrirá, y debajo de sus alas estarás seguro.", ""),
+        ("Salmo 121:1-2", "Levanto mis ojos a los montes: ¿de dónde me vendrá el auxilio? El auxilio me viene del Señor.", ""),
+        ("Salmo 46:1", "Dios es nuestro amparo y fortaleza, nuestro pronto auxilio en las tribulaciones.", ""),
+        # --- 72 NOMBRES DE DIOS (Selección) ---
+        ("Nombre #1 - VEHU", "Viaje en el tiempo, arrepentimiento, eliminar el pasado doloroso.", "והו"),
+        ("Nombre #2 - YELI", "Recuperar la energía, vitalidad, despertar la chispa divina.", "ילי"),
+        ("Nombre #3 - SIT", "Haciendo milagros, rompiendo las leyes de la naturaleza.", "סיט"),
+        ("Nombre #4 - ALEM", "Eliminar pensamientos negativos, paz mental.", "עלם"),
+        ("Nombre #5 - MAHASH", "Curación, sanación física y espiritual.", "מהש"),
+        ("Nombre #6 - LELA", "Estado de sueño, mensajes en sueños, profecía.", "ללה"),
+        ("Nombre #10 - ALAD", "Protección contra el mal de ojo y la envidia.", "אלד"),
+        ("Nombre #12 - HAHASH", "Amor incondicional, despertar el amor al prójimo.", "ההע"),
+        ("Nombre #18 - KALI", "Fertilidad, creatividad, dar a luz proyectos.", "כלי"),
+        ("Nombre #25 - NITH", "Decir la verdad, coraje para hablar, sinceridad.", "נתה"),
+        ("Nombre #26 - HAA", "Orden en el caos, poner orden en la vida.", "האא"),
+        ("Nombre #32 - VASAR", "Recuerdos, memoria, recordar lecciones de vida.", "ושר"),
+        ("Nombre #45 - SAMECH", "Prosperidad, sustento, éxito económico.", "סאל"),
+        ("Nombre #49 - VEHU", "Felicidad, gratitud, apreciar lo que se tiene.", "והו"), # Repetido con otro matiz en algunas tradiciones
+        ("Nombre #58 - YEYAL", "Dejar ir, soltar, liberar ataduras.", "ייל"),
+        ("Nombre #68 - CHAVU", "Contactar con almas que partieron, elevación.", "חבו")
+    ]
+
+    def __init__(self, main):
         super().__init__()
-        self.main = mainwindow
-        self._build_ui()
+        self.main = main
 
-    # ============================================================
-    def _build_ui(self):
+        # RUTA ABSOLUTA A LOS ICONOS PNG
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.icon_path = os.path.join(base, "assets", "icons")
+        if not os.path.exists(self.icon_path):
+             self.icon_path = os.path.join(base, "ui", "assets", "icons")
+
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(40, 20, 40, 20)
+        layout.setContentsMargins(40, 30, 40, 30)
         layout.setSpacing(25)
 
-        # TÍTULO PRINCIPAL
-        titulo = QLabel("⚙ Herramientas del Sistema")
-        titulo.setStyleSheet("""
-            font-size: 26px;
-            font-weight: bold;
-            color: #1e293b;
-        """)
-        layout.addWidget(titulo)
+        # TÍTULO
+        header = QLabel("🛠️ Herramientas & Luz")
+        header.setStyleSheet("font-size: 28px; font-weight: 800; color: #1e293b;")
+        layout.addWidget(header)
 
-        # SUBTÍTULO
-        sub = QLabel("Opciones avanzadas para administración y mantenimiento.")
-        sub.setStyleSheet("font-size: 15px; color: #475569; margin-top:-10px;")
-        layout.addWidget(sub)
+        # -------------------------------------------------------------
+        # 1. ✨ SECCIÓN INSPIRACIÓN (WIDGET DIVINO)
+        # -------------------------------------------------------------
+        self._setup_salmo_widget(layout)
 
-        # ==================================================================
-        # TARJETA DE TEMA VISUAL
-        # ==================================================================
-        layout.addWidget(self._card_tema())
+        # -------------------------------------------------------------
+        # 2. TEMA VISUAL
+        # -------------------------------------------------------------
+        layout.addWidget(QLabel("🎨 Personalización Visual"))
+        panel_tema = self._crear_panel_tema()
+        layout.addWidget(panel_tema)
 
-        # ==================================================================
-        # TARJETA DE IMPORTAR/EXPORTAR EXCEL
-        # ==================================================================
-        layout.addWidget(self._card_excel())
-
-        # ==================================================================
-        # TARJETA DE BACKUP Y RESTAURACIÓN
-        # ==================================================================
-        layout.addWidget(self._card_backup())
-
-        # ==================================================================
-        # TARJETA DE ARCHIVO ACTUAL
-        # ==================================================================
-        layout.addWidget(self._card_archivo_actual())
-
-        # ==================================================================
-        # BOTÓN: Buscar actualización
-        # ==================================================================
-        btn_update = QPushButton("🔄 Buscar actualización")
-        btn_update.setCursor(Qt.PointingHandCursor)
-        btn_update.setStyleSheet(self._btn_blue())
-        btn_update.clicked.connect(lambda: self.main.check_for_updates())
-        layout.addWidget(btn_update)
+        # -------------------------------------------------------------
+        # 3. ACCIONES DE SISTEMA
+        # -------------------------------------------------------------
+        layout.addWidget(QLabel("💾 Gestión de Datos"))
+        panel_datos = self._crear_panel_datos()
+        layout.addWidget(panel_datos)
 
         layout.addStretch()
+        
+        # Iniciar con un mensaje aleatorio
+        self._cambiar_mensaje()
 
-    # --------------------------------------------------------------------
-    # TARJETA: Tema Claro / Oscuro
-    # --------------------------------------------------------------------
-    def _card_tema(self):
-        card = self._card()
-        v = QVBoxLayout(card)
-
-        titulo = QLabel("🎨 Tema visual")
-        titulo.setStyleSheet("font-size:18px; font-weight:700; color:#334155;")
-        v.addWidget(titulo)
-
-        fila = QHBoxLayout()
-        v.addLayout(fila)
-
-        btn_claro = QPushButton("☀️ Modo Claro")
-        btn_oscuro = QPushButton("🌙 Modo Oscuro")
-
-        for b in (btn_claro, btn_oscuro):
-            b.setCursor(Qt.PointingHandCursor)
-            b.setStyleSheet(self._btn_blue())
-
-        btn_claro.clicked.connect(lambda: self.main.aplicar_tema("claro"))
-        btn_oscuro.clicked.connect(lambda: self.main.aplicar_tema("oscuro"))
-
-        fila.addWidget(btn_claro)
-        fila.addWidget(btn_oscuro)
-
-        return card
-
-    # --------------------------------------------------------------------
-    # TARJETA: Importar / Exportar Excel
-    # --------------------------------------------------------------------
-    def _card_excel(self):
-        card = self._card()
-        v = QVBoxLayout(card)
-
-        titulo = QLabel("📄 Movimientos – Excel")
-        titulo.setStyleSheet("font-size:18px; font-weight:700; color:#334155;")
-        v.addWidget(titulo)
-
-        fila = QHBoxLayout()
-        v.addLayout(fila)
-
-        btn_imp = QPushButton("📥 Importar desde Excel…")
-        btn_exp = QPushButton("📤 Exportar a Excel…")
-
-        for b in (btn_imp, btn_exp):
-            b.setCursor(Qt.PointingHandCursor)
-            b.setStyleSheet(self._btn_blue())
-
-        btn_imp.clicked.connect(self.main.importar_excel)
-        btn_exp.clicked.connect(self.main.exportar_excel)
-
-        fila.addWidget(btn_imp)
-        fila.addWidget(btn_exp)
-
-        return card
-
-    # --------------------------------------------------------------------
-    # TARJETA: Backup / Restore
-    # --------------------------------------------------------------------
-    def _card_backup(self):
-        card = self._card()
-        v = QVBoxLayout(card)
-
-        titulo = QLabel("💾 Copias de Seguridad")
-        titulo.setStyleSheet("font-size:18px; font-weight:700; color:#334155;")
-        v.addWidget(titulo)
-
-        fila = QHBoxLayout()
-        v.addLayout(fila)
-
-        btn_backup = QPushButton("📦 Crear Backup ZIP…")
-        btn_restore = QPushButton("🔄 Restaurar desde ZIP…")
-
-        for b in (btn_backup, btn_restore):
-            b.setCursor(Qt.PointingHandCursor)
-            b.setStyleSheet(self._btn_blue())
-
-        btn_backup.clicked.connect(self.main.crear_backup)
-        btn_restore.clicked.connect(self.main.restore_backup)
-
-        fila.addWidget(btn_backup)
-        fila.addWidget(btn_restore)
-
-        return card
-
-    # --------------------------------------------------------------------
-    # TARJETA: Archivo Contable Actual
-    # --------------------------------------------------------------------
-    def _card_archivo_actual(self):
-        card = self._card()
-        v = QVBoxLayout(card)
-
-        titulo = QLabel("📂 Archivo contable en uso")
-        titulo.setStyleSheet("font-size:18px; font-weight:700; color:#334155;")
-        v.addWidget(titulo)
-
-        archivo = str(self.main.data.archivo_json)
-        lbl = QLabel(f"Archivo actual:\n<b>{archivo}</b>")
-        lbl.setStyleSheet("font-size:15px; color:#334155; margin:8px 0;")
-        v.addWidget(lbl)
-
-        fila = QHBoxLayout()
-        v.addLayout(fila)
-
-        btn_cambiar = QPushButton("📁 Cambiar archivo JSON…")
-        btn_abrir = QPushButton("🔍 Abrir archivo…")
-        btn_carpeta = QPushButton("📂 Abrir carpeta del sistema…")
-
-        for b in (btn_cambiar, btn_abrir, btn_carpeta):
-            b.setCursor(Qt.PointingHandCursor)
-            b.setStyleSheet(self._btn_blue())
-
-        btn_cambiar.clicked.connect(self.main.cambiar_archivo_contable)
-        btn_abrir.clicked.connect(self.main.abrir_archivo_contable)
-        btn_carpeta.clicked.connect(self.main.abrir_carpeta_sistema)
-
-        fila.addWidget(btn_cambiar)
-        fila.addWidget(btn_abrir)
-        fila.addWidget(btn_carpeta)
-
-        return card
-
-    # ============================================================
-    # ESTÉTICA
-    # ============================================================
-    def _card(self):
+    # =====================================================================
+    #  WIDGET INSPIRACIÓN
+    # =====================================================================
+    def _setup_salmo_widget(self, layout):
         card = QFrame()
         card.setStyleSheet("""
             QFrame {
-                background: white;
-                border-radius: 10px;
-                border: 1px solid #e2e8f0;
+                background-color: #fefce8; /* Amarillo papiro */
+                border: 1px solid #fde047;
+                border-radius: 15px;
             }
         """)
-        return card
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(15)
+        shadow.setColor(QColor(0, 0, 0, 30))
+        shadow.setOffset(0, 4)
+        card.setGraphicsEffect(shadow)
 
-    def _btn_blue(self):
-        return """
+        vbox = QVBoxLayout(card)
+        vbox.setContentsMargins(25, 25, 25, 25)
+
+        # Título pequeña
+        lbl_top = QLabel("✨ Luz del Día")
+        lbl_top.setStyleSheet("color: #d97706; font-weight: bold; font-size: 12px; text-transform: uppercase;")
+        lbl_top.setAlignment(Qt.AlignCenter)
+        vbox.addWidget(lbl_top)
+
+        # Texto Hebreo (Grande y centrado)
+        self.lbl_hebreo = QLabel("")
+        self.lbl_hebreo.setAlignment(Qt.AlignCenter)
+        self.lbl_hebreo.setStyleSheet("font-size: 40px; font-weight: bold; color: #1e3a8a; font-family: 'Times New Roman'; margin-top: 5px;")
+        vbox.addWidget(self.lbl_hebreo)
+
+        # Texto del Mensaje
+        self.lbl_mensaje = QLabel("...")
+        self.lbl_mensaje.setWordWrap(True)
+        self.lbl_mensaje.setAlignment(Qt.AlignCenter)
+        self.lbl_mensaje.setStyleSheet("font-size: 18px; font-style: italic; color: #451a03; font-family: 'Georgia'; margin: 10px 0;")
+        vbox.addWidget(self.lbl_mensaje)
+
+        # Referencia (Cita o Nombre)
+        self.lbl_cita = QLabel("...")
+        self.lbl_cita.setAlignment(Qt.AlignCenter)
+        self.lbl_cita.setStyleSheet("font-size: 14px; font-weight: bold; color: #92400e;")
+        vbox.addWidget(self.lbl_cita)
+
+        # Botón refrescar
+        btn_refresh = QPushButton("🙏 Nueva Luz")
+        btn_refresh.setCursor(Qt.PointingHandCursor)
+        btn_refresh.setStyleSheet("""
             QPushButton {
-                background: #2563eb;
-                color: white;
-                padding: 10px 16px;
-                border-radius: 6px;
-                font-weight: bold;
+                background: transparent; color: #b45309; font-weight: bold; border: 1px solid #b45309;
+                border-radius: 15px; padding: 5px 15px; margin-top: 10px;
             }
-            QPushButton:hover {
-                background: #1d4ed8;
-            }
-        """
+            QPushButton:hover { background: #fff7ed; }
+        """)
+        btn_refresh.setFixedWidth(150)
+        btn_refresh.clicked.connect(self._cambiar_mensaje)
+        
+        hbox_btn = QHBoxLayout()
+        hbox_btn.addStretch()
+        hbox_btn.addWidget(btn_refresh)
+        hbox_btn.addStretch()
+        vbox.addLayout(hbox_btn)
+
+        layout.addWidget(card)
+
+    def _cambiar_mensaje(self):
+        cita, texto, hebreo = random.choice(self.INSPIRACION)
+        
+        self.lbl_hebreo.setText(hebreo) # Si es salmo, estará vacío y no ocupa espacio
+        self.lbl_hebreo.setVisible(bool(hebreo)) # Ocultar si no hay hebreo
+        
+        self.lbl_mensaje.setText(f"“{texto}”")
+        self.lbl_cita.setText(f"— {cita}")
+
+    # =====================================================================
+    #  PANELES DE HERRAMIENTAS
+    # =====================================================================
+    def _crear_panel_tema(self):
+        frame = QFrame()
+        frame.setStyleSheet("background: white; border-radius: 10px; border: 1px solid #e2e8f0;")
+        h = QHBoxLayout(frame)
+        h.setContentsMargins(15, 15, 15, 15)
+        
+        btn_claro = QPushButton("🌞 Modo Claro")
+        btn_claro.clicked.connect(lambda: self._aplicar_tema("light"))
+        self._estilar_btn(btn_claro, "#0ea5e9")
+
+        btn_oscuro = QPushButton("🌙 Modo Oscuro")
+        btn_oscuro.clicked.connect(lambda: self._aplicar_tema("dark"))
+        self._estilar_btn(btn_oscuro, "#334155")
+
+        h.addWidget(btn_claro)
+        h.addWidget(btn_oscuro)
+        return frame
+
+    def _crear_panel_datos(self):
+        frame = QFrame()
+        frame.setStyleSheet("background: white; border-radius: 10px; border: 1px solid #e2e8f0;")
+        h = QHBoxLayout(frame)
+        h.setContentsMargins(15, 15, 15, 15)
+
+        btn_backup = QPushButton("📦 Crear Backup")
+        btn_backup.clicked.connect(self._accion_backup)
+        self._estilar_btn(btn_backup, "#16a34a")
+
+        btn_restore = QPushButton("♻️ Restaurar")
+        btn_restore.clicked.connect(self._accion_restore)
+        self._estilar_btn(btn_restore, "#ea580c")
+
+        h.addWidget(btn_backup)
+        h.addWidget(btn_restore)
+        return frame
+
+    def _estilar_btn(self, btn, color):
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {color}; color: white; font-weight: bold;
+                padding: 10px 15px; border-radius: 6px; border: none;
+            }}
+            QPushButton:hover {{ opacity: 0.9; }}
+        """)
+
+    # =====================================================================
+    #  CONEXIONES CON MAINWINDOW
+    # =====================================================================
+    def _aplicar_tema(self, tema):
+        if hasattr(self.main, "aplicar_tema"):
+            self.main.aplicar_tema(tema)
+        else:
+            QMessageBox.information(self, "Tema", f"Tema {tema} seleccionado (Reinicio requerido).")
+
+    def _accion_backup(self):
+        if hasattr(self.main, "crear_backup"): self.main.crear_backup()
+        elif hasattr(self.main, "create_backup"): self.main.create_backup()
+        else: QMessageBox.warning(self, "Error", "Función de backup no encontrada.")
+
+    def _accion_restore(self):
+        if hasattr(self.main, "restaurar_backup"): self.main.restaurar_backup()
+        elif hasattr(self.main, "restore_backup"): self.main.restore_backup()
+        else: QMessageBox.warning(self, "Error", "Función de restaurar no encontrada.")

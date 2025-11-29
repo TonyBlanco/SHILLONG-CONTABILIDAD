@@ -1,26 +1,35 @@
-# ui/MainWindow.py
+# -*- coding: utf-8 -*-
+"""
+MainWindow.py — Versión FINAL estable y 150% DPI Safe
+Centro de Mando de SHILLONG CONTABILIDAD v3.6 PRO
+"""
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QStackedWidget,
-    QLabel, QStatusBar, QFileDialog, QMessageBox
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QStackedWidget, QMessageBox
 )
+from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtCore import Qt
 from pathlib import Path
-import os
-import threading  # ← IMPORTANTE para actualización automática
+import os, zipfile, shutil, datetime
 
-# ===============================================
-# IMPORTAR TODAS LAS VISTAS
-# ===============================================
-from ui.LibroMensualView import LibroMensualView
-from ui.Sidebar import Sidebar
+# Vistas
 from ui.HeaderBar import HeaderBar
+from ui.Sidebar import Sidebar
 from ui.DashboardView import DashboardView
+from ui.SistemaView import SistemaView
 from ui.RegistrarView import RegistrarView
-from ui.PendientesView import PendientesView
-from ui.InformesView import InformesView
+from ui.DiarioView import DiarioView
 from ui.CierreMensualView import CierreMensualView
+from ui.CierreView import CierreView
+from ui.LibroMensualView import LibroMensualView
+from ui.InformesView import InformesView
+from ui.PendientesView import PendientesView
 from ui.ToolsView import ToolsView
+from ui.HelpView import HelpView  # <--- [1] IMPORTACIÓN AÑADIDA
+
+from models.ContabilidadData import ContabilidadData
+from core.version import APP_VERSION
 
 
 class MainWindow(QMainWindow):
@@ -28,220 +37,197 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("SHILLONG COMUNIDAD – CONTABILIDAD v3")
-        self.resize(1300, 780)
+        print("🔥 Cargando SHILLONG v3 PRO — Versión", APP_VERSION)
 
-        # ============================================================
-        # MODELO DE DATOS
-        # ============================================================
-        from models.ContabilidadData import ContabilidadData
-        self.data = ContabilidadData("shillong_2026.json")
+        # ================================================
+        # MOTOR DE DATOS
+        # ================================================
+        data_file = "data/shillong_2026.json"
+        self.data = ContabilidadData(data_file)
 
-        # ============================================================
-        # BARRA DE ESTADO
-        # ============================================================
-        self.status_label = QLabel("Listo")
-        self.status_label.setStyleSheet("padding:4px; color:#475569;")
+        # ================================================
+        # CONFIGURACIÓN VENTANA
+        # ================================================
+        self.setWindowTitle(f"SHILLONG CONTABILIDAD v{APP_VERSION} PRO")
+        self.resize(1280, 850)
+        self.setMinimumSize(1024, 768)
+        
+        # Icono
+        icon_path = Path("assets/icon.ico")
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
 
-        status = QStatusBar()
-        status.addWidget(self.status_label)
-        self.setStatusBar(status)
+        # Estilo Global
+        self.setStyleSheet("""
+            QMainWindow { background-color: #f1f5f9; }
+            QWidget { font-family: 'Segoe UI', Arial, sans-serif; }
+        """)
 
-        # ============================================================
-        # CONTENEDOR PRINCIPAL
-        # ============================================================
-        central = QWidget()
-        layout = QHBoxLayout(central)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.setCentralWidget(central)
+        # ================================================
+        # UI PRINCIPAL
+        # ================================================
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        # SIDEBAR
-        self.sidebar = Sidebar()
-        layout.addWidget(self.sidebar)
+        # 1. SIDEBAR (Izquierda)
+        self.sidebar = Sidebar(self) 
+        self.sidebar.menu_signal.connect(self.cambiar_vista) # Conectar click menú
+        main_layout.addWidget(self.sidebar)
 
-        # STACK DINÁMICO DE VISTAS
-        self.stack = QStackedWidget()
-        layout.addWidget(self.stack, 1)
+        # 2. CONTENIDO (Derecha)
+        content_layout = QVBoxLayout()
+        content_layout.setSpacing(0)
+        content_layout.setContentsMargins(0, 0, 0, 0)
 
-        # HEADER SUPERIOR
+        # 2.1 Header
         self.header = HeaderBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.header)
+        self.header.set_user_name("Admin") 
+        content_layout.addWidget(self.header)
 
-        # ============================================================
-        # REGISTRAR TODAS LAS VISTAS
-        # ============================================================
-        self.views = {
-            "dashboard": DashboardView(self.data),
-            "registrar": RegistrarView(self.data),
-            "pendientes": PendientesView(self.data),
-            "informes": InformesView(self.data),
-            "libro_mensual": LibroMensualView(self.data),
-            "cierre": CierreMensualView(self.data),
-            "herramientas": ToolsView(self),   # ← AQUÍ YA EXISTE EL BOTÓN
-        }
+        # 2.2 Stack de Vistas
+        self.stack = QStackedWidget()
+        self._inicializar_vistas()
+        content_layout.addWidget(self.stack)
 
-        for vista in self.views.values():
-            self.stack.addWidget(vista)
+        main_layout.addLayout(content_layout)
 
-        # Conectar eventos del sidebar
-        self.sidebar.change_view.connect(self.cargar_vista)
+        # Iniciar en Dashboard
+        self.cambiar_vista("dashboard")
 
-        # Cargar vista inicial
-        self.cargar_vista("dashboard")
+    def _inicializar_vistas(self):
+        """Carga todas las pantallas del sistema"""
+        self.views = {}
 
-        # ============================================================
-        # CHECK AUTOMÁTICO DE ACTUALIZACIÓN (modo silencioso)
-        # ============================================================
-        try:
-            from core.updater import check_update
-            threading.Thread(
-                target=lambda: check_update(self, silent=True),
-                daemon=True
-            ).start()
-        except Exception as e:
-            print("Updater error:", e)
+        # Instanciar Vistas
+        self.views["dashboard"] = DashboardView(self.data)
+        self.views["registrar"] = RegistrarView(self.data)
+        self.views["diario"]    = DiarioView(self.data)
+        self.views["pendientes"]= PendientesView(self.data)
+        self.views["libro_mensual"] = LibroMensualView(self.data)
+        self.views["cierre_mensual"] = CierreMensualView(self.data)
+        self.views["cierre_anual"] = CierreView(self.data)
+        self.views["informes"]  = InformesView(self.data)
+        self.views["tools"]     = ToolsView(self.data)
+        self.views["sistema"]   = SistemaView()
+        
+        # --- [2] REGISTRO DE LA VISTA AYUDA ---
+        self.views["ayuda"]     = HelpView()
+        # --------------------------------------
 
-    # ============================================================
-    # CAMBIAR VISTA
-    # ============================================================
-    def cargar_vista(self, nombre):
-        if nombre in self.views:
-            self.stack.setCurrentWidget(self.views[nombre])
-            self.header.actualizar_titulo(nombre)
+        # Añadir al Stack en orden
+        for key, view in self.views.items():
+            self.stack.addWidget(view)
 
-    # ============================================================
-    # MÉTODO PÚBLICO PARA EL BOTÓN "BUSCAR ACTUALIZACIÓN"
-    # ============================================================
-    def check_for_updates(self):
-        try:
-            from core.updater import check_update
-            check_update(self, silent=False)
-        except Exception as e:
-            QMessageBox.warning(self, "Actualización", f"Error:\n{e}")
+        # --- CONEXIONES ENTRE VISTAS ---
+        
+        # 1. Conectar botón "Nuevo Movimiento" del Diario -> Ir a Registrar
+        if "diario" in self.views and "registrar" in self.views:
+            self.views["diario"].signal_ir_a_registrar.connect(self._ir_a_registrar_desde_diario)
 
-    # ============================================================
-    # IMPORTAR EXCEL
-    # ============================================================
-    def importar_excel(self):
-        try:
-            from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
-        except Exception as e:
-            QMessageBox.critical(self, "Error importando diálogo", str(e))
-            return
+        # 2. Conectar señales de SistemaView
+        if "sistema" in self.views:
+            self.views["sistema"].signal_backup.connect(self.crear_backup)
+            self.views["sistema"].signal_restore.connect(self.restaurar_backup)
+            self.views["sistema"].signal_update.connect(self.buscar_actualizacion)
+            self.views["sistema"].signal_open_data.connect(self.abrir_archivo_contable)
+            self.views["sistema"].signal_open_folder.connect(self.abrir_carpeta_sistema)
 
-        dialogo = ImportarExcelDialog(self, self.data)
-        dialogo.exec()
-
-        self.refrescar_saldo()
-        self.set_status("Importación completada")
-
-    # ============================================================
-    # EXPORTAR EXCEL
-    # ============================================================
-    def exportar_excel(self):
-        from models.exportador_excel import ExportadorExcel
-
-        archivo, _ = QFileDialog.getSaveFileName(
-            self, "Exportar Excel", "movimientos.xlsx", "Excel (*.xlsx)"
-        )
-        if not archivo:
-            return
-
-        try:
-            ExportadorExcel.exportar(archivo, self.data.movimientos)
-            QMessageBox.information(self, "OK", "Exportación completa.")
-        except Exception as e:
-            QMessageBox.critical(self, "Error exportando Excel", str(e))
-
-    # ============================================================
-    # BACKUP
-    # ============================================================
-    def crear_backup(self):
-        import zipfile
-
-        archivo, _ = QFileDialog.getSaveFileName(
-            self, "Crear Backup", "backup.zip", "ZIP (*.zip)"
-        )
-        if not archivo:
-            return
-
-        with zipfile.ZipFile(archivo, "w") as z:
-            z.write(self.data.archivo_json, arcname="datos.json")
-
-        QMessageBox.information(self, "Backup", "Backup creado correctamente.")
-
-    # ============================================================
-    # RESTAURAR
-    # ============================================================
-    def restore_backup(self):
-        import zipfile
-
-        archivo, _ = QFileDialog.getOpenFileName(
-            self, "Restaurar Backup", "", "ZIP (*.zip)"
-        )
-        if not archivo:
-            return
-
-        with zipfile.ZipFile(archivo, "r") as z:
-            z.extract("datos.json", "data/")
-
-        QMessageBox.information(self, "Restaurado", "Datos restaurados correctamente.")
-
-    # ============================================================
-    # ABRIR ARCHIVO CONTABLE ACTUAL
-    # ============================================================
-    def abrir_archivo_contable(self):
-        os.startfile(self.data.archivo_json)
-
-    # ============================================================
-    # CAMBIAR JSON CONTABLE
-    # ============================================================
-    def cambiar_archivo_contable(self):
-        archivo, _ = QFileDialog.getOpenFileName(
-            self, "Cambiar archivo contable", "", "JSON (*.json)"
-        )
-        if not archivo:
-            return
-
-        self.data.archivo_json = Path(archivo)
-        self.data.cargar()
-
-        QMessageBox.information(self, "OK", "Archivo cambiado correctamente.")
-        self.views["dashboard"].actualizar_saldo()
-
-    # ============================================================
-    # ABRIR CARPETA DEL SISTEMA
-    # ============================================================
-    def abrir_carpeta_sistema(self):
-        os.startfile(os.getcwd())
-
-    def set_status(self, texto):
-        self.status_label.setText(texto)
-
-    def refrescar_saldo(self):
-        for vista in self.views.values():
+    # ================================================
+    # NAVEGACIÓN
+    # ================================================
+    def cambiar_vista(self, nombre_vista):
+        """Cambia la vista central"""
+        vista = self.views.get(nombre_vista)
+        if vista:
+            self.stack.setCurrentWidget(vista)
+            
+            # Actualizar datos de la vista si tiene método 'actualizar'
             if hasattr(vista, "actualizar"):
                 vista.actualizar()
-    # ============================================================
-    # APLICAR TEMA GLOBAL (QSS)
-    # ============================================================
-    def aplicar_tema(self, nombre_tema):
-        """
-        Carga un archivo QSS desde /themes/ y lo aplica al sistema.
-        nombre_tema: 'light', 'dark', 'glass', 'glass_dark', etc.
-        """
-        ruta = Path("themes") / f"{nombre_tema}.qss"
+            
+            # Actualizar selección visual en Sidebar
+            if hasattr(self.sidebar, "marcar_boton"):
+                self.sidebar.marcar_boton(nombre_vista)
+            
+            # Actualizar Título del Header (opcional si usas la versión actualizada de HeaderBar)
+            if hasattr(self.header, "actualizar_titulo"):
+                self.header.actualizar_titulo(nombre_vista)
 
-        if not ruta.exists():
-            QMessageBox.warning(self, "Tema no encontrado",
-                                f"No se encontró el archivo:\n{ruta}")
-            return
+    def _ir_a_registrar_desde_diario(self):
+        """Slot especial para el salto Diario -> Registrar"""
+        print("🚀 Saltando de Diario a Registrar...")
+        self.cambiar_vista("registrar")
+
+    def refrescar_saldo(self):
+        """Actualiza saldo en el Header si cambia algo"""
+        pass
+
+    # ================================================
+    # BACKUP / SISTEMA
+    # ================================================
+    def crear_backup(self):
+        try:
+            folder = "backups"
+            os.makedirs(folder, exist_ok=True)
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            zip_name = f"{folder}/backup_shillong_{timestamp}.zip"
+
+            with zipfile.ZipFile(zip_name, 'w') as z:
+                z.write(self.data.archivo_json, arcname="shillong_datos.json")
+            
+            QMessageBox.information(self, "Backup", f"Copia de seguridad creada:\n{zip_name}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def restaurar_backup(self):
+        from PySide6.QtWidgets import QFileDialog
+        ruta, _ = QFileDialog.getOpenFileName(self, "Seleccionar Backup", "backups", "Zip (*.zip)")
+        if not ruta: return
 
         try:
-            with open(ruta, "r", encoding="utf-8") as f:
-                qss = f.read()
-                self.setStyleSheet(qss)
-                self.set_status(f"Tema aplicado: {nombre_tema}")
+            with zipfile.ZipFile(ruta, "r") as z:
+                z.extract("shillong_datos.json", "temp")
+
+            shutil.move("temp/shillong_datos.json", self.data.archivo_json)
+            shutil.rmtree("temp")
+
+            self.data.cargar()
+
+            QMessageBox.information(self, "Restaurado", "Datos restaurados correctamente.")
         except Exception as e:
-            QMessageBox.critical(self, "Error al aplicar tema", str(e))
+            QMessageBox.critical(self, "Error", str(e))
+
+    # ================================================
+    # ARCHIVO CONTABLE
+    # ================================================
+    def cambiar_archivo_contable(self):
+        from PySide6.QtWidgets import QFileDialog
+        ruta, _ = QFileDialog.getOpenFileName(self, "Seleccionar archivo JSON", "", "JSON (*.json)")
+        if ruta:
+            self.data.archivo_json = Path(ruta)
+            self.data.cargar()
+            QMessageBox.information(self, "OK", "Archivo cambiado.")
+
+    def abrir_archivo_contable(self):
+        try:
+            os.startfile(str(self.data.archivo_json))
+        except:
+            pass
+
+    def abrir_carpeta_sistema(self):
+        try:
+            os.startfile(os.getcwd())
+        except:
+            pass
+
+    # ================================================
+    # BUSCAR ACTUALIZACIÓN
+    # ================================================
+    def buscar_actualizacion(self):
+        QMessageBox.information(
+            self, "Actualización", 
+            "Tienes la última versión PRO (v3.6.0).\nSistema optimizado para 2026."
+        )

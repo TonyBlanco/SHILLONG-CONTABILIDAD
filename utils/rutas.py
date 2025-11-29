@@ -1,29 +1,32 @@
 # -*- coding: utf-8 -*-
-"""
-utils/rutas.py — Sistema profesional de rutas para SHILLONG v3 PRO
-Funciona en desarrollo y en EXE empaquetado con PyInstaller
-"""
-
 import sys
+import os
 from pathlib import Path
 
-
-def ruta_recurso(rel_path: str) -> Path:
+def ruta_recurso(ruta_relativa):
     """
-    Devuelve la ruta correcta tanto en desarrollo como en EXE.
-    Uso: ruta_recurso("data/plan_contable_v3.json")
+    Obtiene la ruta absoluta al recurso (archivos estáticos dentro del exe).
+    Funciona para desarrollo y para PyInstaller (_MEIPASS).
     """
     try:
-        # PyInstaller crea una carpeta temporal y guarda la ruta en _MEIPASS
-        base_path = Path(sys._MEIPASS)
-    except AttributeError:
-        # En modo desarrollo: usa la ruta del proyecto
-        base_path = Path(__file__).resolve().parent.parent
+        # PyInstaller crea una carpeta temporal y almacena la ruta en _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
 
-    return base_path / rel_path
+    return Path(base_path) / ruta_relativa
 
-
-def crear_carpeta_si_no_existe(rel_path: str):
-    """Crea carpeta si no existe (útil en primera ejecución)"""
-    path = ruta_recurso(rel_path)
-    path.mkdir(parents=True, exist_ok=True)
+def ruta_datos_usuario(archivo):
+    """
+    Devuelve la ruta a un archivo en la carpeta 'data' junto al ejecutable.
+    Esto es crucial para que los datos persistan y no se borren al cerrar el exe.
+    """
+    if getattr(sys, 'frozen', False):
+        # Si es exe, usar la carpeta donde está el exe
+        base_path = os.path.dirname(sys.executable)
+    else:
+        # Si es script, usar la carpeta actual
+        base_path = os.path.abspath(".")
+        
+    # Construir ruta: base_path/data/archivo
+    return Path(base_path) / "data" / archivo

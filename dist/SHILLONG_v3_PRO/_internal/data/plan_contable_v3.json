@@ -1,0 +1,327 @@
+{
+  "206000": {
+    "nombre": "Aplicaciones informáticas",
+    "descripcion": "Programas informáticos. (P.S. Aplicaciones y software adquirido para uso comunitario.)"
+  },
+  "211000": {
+    "nombre": "Edificios y otras construcciones",
+    "descripcion": "Construcciones en recinto comunitario. Incluye obras, reformas, mejoras o ampliaciones. (A partir de la creación de la Fundación)."
+  },
+  "213000": {
+    "nombre": "Maquinaria",
+    "descripcion": "Lavadora, vitrocerámica, frigorífico, pequeños electrodomésticos y máquinas de uso comunitario."
+  },
+  "214000": {
+    "nombre": "Utillaje",
+    "descripcion": "Robot de cocina y otros utensilios similares de uso frecuente en la comunidad."
+  },
+  "215000": {
+    "nombre": "Instalaciones",
+    "descripcion": "Instalaciones de electricidad, agua, gas, telefonía, calefacción, etc."
+  },
+  "216000": {
+    "nombre": "Mobiliario y enseres",
+    "descripcion": "Camas, sofás, televisores, vídeo, equipo de música y otros enseres de uso comunitario."
+  },
+  "217000": {
+    "nombre": "Equipos para procesos de información",
+    "descripcion": "Ordenadores, impresoras, fotocopiadoras y equipos similares."
+  },
+
+  "400": {
+    "nombre": "Proveedores",
+    "descripcion": "Suministran productos de consumo con pago a plazo (cheque o cargo bancario)."
+  },
+  "410": {
+    "nombre": "Acreedores",
+    "descripcion": "Suministros, servicios y mantenimientos pendientes de pago. Similar a la cuenta 400."
+  },
+
+  "550000": {
+    "nombre": "Cuenta corriente con Provincia",
+    "descripcion": "Deuda o movimientos con la Provincia."
+  },
+  "551000": {
+    "nombre": "Cuenta corriente con el Centro",
+    "descripcion": "Deudas y movimientos con el Centro."
+  },
+  "555000": {
+    "nombre": "Partidas pendientes de aplicación",
+    "descripcion": "Movimientos contables dudosos o erróneos pendientes de aclaración."
+  },
+
+  "570000": {
+    "nombre": "Caja de Comunidad",
+    "descripcion": "Efectivo disponible en la comunidad."
+  },
+  "572000": {
+    "nombre": "Banco",
+    "descripcion": "Tesorería en cuentas bancarias comunitarias."
+  },
+  "574000": {
+    "nombre": "Cuentas de ahorro",
+    "descripcion": "Depósitos y libretas de ahorro de la comunidad."
+  },
+
+  "600000": {
+    "nombre": "Compra de farmacia y material sanitario",
+    "descripcion": "Medicación recetada y material sanitario. (P.S. Parafarmacia, herbolario, cremas y productos no pautados por profesionales.)"
+  },
+
+  "602100": {
+    "nombre": "Compra de combustibles",
+    "descripcion": "Combustible para automóvil y máquinas al servicio de la comunidad."
+  },
+  "602300": {
+    "nombre": "Material de reposición y conservación",
+    "descripcion": "Materiales de metal, madera, pequeña reparación. Bombillas, manillas, pilas, macetas, plantas, etc."
+  },
+  "602400": {
+    "nombre": "Material de limpieza",
+    "descripcion": "Productos de limpieza para el recinto comunitario. Papel higiénico, servilletas, toallas, etc."
+  },
+  "620401": {
+    "nombre": "Material de lavandería",
+    "descripcion": "Detergentes, suavizantes, lejías y productos para el lavado de ropa."
+  },
+  "602402": {
+    "nombre": "Material de aseo personal",
+    "descripcion": "Jabón, colonia, crema, compresas, reposición de cuarto de huéspedes. (P.S. Todos los productos de aseo personal.)"
+  },
+  "602403": {
+    "nombre": "Material de peluquería",
+    "descripcion": "Productos y utensilios de peluquería. (P.S. Todos los productos y servicios de peluquería.)"
+  },
+  "602500": {
+    "nombre": "Material de oficina, impresos e informática",
+    "descripcion": "Papelería, sobres, bolígrafos, carpetas, pequeños útiles, tóner, pendrive, consumibles informáticos."
+  },
+
+  "603000": {
+    "nombre": "Compra de comestibles y bebidas",
+    "descripcion": "Alimentos y bebidas complementarias. Gastos al acompañar a hermanas convalecientes o ingresadas."
+  },
+
+  "605000": {
+    "nombre": "Pequeño utillaje, vajilla y objetos de adorno",
+    "descripcion": "Manualidades, perchas, vajilla, cubertería, pequeños electrodomésticos y objetos decorativos."
+  },
+
+  "606000": {
+    "nombre": "Compra de ropería personal, hogar y objetos personales",
+    "descripcion": "Sábanas, mantas, cortinas, ropa personal, artículos de costura, calzado, accesorios. (P.S. Prendas personales, telas, costura, calzado, maletas, relojes, etc.)"
+  },
+
+  "607000": {
+    "nombre": "Trabajos realizados por empresas o profesionales",
+    "descripcion": "Personal contratado desde el Centro al servicio de la comunidad."
+  },
+  "607400": {
+    "nombre": "Servicios empresa de cocina",
+    "descripcion": "Coste del servicio de cocina, interno o externo."
+  },
+  "607500": {
+    "nombre": "Servicios empresa de limpieza",
+    "descripcion": "Servicios de limpieza del recinto comunitario, cristales, jardines."
+  },
+  "607900": {
+    "nombre": "Servicios de lavandería y otros",
+    "descripcion": "Servicio de lavandería y tintorería interno o contratado."
+  },
+
+  "622000": {
+    "nombre": "Reparaciones y conservación",
+    "descripcion": "Trabajos de carpintería, pintura, albañilería, fontanería, etc., por cuenta de la comunidad. ITV, reparaciones de coche y electrodomésticos."
+  },
+  "622150": {
+    "nombre": "Mantenimiento y reparaciones",
+    "descripcion": "Mantenimiento de edificios, jardines, ascensores, calefacción, extintores, etc., por empresas o profesionales."
+  },
+
+  "623000": {
+    "nombre": "Servicios profesionales independientes",
+    "descripcion": "Asesores, abogados, notarios, médicos, etc."
+  },
+
+  "625000": {
+    "nombre": "Primas de seguros",
+    "descripcion": "Seguros de daños, vehículos y otros riesgos."
+  },
+
+  "627000": {
+    "nombre": "Publicidad, relaciones públicas y obsequios",
+    "descripcion": "Regalos a personas externas, propaganda, calendarios."
+  },
+
+  "628010": { "nombre": "Suministro gas", "descripcion": "Gas." },
+  "628020": { "nombre": "Suministro agua", "descripcion": "Agua." },
+  "628030": { "nombre": "Suministro electricidad", "descripcion": "Electricidad." },
+
+  "629100": {
+    "nombre": "Viajes",
+    "descripcion": "Viajes por trabajo, reuniones, hospitales o formación. (P.S. Viajes personales, vacaciones, visitas familiares.)"
+  },
+  "629106": {
+    "nombre": "Gastos varios en viajes",
+    "descripcion": "Aparcamientos, peajes y otros gastos asociados."
+  },
+  "629200": {
+    "nombre": "Teléfonos, internet, mensajería y correo",
+    "descripcion": "Telefonía fija y móvil comunitaria. Sellos, mensajería. (P.S. Telefonía móvil personal.)"
+  },
+  "629990": {
+    "nombre": "Gastos piso comunidad de vecinos",
+    "descripcion": "Cuotas de comunidad del edificio."
+  },
+
+  "631000": {
+    "nombre": "Tributos varios",
+    "descripcion": "Impuestos: circulación, basura, vados, tasas municipales."
+  },
+
+  "640000": {
+    "nombre": "Sueldos y salarios",
+    "descripcion": "Trabajadores contratados directamente por la comunidad."
+  },
+  "642000": {
+    "nombre": "Seguridad social empresa",
+    "descripcion": "Cuotas de la Seguridad Social de trabajadores."
+  },
+
+  "650110": {
+    "nombre": "Odontología y prótesis",
+    "descripcion": "Prótesis, implantes, empastes y consultas odontológicas."
+  },
+  "650120": {
+    "nombre": "Oftalmología",
+    "descripcion": "Óptica, gafas, revisiones."
+  },
+  "650130": {
+    "nombre": "Prótesis y aparatos ortopédicos",
+    "descripcion": "Sillas de ruedas, audífonos, elevadores, etc."
+  },
+  "650140": {
+    "nombre": "Consultas, análisis y exploraciones",
+    "descripcion": "Servicios médicos, especialistas, podología, análisis."
+  },
+  "650160": {
+    "nombre": "Hospitalización",
+    "descripcion": "Estancias en hospitales y gastos de acompañamiento."
+  },
+
+  "650300": {
+    "nombre": "Atenciones comunitarias",
+    "descripcion": "Obsequios a hermanas de otras comunidades."
+  },
+  "650310": {
+    "nombre": "Celebraciones comunitarias",
+    "descripcion": "Fiestas comunitarias, santos, despedidas."
+  },
+  "650320": {
+    "nombre": "Salidas comunitarias",
+    "descripcion": "Excursiones, cine, teatro, viajes comunitarios. (P.S. Salidas personales.)"
+  },
+  "650330": {
+    "nombre": "Regalos comunitarios",
+    "descripcion": "Regalos de onomástico, reyes, bodas."
+  },
+  "650400": {
+    "nombre": "Vacaciones y viajes",
+    "descripcion": "Asignación de vacaciones de las hermanas. (P.S. Viajes personales.)"
+  },
+
+  "650510": {
+    "nombre": "Gastos hermanas de otras provincias",
+    "descripcion": "Estancias por formación u otros motivos."
+  },
+  "650530": {
+    "nombre": "Formación permanente",
+    "descripcion": "Formación provincial o del proyecto comunitario. (P.S. Formación personal deseada.)"
+  },
+  "650560": {
+    "nombre": "Ejercicios y retiros",
+    "descripcion": "Ejercicios espirituales y retiros. (P.S. retiros fuera del plan.)"
+  },
+  "650570": {
+    "nombre": "Libros, suscripciones y periódicos",
+    "descripcion": "Libros comunitarios, revistas y prensa. (P.S. libros personales.)"
+  },
+
+  "652000": {
+    "nombre": "Pastoral juvenil vocacional",
+    "descripcion": "Gastos de reuniones, publicidad y personal de pastoral vocacional."
+  },
+
+  "653200": {
+    "nombre": "Comunicaciones de bienes a Provincia",
+    "descripcion": "Traspasos de tesorería hacia Provincia (pensiones, Norma 9.2)."
+  },
+
+  "658000": {
+    "nombre": "Donativos y obras sociales",
+    "descripcion": "Colectas imperadas y excedentes del Presupuesto personal solidario."
+  },
+
+  "659010": {
+    "nombre": "Cuotas y afiliaciones",
+    "descripcion": "Cuotas de colegios profesionales u otras entidades."
+  },
+  "659020": {
+    "nombre": "Culto",
+    "descripcion": "Capellanes, misas, vinajeras, patenas, casullas, flores, cera, etc."
+  },
+  "659030": {
+    "nombre": "Servicios funerarios",
+    "descripcion": "Servicios de funerarias."
+  },
+  "659034": {
+    "nombre": "Documentos, fotos y audiovisuales",
+    "descripcion": "Pasaportes, DNI, carnets, fotografías, vídeos, revelados."
+  },
+  "659060": {
+    "nombre": "Presupuesto personal solidario",
+    "descripcion": "Dinero entregado a cada hermana para gastos personales y solidaridad."
+  },
+  "659090": {
+    "nombre": "Otros gastos",
+    "descripcion": "Gastos no incluidos en otras cuentas: multas, robos, imprevistos."
+  },
+
+  "669000": {
+    "nombre": "Gastos financieros",
+    "descripcion": "Comisiones y cargos bancarios improcedentes."
+  },
+
+  "750000": {
+    "nombre": "Pensiones de jubilación",
+    "descripcion": "Ingresos por pensiones."
+  },
+  "750100": {
+    "nombre": "Prestación de servicios internos",
+    "descripcion": "Ingresos por trabajo del conjunto de la comunidad."
+  },
+  "750200": {
+    "nombre": "Sueldos y salarios",
+    "descripcion": "Ingresos por trabajo de una persona."
+  },
+  "750600": {
+    "nombre": "Norma 9.2",
+    "descripcion": "Retribución recibida por hermanas que trabajan en el centro."
+  },
+  "75330X": {
+    "nombre": "Comunicación de bienes de Provincia",
+    "descripcion": "Traspasos procedentes de Provincia hacia la comunidad."
+  },
+  "758000": {
+    "nombre": "Donativos",
+    "descripcion": "Donativos recibidos."
+  },
+  "759100": {
+    "nombre": "Otros ingresos",
+    "descripcion": "Ingresos por ventas de chatarra, papel, etc."
+  },
+  "769000": {
+    "nombre": "Ingresos financieros",
+    "descripcion": "Intereses abonados por los bancos."
+  }
+}
