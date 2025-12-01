@@ -1,100 +1,144 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-import ctypes
+import logging
+import traceback
+from datetime import datetime
+from pathlib import Path
 
-# ===============================================
-# DPI PERFECTO 2025 – PySide6 (sin warnings ni errores)
-# ===============================================
+# --- CONFIGURACIÓN DE RUTAS ---
+# Detectar si estamos en ejecutable o en código fuente
+if getattr(sys, 'frozen', False):
+    ROOT_DIR = os.path.dirname(sys.executable)
+else:
+    ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# 1. Forzamos DPI Awareness a nivel de proceso (Windows)
-try:
-    # Solo funciona si la app NO está empaquetada con PyInstaller o si tiene manifiesto
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PER_MONITOR_AWARE_V2
-except:
-    try:
-        ctypes.windll.user32.SetProcessDPIAware()   # fallback antiguo
-    except:
-        pass
+# Asegurar que Python encuentre los módulos
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
-# 2. Variables de entorno Qt (las únicas que funcionan hoy)
-os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-os.environ["QT_SCALE_FACTOR"] = "1"
-os.environ["QT_FONT_DPI"] = "96"
-
-# 3. Importamos QApplication DESPUÉS de configurar todo
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QPalette, QColor, QFont
 
-# 4. Configuración moderna (sin usar atributos obsoletos)
-QApplication.setHighDpiScaleFactorRoundingPolicy(
-    Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-)
-
-# Estas dos líneas ya están obsoletas y fueron eliminadas intencionalmente:
-# QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)     ← deprecated
-# QApplication.setAttribute(Qt.AA_UseHighDpiScaling, True)       ← ya no existe
-
-# ===============================================
-# IMPORTS PRINCIPALES
-# ===============================================
+# Importamos las piezas clave
+from models.ContabilidadData import ContabilidadData
 from ui.MainWindow import MainWindow
-from core.theme_detector import windows_is_dark
-from core.version import APP_VERSION
 
+# --- CONSTANTES ---
+APP_VERSION = "3.7.7"
 
-# ============================
-#   CARGA DE TEMA AUTOMÁTICA
-# ============================
-def load_theme(app):
-    base = "themes"
+# ============================================================
+#  SISTEMA DE LOGS (LA CAJA NEGRA) 📦
+# ============================================================
+def setup_logging():
+    """Configura el sistema para guardar errores en la carpeta logs/"""
+    log_dir = os.path.join(ROOT_DIR, "logs")
+    
+    # 1. Crear carpeta si no existe
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 
-    if windows_is_dark():
-        theme_file = os.path.join(base, "dark.qss")
-        print("🌙 Windows detectado en modo oscuro → usando DARK")
-    else:
-        theme_file = os.path.join(base, "light.qss")
-        print("☀ Windows detectado en modo claro → usando LIGHT")
+    # 2. Nombre del archivo: log_2025-12-01.txt
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+    log_file = os.path.join(log_dir, f"log_{fecha_hoy}.txt")
 
-    if os.path.exists(theme_file):
-        with open(theme_file, "r", encoding="utf-8") as f:
-            app.setStyleSheet(f.read())
+    # 3. Configurar el logger
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.ERROR,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
 
+    # 4. Hook para capturar CRASHES (Errores no controlados)
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
 
-# ============================
-#   DESACTIVAR DPI DE WINDOWS
-# ============================
-def disable_windows_dpi_scaling():
-    """Evita que Windows vuelva a reescalar la app."""
-    if sys.platform == "win32":
+        # Escribir el error completo en el archivo
+        logging.error("🔥 ERROR NO CONTROLADO (CRASH):", exc_info=(exc_type, exc_value, exc_traceback))
+        
+        # Opcional: Mostrar alerta visual al usuario antes de morir
+        error_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+        print("CRITICAL ERROR:", error_msg) # Para consola si existe
+        
+        # Intentar mostrar ventana de error (si Qt sigue vivo)
         try:
-            # 0 = deshabilitar completamente scaling
-            ctypes.windll.shcore.SetProcessDpiAwareness(0)
-        except Exception:
+            app = QApplication.instance()
+            if app:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText("Ocurrió un error inesperado.")
+                msg.setInformativeText("El error ha sido guardado en la carpeta 'logs'.")
+                msg.setDetailedText(error_msg)
+                msg.setWindowTitle("Error Crítico")
+                msg.exec()
+        except:
             pass
 
+    sys.excepthook = handle_exception
+    print(f"✅ Sistema de Logs activado en: {log_file}")
 
-# ============================
-#   MAIN
-# ============================
+# ============================================================
+#  CONFIGURACIÓN VISUAL
+# ============================================================
+def disable_windows_dpi_scaling():
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "0"
+    os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
+    os.environ["QT_SCALE_FACTOR"] = "1"
+    if hasattr(Qt, "AA_EnableHighDpiScaling"):
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, False)
+    if hasattr(Qt, "HighDpiScaleFactorRoundingPolicy"):
+        QApplication.setHighDpiScaleFactorRoundingPolicy(
+            Qt.HighDpiScaleFactorRoundingPolicy.Floor
+        )
+
+def load_theme(app):
+    app.setStyle("Fusion")
+    font = QFont("Segoe UI", 9)
+    app.setFont(font)
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(248, 250, 252)) 
+    palette.setColor(QPalette.WindowText, QColor(15, 23, 42)) 
+    app.setPalette(palette)
+
+# ============================================================
+#  MAIN
+# ============================================================
 def main():
+    # 1. ACTIVAR LOGS ANTES DE NADA
+    setup_logging()
 
-    print(f"🔥 Cargando SHILLONG v3 PRO — Versión {APP_VERSION}")
-
+    print(f"🔥 Cargando SHILLONG v{APP_VERSION} PRO...")
     disable_windows_dpi_scaling()
 
-    # Qt Application
     app = QApplication(sys.argv)
+    app.setApplicationName("Shillong Contabilidad")
+    app.setApplicationVersion(APP_VERSION)
+    
+    # Icono de ventana (si existe logo.ico)
+    icon_path = os.path.join(ROOT_DIR, "logo.ico")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
 
-    # Tema automático
     load_theme(app)
 
-    # Crear ventana principal
-    ventana = MainWindow()
-    ventana.show()
+    try:
+        data = ContabilidadData()
+    except Exception as e:
+        logging.error(f"Error cargando datos iniciales: {e}")
+        print(f"❌ Error crítico: {e}")
+        data = None 
 
-    sys.exit(app.exec())
-
+    if data:
+        ventana = MainWindow(data)
+        ventana.resize(1280, 800)
+        ventana.show()
+        sys.exit(app.exec())
+    else:
+        print("⚠️ No se pudo iniciar la aplicación.")
 
 if __name__ == "__main__":
     main()

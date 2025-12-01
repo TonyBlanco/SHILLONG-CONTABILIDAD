@@ -75,7 +75,7 @@ class SistemaView(QWidget):
         layout.addStretch() # Empujar todo arriba
 
         # Footer versión
-        lbl_ver = QLabel("Shillong System Core v3.6.0 PRO")
+        lbl_ver = QLabel("Shillong System Core v3.6.1 PRO")
         lbl_ver.setAlignment(Qt.AlignCenter)
         lbl_ver.setStyleSheet("color: #94a3b8; font-size: 12px;")
         layout.addWidget(lbl_ver)

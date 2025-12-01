@@ -1,88 +1,76 @@
-import os
-import sys
+# -*- coding: utf-8 -*-
 import requests
-import subprocess
-import threading
-from PySide6.QtWidgets import QMessageBox
-from core.version import APP_VERSION
+import json
+import sys
 
-# URLS DEL REPOSITORIO GITHUB
-VERSION_URL = "https://raw.githubusercontent.com/TonyBlanco/SHILLONG-CONTABILIDAD/main/core/version.json"
-INSTALLER_URL = "https://raw.githubusercontent.com/TonyBlanco/SHILLONG-CONTABILIDAD/main/update/SHILLONG_v3_PRO_Setup_Final.exe"
-INSTALLER_LOCAL = "SHILLONG_v3_PRO_Setup_Final.exe"
+# Importar parse_version de forma segura
+try:
+    from packaging.version import parse as parse_version
+except ImportError:
+    parse_version = None 
 
+# Importar versión local
+try:
+    from .version import VERSION as VERSION_LOCAL 
+except ImportError:
+    VERSION_LOCAL = "0.0.0" 
 
-def check_update(parent=None, silent=False):
+# URL de la API (Correcta)
+GITHUB_API_URL = "https://api.github.com/repos/TonyBlanco/SHILLONG-CONTABILIDAD/releases/latest" 
+
+def clean_version(v_str):
     """
-    Comprueba si existe una nueva versión en GitHub.
-    Si silent=True, no muestra mensajes a menos que haya nueva versión.
+    Limpia la cadena de versión de caracteres comunes que causan errores.
+    Elimina 'v', comillas simples/dobles y espacios.
     """
+    if not v_str: return "0.0.0"
+    # Eliminar 'v' o 'V' al inicio
+    v_str = v_str.lstrip('v').lstrip('V')
+    # Eliminar comillas y espacios que puedan haberse colado
+    v_str = v_str.replace("'", "").replace('"', "").strip()
+    return v_str
 
+def check_for_updates():
+    """
+    Compara la versión local con el último Release etiquetado en GitHub.
+    """
+    if parse_version is None:
+        print("ADVERTENCIA: 'packaging' no instalado.")
+        return False, VERSION_LOCAL, None
+        
     try:
-        response = requests.get(VERSION_URL, timeout=5)
-        if response.status_code != 200:
-            if not silent:
-                QMessageBox.warning(parent, "Actualización", "No se pudo comprobar la versión online.")
-            return
+        # Consulta a GitHub
+        response = requests.get(GITHUB_API_URL, timeout=5)
+        response.raise_for_status()
+        remote_data = response.json()
+        
+        # 1. Obtener el tag crudo
+        raw_tag = remote_data.get("tag_name", "0.0.0")
+        
+        # 2. LIMPIEZA AGRESIVA DE LAS VERSIONES
+        remote_version_clean = clean_version(raw_tag)
+        local_version_clean = clean_version(VERSION_LOCAL)
+        
+        # Obtener URL de descarga
+        download_url = None
+        for asset in remote_data.get("assets", []):
+            if asset.get("name", "").endswith(".exe"):
+                download_url = asset.get("browser_download_url")
+                break
+        
+        if not download_url:
+             download_url = remote_data.get("html_url", "No se encontró el instalador.")
 
-        data = response.json()
-        latest_version = data.get("version", APP_VERSION)
-
-        if latest_version.strip() != APP_VERSION.strip():
-            _ask_to_update(parent, latest_version)
+        # 3. Comparación segura
+        if parse_version(remote_version_clean) > parse_version(local_version_clean):
+            return True, remote_version_clean, download_url
         else:
-            if not silent:
-                QMessageBox.information(parent, "Actualización",
-                                        f"Ya tienes la última versión ({APP_VERSION}).")
-
+            return False, local_version_clean, None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Error de conexión: {e}")
+        return False, VERSION_LOCAL, None
     except Exception as e:
-        if not silent:
-            QMessageBox.warning(parent, "Actualización", f"Error comprobando actualización:\n{e}")
-
-
-def _ask_to_update(parent, latest_version):
-    """Pregunta si desea actualizar."""
-    r = QMessageBox.question(
-        parent,
-        "Nueva versión disponible",
-        f"Hay una versión nueva disponible:\n\n"
-        f"Versión instalada: {APP_VERSION}\n"
-        f"Versión nueva: {latest_version}\n\n"
-        f"¿Desea actualizar ahora?",
-        QMessageBox.Yes | QMessageBox.No
-    )
-
-    if r == QMessageBox.Yes:
-        _download_and_install(parent)
-
-
-def _download_and_install(parent):
-    """Descarga y ejecuta el instalador."""
-    try:
-        QMessageBox.information(parent, "Actualización", "Comenzando descarga del instalador...")
-
-        response = requests.get(INSTALLER_URL, stream=True)
-        total = int(response.headers.get("content-length", 0))
-
-        downloaded = 0
-        chunk_size = 4096
-
-        with open(INSTALLER_LOCAL, "wb") as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-
-        QMessageBox.information(parent, "Actualización",
-                                "Descarga completada.\n"
-                                "El instalador se ejecutará ahora.")
-
-        # Ejecutar instalador
-        subprocess.Popen([INSTALLER_LOCAL], shell=True)
-
-        # Cerrar la app actual
-        os._exit(0)
-
-    except Exception as e:
-        QMessageBox.warning(parent, "Actualización",
-                            f"No se pudo completar la actualización:\n{e}")
+        # Esto captura el error que veías en la imagen
+        print(f"Error procesando la actualización: {e}")
+        return False, VERSION_LOCAL, None

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-RegistrarView — SHILLONG CONTABILIDAD v3 PRO
-Versión DEFINITIVA (Diseño original + DPI-SAFE + FIX QMessageBox)
+RegistrarView — SHILLONG CONTABILIDAD v3.7.7 PRO
+Versión DEFINITIVA (Diseño original + Botón Importar Excel)
 """
 
 from models.CuentasMotor import MotorCuentas
@@ -17,6 +17,12 @@ from PySide6.QtGui import QColor
 from datetime import datetime
 import random
 
+# --- NUEVO: Importación segura del diálogo ---
+try:
+    from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
+except ImportError:
+    ImportarExcelDialog = None
+# ---------------------------------------------
 
 class RegistrarView(QWidget):
 
@@ -32,7 +38,7 @@ class RegistrarView(QWidget):
         self._cargar_ultimos()
 
     # ============================================================
-    # ESTILOS DPI-SAFE
+    # ESTILOS DPI-SAFE (ORIGINALES)
     # ============================================================
     def _estilo_claro(self):
         return """
@@ -61,6 +67,10 @@ class RegistrarView(QWidget):
             QPushButton#limpiar_dh { background: #6b7280; }
             QPushButton#nuevo { background: #059669; }
             QPushButton#tema { background: #475569; }
+            
+            /* NUEVO: ESTILO PARA BOTÓN IMPORTAR */
+            QPushButton#importar { background: #10b981; } 
+            QPushButton#importar:hover { background: #059669; }
 
             QHeaderView::section {
                 background: #e0e7ff;
@@ -92,6 +102,10 @@ class RegistrarView(QWidget):
             QPushButton#limpiar_dh { background: #6b7280; }
             QPushButton#nuevo { background: #059669; }
             QPushButton#tema { background: #475569; }
+            
+            /* NUEVO: ESTILO PARA BOTÓN IMPORTAR EN MODO OSCURO */
+            QPushButton#importar { background: #059669; }
+
             QHeaderView::section { background: #334155; color: white; }
         """
 
@@ -103,7 +117,7 @@ class RegistrarView(QWidget):
         self.btn_tema.setText("Modo claro" if self.tema_oscuro else "Modo oscuro")
 
     # ============================================================
-    # UI PRINCIPAL (ORIGINAL EXACTA)
+    # UI PRINCIPAL (ORIGINAL EXACTA + Botón Importar)
     # ============================================================
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -116,12 +130,21 @@ class RegistrarView(QWidget):
         top = QHBoxLayout()
         titulo = QLabel("REGISTRAR MOVIMIENTO CONTABLE")
         titulo.setStyleSheet("font-size: 26px; font-weight: 800;")
+        
+        # --- NUEVO: BOTÓN IMPORTAR ---
+        self.btn_importar = QPushButton("📥 Importar Excel")
+        self.btn_importar.setObjectName("importar")
+        self.btn_importar.setCursor(Qt.PointingHandCursor)
+        self.btn_importar.clicked.connect(self._abrir_importador)
+        # -----------------------------
+
         self.btn_tema = QPushButton("Modo oscuro")
         self.btn_tema.setObjectName("tema")
         self.btn_tema.clicked.connect(self._cambiar_tema)
 
         top.addWidget(titulo)
         top.addStretch()
+        top.addWidget(self.btn_importar) # Añadido
         top.addWidget(self.btn_tema)
         layout.addLayout(top)
 
@@ -318,6 +341,19 @@ class RegistrarView(QWidget):
             "font-weight:bold;font-size:15px;padding:10px;background:#e0e7ff;border-radius:8px;"
         )
         layout.addWidget(self.lbl_totales)
+
+    # ============================================================
+    # NUEVO: LÓGICA DE IMPORTACIÓN
+    # ============================================================
+    def _abrir_importador(self):
+        if ImportarExcelDialog is None:
+            QMessageBox.critical(self, "Error", "No se encontró el módulo ui/Dialogs/ImportarExcelDialog.py")
+            return
+            
+        dlg = ImportarExcelDialog(self, self.data)
+        if dlg.exec():
+            # Refrescar la tabla si se importó algo
+            self._cargar_ultimos()
 
     # ============================================================
     # INTERACCIÓN CUENTA

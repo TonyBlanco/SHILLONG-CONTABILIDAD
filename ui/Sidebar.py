@@ -68,7 +68,7 @@ class Sidebar(QWidget):
         layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
         
         self.btn_tools = self._crear_boton("Herramientas", "tools")
-        self.btn_sistema = self._crear_boton("Sistema", "sistema")
+       # -- self.btn_sistema = self._crear_boton("Sistema", "sistema") Removed as por que puse todo en el toolview.py
 
     # ---------------------------------------------------------
     # Crear botón

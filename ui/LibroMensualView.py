@@ -1,38 +1,45 @@
 # -*- coding: utf-8 -*-
 """
-LIBRO MENSUAL — SHILLONG CONTABILIDAD v3.2 PRO++ (FORMATO FINAL PERFECTO)
-Actualizado para usar el nuevo Motor de Exportación 2025.
+LibroMensualView.py — SHILLONG CONTABILIDAD v3.7.2 PRO
+---------------------------------------------------------
+FIX: Restaurado menú "Exportar como..." con 3 opciones:
+1. General
+2. Por Categorías
+3. Por Cuentas
+---------------------------------------------------------
 """
 
 from PySide6.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QHBoxLayout, QComboBox,
     QPushButton, QTableWidget, QTableWidgetItem, QFrame,
-    QFileDialog, QMessageBox
+    QFileDialog, QMessageBox, QHeaderView, QMenu
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QTextDocument, QColor, QFont
+from PySide6.QtGui import QColor, QFont, QTextDocument
 from PySide6.QtPrintSupport import QPrinter, QPrintPreviewDialog, QPrintDialog
-from PySide6.QtCharts import QChart, QChartView, QBarCategoryAxis, QValueAxis, QBarSet, QBarSeries
 
 import datetime
 import json
+import os
+from collections import defaultdict
 
-# Importamos el nuevo motor
+# Intentamos importar el motor de Excel
 try:
     from models.ExportadorExcelMensual import ExportadorExcelMensual
 except ImportError:
     ExportadorExcelMensual = None
 
-
 class LibroMensualView(QWidget):
-
     def __init__(self, data):
         super().__init__()
         self.data = data
-        hoy = datetime.date.today()
-        self.mes_actual = hoy.month
-        self.año_actual = hoy.year
+        self.hoy = datetime.date.today()
+        self.mes_actual = self.hoy.month
+        self.año_actual = self.hoy.year
+        
         self.bancos = self._cargar_bancos()
+        self.reglas_cache = self._cargar_reglas()
+        
         self._build_ui()
         self.actualizar()
 
@@ -43,19 +50,52 @@ class LibroMensualView(QWidget):
         except:
             return ["Todos", "Caja"]
 
-    def _categoria_de_cuenta(self, cuenta):
-        """Helper para determinar categoría (necesario para el Excel bonito)"""
+    def _cargar_reglas(self):
         try:
-            c = int(cuenta)
-            if 600000 <= c <= 609999: return "FOOD"
-            if 610000 <= c <= 619999: return "MEDICINE"
-            if 620000 <= c <= 629999: return "HYGIENE"
-            if 750000 <= c <= 759999: return "SALARY"
-            if 770000 <= c <= 779999: return "ONLINE"
-            if 780000 <= c <= 789999: return "THERAPEUTIC"
-            if 790000 <= c <= 799999: return "DIET"
-        except:
+            if os.path.exists("data/reglas_conceptos.json"):
+                with open("data/reglas_conceptos.json", "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except: pass
+        return {}
+
+    # --- LÓGICA DE CATEGORÍAS (ROBUSTA) ---
+    def _categoria_de_cuenta(self, cuenta):
+        # 1. Limpieza del input
+        cuenta_str = str(cuenta).split(" ")[0].strip()
+        
+        # 2. Búsqueda directa en reglas (Cache)
+        if cuenta_str in self.reglas_cache:
+            cat_original = self.reglas_cache[cuenta_str].get("categoria", "")
+            cat_upper = cat_original.upper()
+            
+            # Mapeo de categorías en español a códigos internos en inglés
+            mapeo = {
+                "COMESTIBLES Y BEBIDAS": "FOOD", "ALIMENTACIÓN": "FOOD",
+                "FARMACIA Y MATERIAL SANITARIO": "MEDICINE", "FARMACIA": "MEDICINE",
+                "MEDICAMENTOS": "MEDICINE",
+                "MATERIAL DE LIMPIEZA": "HYGIENE", "LIMPIEZA": "HYGIENE", 
+                "LAVANDERÍA": "HYGIENE", "HIGIENE": "HYGIENE", "ASEO PERSONAL": "HYGIENE",
+                "SUELDOS Y SALARIOS": "SALARY", "NOMINAS": "SALARY",
+                "TELEFONÍA E INTERNET": "ONLINE", "INTERNET": "ONLINE", 
+                "TELEFONO": "ONLINE",
+                "TERAPIAS": "THERAPEUTIC", "DIETA": "DIET"
+            }
+            
+            if cat_upper in mapeo: return mapeo[cat_upper]
+            return cat_original
+
+        # 3. Fallback por rangos numéricos
+        try:
+            c = int(cuenta_str)
+            if 600000 <= c <= 609999: return "MEDICINE"
+            if 603000 <= c <= 603999: return "FOOD"
+            if 602400 <= c <= 602499: return "HYGIENE"
+            if 620401 <= c <= 620499: return "HYGIENE"
+            if 640000 <= c <= 649999 or (750000 <= c <= 759999): return "SALARY"
+            if 629200 <= c <= 629299: return "ONLINE"
+        except: 
             pass
+            
         return "OTROS"
 
     def _build_ui(self):
@@ -63,171 +103,277 @@ class LibroMensualView(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
-        # --- HEADER (Título y Botones) ---
-        header_layout = QHBoxLayout()
-        
-        # Título
+        # HEADER
+        h_layout = QHBoxLayout()
         lbl_titulo = QLabel("📖 Libro Diario Mensual")
         lbl_titulo.setStyleSheet("font-size: 24px; font-weight: bold; color: #1e3a8a;")
-        header_layout.addWidget(lbl_titulo)
+        h_layout.addWidget(lbl_titulo)
+        h_layout.addStretch()
+
+        btn_preview = QPushButton("📄 Vista Previa")
+        btn_preview.clicked.connect(self.vista_previa)
         
-        header_layout.addStretch() # Espacio flexible
+        btn_print = QPushButton("🖨️ Imprimir")
+        btn_print.clicked.connect(self.imprimir)
 
-        # Botones de Acción (Movidios ARRIBA)
-        btn_print = QPushButton("🖨️ Imprimir PDF")
-        btn_print.setStyleSheet("""
+        # --- BOTÓN RESTAURADO: MENÚ DESPLEGABLE ---
+        self.btn_exportar_menu = QPushButton("📤 Exportar como… ▼")
+        self.btn_exportar_menu.setStyleSheet("""
             QPushButton {
-                background-color: #64748b; color: white; font-weight: bold; 
-                padding: 8px 15px; border-radius: 6px;
-            }
-            QPushButton:hover { background-color: #475569; }
-        """)
-        btn_print.clicked.connect(self.imprimir_pdf)
-
-        btn_excel = QPushButton("📤 Exportar Excel Oficial")
-        btn_excel.setStyleSheet("""
-            QPushButton {
-                background-color: #16a34a; color: white; font-weight: bold; 
-                padding: 8px 15px; border-radius: 6px;
+                background-color: #16a34a; color: white; font-weight: bold;
+                padding: 6px 15px; border-radius: 6px;
             }
             QPushButton:hover { background-color: #15803d; }
+            QPushButton::menu-indicator { image: none; }
         """)
-        btn_excel.clicked.connect(self.exportar_excel)
-
-        header_layout.addWidget(btn_print)
-        header_layout.addWidget(btn_excel)
         
-        layout.addLayout(header_layout)
+        # Menú
+        self.menu_exportar = QMenu(self)
+        self.menu_exportar.addAction("📊 Excel Detallado (General)", self._exportar_excel_general)
+        self.menu_exportar.addSeparator()
+        self.menu_exportar.addAction("📂 Excel por Categorías", self._exportar_excel_categorias)
+        self.menu_exportar.addAction("🔢 Excel por Cuentas", self._exportar_excel_cuentas)
+        
+        # Asignar menú al botón (o usar clic para mostrarlo)
+        self.btn_exportar_menu.setMenu(self.menu_exportar)
 
-        # --- FILTROS ---
-        filtros_frame = QFrame()
-        filtros_frame.setStyleSheet("background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;")
-        filtros_layout = QHBoxLayout(filtros_frame)
-        filtros_layout.setContentsMargins(15, 10, 15, 10)
+        for b in [btn_preview, btn_print, self.btn_exportar_menu]:
+            b.setCursor(Qt.PointingHandCursor)
+            b.setMinimumHeight(35)
+            if not b.styleSheet():
+                b.setStyleSheet("padding: 5px 15px; border-radius: 6px; background: #f1f5f9; border: 1px solid #cbd5e1;")
+            h_layout.addWidget(b)
 
+        layout.addLayout(h_layout)
+
+        # FILTROS
+        filtros = QFrame()
+        filtros.setStyleSheet("background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;")
+        f_layout = QHBoxLayout(filtros)
+        f_layout.setContentsMargins(10, 10, 10, 10)
+        
         self.cbo_mes = QComboBox()
-        self.cbo_mes.addItems(["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"])
+        self.cbo_mes.addItems(["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"])
         self.cbo_mes.setCurrentIndex(self.mes_actual - 1)
         
         self.cbo_año = QComboBox()
-        self.cbo_año.addItems([str(x) for x in range(2020, 2031)])
+        self.cbo_año.addItems([str(x) for x in range(2020, 2036)])
         self.cbo_año.setCurrentText(str(self.año_actual))
         
         self.cbo_banco = QComboBox()
         self.cbo_banco.addItems(self.bancos)
 
-        btn_refresh = QPushButton("🔄 Filtrar")
-        btn_refresh.setStyleSheet("background-color: #3b82f6; color: white; font-weight: bold; padding: 5px 15px; border-radius: 4px;")
-        btn_refresh.clicked.connect(self.actualizar)
+        btn_ver = QPushButton("🔄 Actualizar")
+        btn_ver.setStyleSheet("background:#3b82f6; color:white; font-weight:bold; padding:5px 15px; border-radius:4px;")
+        btn_ver.clicked.connect(self.actualizar)
 
-        filtros_layout.addWidget(QLabel("<b>Mes:</b>"))
-        filtros_layout.addWidget(self.cbo_mes)
-        filtros_layout.addSpacing(15)
-        filtros_layout.addWidget(QLabel("<b>Año:</b>"))
-        filtros_layout.addWidget(self.cbo_año)
-        filtros_layout.addSpacing(15)
-        filtros_layout.addWidget(QLabel("<b>Banco:</b>"))
-        filtros_layout.addWidget(self.cbo_banco)
-        filtros_layout.addSpacing(15)
-        filtros_layout.addWidget(btn_refresh)
-        filtros_layout.addStretch()
-        
-        layout.addWidget(filtros_frame)
+        f_layout.addWidget(QLabel("Mes:"))
+        f_layout.addWidget(self.cbo_mes)
+        f_layout.addSpacing(15)
+        f_layout.addWidget(QLabel("Año:"))
+        f_layout.addWidget(self.cbo_año)
+        f_layout.addSpacing(15)
+        f_layout.addWidget(QLabel("Banco:"))
+        f_layout.addWidget(self.cbo_banco)
+        f_layout.addSpacing(15)
+        f_layout.addWidget(btn_ver)
+        f_layout.addStretch()
+        layout.addWidget(filtros)
 
-        # --- TABLA ---
+        # CARDS
+        cards = QHBoxLayout()
+        self.card_gasto = self._crear_card("Total Gastos", "#ef4444")
+        self.card_ingreso = self._crear_card("Total Ingresos", "#10b981")
+        self.card_saldo = self._crear_card("Saldo del Mes", "#3b82f6")
+        cards.addWidget(self.card_gasto)
+        cards.addWidget(self.card_ingreso)
+        cards.addWidget(self.card_saldo)
+        layout.addLayout(cards)
+
+        # TABLA
         self.tabla = QTableWidget()
-        self.tabla.setColumnCount(9)
-        self.tabla.setHorizontalHeaderLabels(["Fecha", "Doc", "Concepto", "Cuenta", "Debe", "Haber", "Saldo", "Banco", "Estado"])
+        self.tabla.setColumnCount(11)
+        self.tabla.setHorizontalHeaderLabels([
+            "Fecha", "Doc", "Concepto", "Cuenta", "Nombre", 
+            "Debe", "Haber", "Saldo", "Banco", "Estado", "Categoría"
+        ])
+        self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.tabla.setAlternatingRowColors(True)
         self.tabla.setStyleSheet("QHeaderView::section { background-color: #f1f5f9; font-weight: bold; border: none; padding: 6px; }")
         layout.addWidget(self.tabla)
 
+    def _crear_card(self, titulo, color):
+        card = QFrame()
+        card.setStyleSheet(f"background: white; border: 1px solid #e2e8f0; border-radius: 10px; border-left: 5px solid {color};")
+        card.setMinimumHeight(80)
+        l = QVBoxLayout(card)
+        l.addWidget(QLabel(titulo))
+        lbl_val = QLabel("0.00")
+        lbl_val.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {color};")
+        lbl_val.setObjectName("val")
+        l.addWidget(lbl_val)
+        return card
+
+    def _update_card(self, card, valor):
+        lbl = card.findChild(QLabel, "val")
+        if lbl: lbl.setText(f"{valor:,.2f}")
+
     def actualizar(self):
         mes = self.cbo_mes.currentIndex() + 1
         año = int(self.cbo_año.currentText())
-        movimientos = self.data.movimientos_por_mes(mes, año)
-        filtrados = self._aplicar_filtros(movimientos)
-
+        banco_filtro = self.cbo_banco.currentText()
+        
+        movs = self.data.movimientos_por_mes(mes, año)
+        
         self.tabla.setRowCount(0)
         saldo_acum = 0
+        total_debe = 0
+        total_haber = 0
         
-        for m in filtrados:
+        for m in movs:
+            if banco_filtro != "Todos" and m.get("banco") != banco_filtro:
+                continue
+                
             row = self.tabla.rowCount()
             self.tabla.insertRow(row)
             
-            debe = float(m.get("debe", 0))
-            haber = float(m.get("haber", 0))
+            try: debe = float(m.get("debe", 0))
+            except: debe = 0.0
+            try: haber = float(m.get("haber", 0))
+            except: haber = 0.0
+            
+            total_debe += debe
+            total_haber += haber
             saldo_acum += haber - debe
+            
+            cat = self._categoria_de_cuenta(m.get("cuenta"))
+            nombre_cuenta = self.data.obtener_nombre_cuenta(m.get("cuenta"))
 
             items = [
-                m.get("fecha"),
-                m.get("documento"),
-                m.get("concepto"),
-                str(m.get("cuenta")),
-                f"{debe:,.2f}",
-                f"{haber:,.2f}",
-                f"{saldo_acum:,.2f}",
-                m.get("banco"),
-                m.get("estado")
+                m.get("fecha", ""), m.get("documento", ""), m.get("concepto", ""),
+                str(m.get("cuenta", "")), nombre_cuenta,
+                f"{debe:,.2f}", f"{haber:,.2f}", f"{saldo_acum:,.2f}",
+                m.get("banco", ""), m.get("estado", ""), cat
             ]
 
-            for col, val in enumerate(items):
+            for c, val in enumerate(items):
                 it = QTableWidgetItem(str(val))
-                if col in [4, 5, 6]: # Numeros a la derecha
+                if c in [5,6,7]: 
                     it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                    if col == 6: # Color al saldo
-                        # CORRECCIÓN: Usar setForeground en lugar de setFont para cambiar color
-                        it.setForeground(QColor("#1e3a8a"))
-                        it.setFont(QFont("Arial", 9, QFont.Bold)) # Opcional: poner en negrita también
-                self.tabla.setItem(row, col, it)
+                    if c == 7: it.setFont(QFont("Arial", 9, QFont.Bold))
+                
+                if c == 10:
+                    if val == "OTROS": it.setForeground(QColor("#94a3b8"))
+                    else: it.setForeground(QColor("#16a34a"))
+                    it.setFont(QFont("Arial", 9, QFont.Bold))
 
-    def _aplicar_filtros(self, movs):
-        banco = self.cbo_banco.currentText()
-        res = []
-        for m in movs:
-            if banco != "Todos" and m.get("banco") != banco:
-                continue
-            res.append(m)
-        return res
+                self.tabla.setItem(row, c, it)
 
-    def imprimir_pdf(self):
+        self._update_card(self.card_gasto, total_debe)
+        self._update_card(self.card_ingreso, total_haber)
+        self._update_card(self.card_saldo, total_haber - total_debe)
+
+    # ============================================================
+    # MÉTODOS DE EXPORTACIÓN RESTAURADOS
+    # ============================================================
+    def _exportar_excel_general(self):
+        self._exportar_excel_base("general")
+
+    def _exportar_excel_categorias(self):
+        self._exportar_excel_base("categoria")
+
+    def _exportar_excel_cuentas(self):
+        self._exportar_excel_base("cuenta")
+
+    def _exportar_excel_base(self, modo):
+        """Método centralizado para exportar los 3 tipos de reportes."""
+        if ExportadorExcelMensual is None:
+            QMessageBox.critical(self, "Error", "Falta el módulo ExportadorExcelMensual.")
+            return
+
+        # Pedir ruta
+        nombres = {
+            "general": f"Libro_{self.cbo_mes.currentText()}.xlsx",
+            "categoria": f"Resumen_Categorias_{self.cbo_mes.currentText()}.xlsx",
+            "cuenta": f"Resumen_Cuentas_{self.cbo_mes.currentText()}.xlsx"
+        }
+        
+        ruta, _ = QFileDialog.getSaveFileName(self, "Exportar Excel", nombres[modo], "Excel (*.xlsx)")
+        if not ruta: return
+
+        # Recopilar datos filtrados
+        mes = self.cbo_mes.currentIndex() + 1
+        año = int(self.cbo_año.currentText())
+        banco_filtro = self.cbo_banco.currentText()
+        
+        movs_raw = self.data.movimientos_por_mes(mes, año)
+        datos_prep = []
+        saldo = 0
+        
+        for m in movs_raw:
+            if banco_filtro != "Todos" and m.get("banco") != banco_filtro: continue
+            
+            d = float(m.get("debe", 0))
+            h = float(m.get("haber", 0))
+            saldo += h - d
+            
+            item = m.copy()
+            item["saldo"] = saldo
+            item["categoria"] = self._categoria_de_cuenta(m.get("cuenta"))
+            item["nombre_cuenta"] = self.data.obtener_nombre_cuenta(m.get("cuenta"))
+            datos_prep.append(item)
+
+        try:
+            periodo = f"{self.cbo_mes.currentText()} {año}"
+            
+            if modo == "general":
+                ExportadorExcelMensual.exportar_general(ruta, datos_prep, periodo)
+                
+            elif modo == "categoria":
+                # Agrupar por categoría
+                grupos = defaultdict(list)
+                for x in datos_prep: grupos[x["categoria"]].append(x)
+                # Ordenar por nombre de categoría
+                grupos_ord = dict(sorted(grupos.items()))
+                ExportadorExcelMensual.exportar_agrupado(ruta, grupos_ord, periodo, "Categoría")
+                
+            elif modo == "cuenta":
+                # Agrupar por Cuenta
+                grupos = defaultdict(list)
+                for x in datos_prep: 
+                    clave = f"{x['cuenta']} - {x['nombre_cuenta']}"
+                    grupos[clave].append(x)
+                # Ordenar por número de cuenta
+                grupos_ord = dict(sorted(grupos.items()))
+                ExportadorExcelMensual.exportar_agrupado(ruta, grupos_ord, periodo, "Cuenta")
+
+            QMessageBox.information(self, "Éxito", f"Reporte '{modo}' generado correctamente.")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Fallo al exportar: {e}")
+
+    # ============================================================
+    # IMPRESIÓN Y PDF
+    # ============================================================
+    def _generar_html(self):
+        mes = self.cbo_mes.currentText()
+        año = self.cbo_año.currentText()
+        html = f"<html><head><style>body{{font-family:Arial;}} table{{width:100%;border-collapse:collapse;}} th{{background:#eee;}} td,th{{border:1px solid #ccc;padding:5px;}} .num{{text-align:right;}}</style></head><body><h1>Libro {mes} {año}</h1><table><tr><th>Fecha</th><th>Concepto</th><th>Cuenta</th><th>Debe</th><th>Haber</th></tr>"
+        for r in range(self.tabla.rowCount()):
+            html += f"<tr><td>{self.tabla.item(r,0).text()}</td><td>{self.tabla.item(r,2).text()}</td><td>{self.tabla.item(r,3).text()}</td><td class='num'>{self.tabla.item(r,5).text()}</td><td class='num'>{self.tabla.item(r,6).text()}</td></tr>"
+        html += "</table></body></html>"
+        return html
+
+    def vista_previa(self):
+        printer = QPrinter(QPrinter.HighResolution)
+        preview = QPrintPreviewDialog(printer, self)
+        preview.paintRequested.connect(lambda p: QTextDocument().setHtml(self._generar_html()) or QTextDocument().print_(p))
+        preview.exec()
+
+    def imprimir(self):
         printer = QPrinter(QPrinter.HighResolution)
         dialog = QPrintDialog(printer, self)
         if dialog.exec():
-            # Aquí podrías conectar con un generador de reportes PDF si lo tienes
-            pass
-
-    def exportar_excel(self):
-        """Versión corregida que usa ExportadorExcelMensual.exportar_general"""
-        ruta, _ = QFileDialog.getSaveFileName(self, "Exportar Libro Mensual", "Libro_Mensual.xlsx", "Excel (*.xlsx)")
-        if not ruta:
-            return
-
-        if ExportadorExcelMensual is None:
-            QMessageBox.critical(self, "Error", "Falta el módulo ExportadorExcelMensual o openpyxl.")
-            return
-
-        mes = self.cbo_mes.currentIndex() + 1
-        año = int(self.cbo_año.currentText())
-        movimientos = self.data.movimientos_por_mes(mes, año)
-        filtrados = self._aplicar_filtros(movimientos)
-        
-        datos_para_excel = []
-        saldo_acum = 0
-        for m in filtrados:
-            debe = float(m.get("debe", 0))
-            haber = float(m.get("haber", 0))
-            saldo_acum += haber - debe
-            
-            # Adaptamos el diccionario a lo que espera el motor nuevo
-            item = m.copy()
-            item["saldo"] = saldo_acum
-            item["categoria"] = self._categoria_de_cuenta(m.get("cuenta"))
-            datos_para_excel.append(item)
-
-        try:
-            periodo_str = f"{self.cbo_mes.currentText()} {año}"
-            ExportadorExcelMensual.exportar_general(ruta, datos_para_excel, periodo_str)
-            QMessageBox.information(self, "Éxito", "Libro mensual exportado correctamente con formato profesional.")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"No se pudo exportar:\n{str(e)}")
+            doc = QTextDocument()
+            doc.setHtml(self._generar_html())
+            doc.print_(printer)

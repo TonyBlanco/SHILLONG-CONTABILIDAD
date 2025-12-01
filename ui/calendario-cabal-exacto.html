@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Calendario Cabalístico Exacto (Kabbalah Centre)</title>
+<style>
+  body{font-family:Arial;background:#000;color:#fff;text-align:center}
+  .cal{display:inline-block;margin:20px;background:#111;padding:20px;border:2px solid #c00}
+  table{border-collapse:collapse}
+  td{width:56px;height:56px;border:1px solid #444;text-align:center;vertical-align:middle;font-size:22px}
+  .pos{background:#040;color:#7f7}
+  .neg{background:#400;color:#f77}
+  .neu{background:#222;color:#aaa}
+  .hoy{background:#c00 !important;color:#fff;font-weight:bold}
+  h2{margin:10px;color:#fcc}
+</style>
+</head>
+<body>
+<h1>Calendario Cabalístico Exacto 2025-2027</h1>
+<div id="cals"></div>
+
+<script>
+// Días negativos exactos según la app Kabbalah Centre (patrón fijo mensual)
+const negativos = [1,9,10,11,12,19,20,21,22,23,24,29,30,31];
+
+function esNegativo(d) {
+  return negativos.includes(d);
+}
+
+function crearMes(y,m) {
+  const fecha = new Date(y,m-1,1);
+  const primerDia = fecha.getDay();
+  const diasMes = new Date(y,m,0).getDate();
+  const hoy = new Date();
+  
+  let html = `<div class="cal"><h2>${fecha.toLocaleString('es-ES',{month:'long',year:'numeric'}).toUpperCase()}</h2><table>`;
+  html += "<tr><th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th></tr><tr>";
+  
+  for(let i=0;i<primerDia;i++) html+="<td></td>";
+  
+  for(let d=1;d<=diasMes;d++) {
+    const estaFecha = new Date(y,m-1,d);
+    const esHoy = estaFecha.toDateString()===hoy.toDateString();
+    const neg = esNegativo(d);
+    const clase = esHoy?'hoy ':(neg?'neg':(d===15||d===25||d===28?'neu':'pos'));
+    const simbolo = neg?'−':(clase.includes('neu')?'~':'+');
+    
+    html += `<td class="${clase}">${d}<br><small>${simbolo}</small></td>`;
+    if((d+primerDia)%7===0) html+="</tr><tr>";
+  }
+  html += "</tr></table></div>";
+  return html;
+}
+
+let salida="";
+for(let y=2025;y<=2027;y++){
+  for(let m=1;m<=12;m++){
+    salida += crearMes(y,m);
+  }
+}
+document.getElementById("cals").innerHTML=salida;
+</script>
+</body>
+</html>

@@ -1,8 +1,0 @@
-Fecha,Documento,Concepto,Cuenta,Nombre Cuenta,Debe,Haber,Banco,Estado,Saldo
-29/11/2025,SIN-DOC-63144,lavadora,213000,Maquinaria,"58,000.00",0.00,SBI,pagado,"-58,000.00"
-29/11/2025,SIN-DOC-55746,cama,216000,Mobiliario y enseres,"5,000.00",0.00,Caja,pagado,"-63,000.00"
-29/11/2025,SIN-DOC-47779,Banco,769000,Ingresos financieros,0.00,"5,000.00",Union Bank,pagado,"-58,000.00"
-29/11/2025,SIN-DOC-41881,Leche,603000,Compra de comestibles y bebidas,"3,000.00",0.00,SBI,pagado,"-61,000.00"
-29/11/2025,SIN-DOC-30663,Pan,206000,Aplicaciones informáticas,140.00,0.00,Caja,pagado,"-61,140.00"
-29/11/2025,SIN-DOC-28806,Leche,SUB,Cuenta sin nombre,500.00,0.00,SBI,pagado,"-61,640.00"
-29/11/2025,SIN-DOC-15595,leche,206000,Aplicaciones informáticas,"2,140.00",0.00,Caja,pagado,"-63,780.00"

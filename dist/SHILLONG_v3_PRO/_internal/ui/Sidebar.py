@@ -61,11 +61,14 @@ class Sidebar(QWidget):
         self.btn_anual = self._crear_boton("Cierre Anual", "cierre_anual")
         self.btn_informes = self._crear_boton("Informes BI", "informes")
         
+        # 🔥 AQUÍ ESTÁ EL BOTÓN QUE FALTABA
+        self.btn_ayuda = self._crear_boton("Ayuda / Soporte", "ayuda")
+        
         # Espaciador para empujar herramientas y sistema abajo
         layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
         
         self.btn_tools = self._crear_boton("Herramientas", "tools")
-        self.btn_sistema = self._crear_boton("Sistema", "sistema")
+       # -- self.btn_sistema = self._crear_boton("Sistema", "sistema") Removed as por que puse todo en el toolview.py
 
     # ---------------------------------------------------------
     # Crear botón

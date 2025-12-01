@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-CierreView.py — SHILLONG CONTABILIDAD v3.6 PRO
-Dashboard de Cierre Anual: Visión global del ejercicio.
+CierreView.py — SHILLONG CONTABILIDAD v3.7.6 PRO
+---------------------------------------------------------
+Cierre Anual Blindado:
+- Exportaciones Anuales completas (General, Categoría, Cuenta).
+- Categorización Inteligente (AI).
+- Tabla Resumen Mensual.
+---------------------------------------------------------
 """
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
     QPushButton, QTableWidget, QTableWidgetItem, QFrame, 
-    QHeaderView, QMessageBox, QFileDialog
+    QHeaderView, QMessageBox, QFileDialog, QMenu
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont
@@ -15,7 +20,7 @@ from PySide6.QtGui import QColor, QFont
 import datetime
 from collections import defaultdict
 
-# Intentamos importar el motor de exportación para generar el evolutivo
+# Intentamos importar el motor de exportación
 try:
     from models.ExportadorExcelMensual import ExportadorExcelMensual
 except ImportError:
@@ -26,8 +31,53 @@ class CierreView(QWidget):
         super().__init__()
         self.data = data
         self.año_actual = datetime.date.today().year
+        
+        self.reglas_cache = self._cargar_reglas()
+        
         self._build_ui()
         self.actualizar()
+
+    def _cargar_reglas(self):
+        import json, os
+        try:
+            if os.path.exists("data/reglas_conceptos.json"):
+                with open("data/reglas_conceptos.json", "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except: pass
+        return {}
+
+    # --- CATEGORIZACIÓN INTELIGENTE (IGUAL QUE EN LIBRO MENSUAL) ---
+    def _categoria_de_cuenta(self, cuenta):
+        cuenta_str = str(cuenta).split(" ")[0].strip()
+        
+        # 1. Reglas aprendidas
+        if cuenta_str in self.reglas_cache:
+            cat = self.reglas_cache[cuenta_str].get("categoria", "").upper()
+            mapeo = {
+                "COMESTIBLES Y BEBIDAS": "FOOD", "ALIMENTACIÓN": "FOOD",
+                "FARMACIA Y MATERIAL SANITARIO": "MEDICINE", "FARMACIA": "MEDICINE",
+                "MEDICAMENTOS": "MEDICINE", "MATERIAL DE LIMPIEZA": "HYGIENE", 
+                "LIMPIEZA": "HYGIENE", "LAVANDERÍA": "HYGIENE", "HIGIENE": "HYGIENE",
+                "ASEO PERSONAL": "HYGIENE", "SUELDOS Y SALARIOS": "SALARY", 
+                "NOMINAS": "SALARY", "TELEFONÍA E INTERNET": "ONLINE", 
+                "INTERNET": "ONLINE", "TELEFONO": "ONLINE", 
+                "TERAPIAS": "THERAPEUTIC", "DIETA": "DIET"
+            }
+            if cat in mapeo: return mapeo[cat]
+            return cat
+
+        # 2. Fallback numérico
+        try:
+            c = int(cuenta_str)
+            if 600000 <= c <= 609999: return "MEDICINE"
+            if 603000 <= c <= 603999: return "FOOD"
+            if 602400 <= c <= 602499: return "HYGIENE"
+            if 620401 <= c <= 620499: return "HYGIENE"
+            if 640000 <= c <= 649999: return "SALARY"
+            if 629200 <= c <= 629299: return "ONLINE"
+        except: pass
+        
+        return "OTROS"
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -39,19 +89,29 @@ class CierreView(QWidget):
         lbl_titulo = QLabel("📅 Cierre Anual del Ejercicio")
         lbl_titulo.setStyleSheet("font-size: 28px; font-weight: 800; color: #1e293b;")
         header.addWidget(lbl_titulo)
-        
         header.addStretch()
         
-        self.btn_exportar = QPushButton("📊 Exportar Evolutivo Anual")
-        self.btn_exportar.setStyleSheet("""
+        # --- BOTÓN MENÚ DESPLEGABLE ---
+        self.btn_exportar_menu = QPushButton("📊 Exportar Anual ▼")
+        self.btn_exportar_menu.setStyleSheet("""
             QPushButton {
                 background-color: #2563eb; color: white; font-weight: bold; 
                 padding: 10px 20px; border-radius: 8px; font-size: 14px;
             }
             QPushButton:hover { background-color: #1d4ed8; }
+            QPushButton::menu-indicator { image: none; }
         """)
-        self.btn_exportar.clicked.connect(self._exportar_evolutivo)
-        header.addWidget(self.btn_exportar)
+        
+        self.menu_exportar = QMenu(self)
+        self.menu_exportar.addAction("📈 Excel Evolutivo (Matriz Mensual)", self._exportar_evolutivo)
+        self.menu_exportar.addSeparator()
+        self.menu_exportar.addAction("📑 Excel Detallado (Todo el Año)", self._exportar_general_anual)
+        self.menu_exportar.addAction("📂 Excel Anual por Categorías", self._exportar_categorias_anual)
+        self.menu_exportar.addAction("🔢 Excel Anual por Cuentas", self._exportar_cuentas_anual)
+        
+        self.btn_exportar_menu.setMenu(self.menu_exportar)
+        self.btn_exportar_menu.setCursor(Qt.PointingHandCursor)
+        header.addWidget(self.btn_exportar_menu)
         
         layout.addLayout(header)
 
@@ -59,7 +119,7 @@ class CierreView(QWidget):
         filtro_layout = QHBoxLayout()
         filtro_layout.addWidget(QLabel("Seleccionar Año Fiscal:"))
         self.cbo_año = QComboBox()
-        for a in range(2020, 2031):
+        for a in range(2020, 2036):
             self.cbo_año.addItem(str(a))
         self.cbo_año.setCurrentText(str(self.año_actual))
         self.cbo_año.currentTextChanged.connect(self.actualizar)
@@ -111,7 +171,10 @@ class CierreView(QWidget):
         return card
 
     def actualizar(self):
-        año = int(self.cbo_año.currentText())
+        try:
+            año = int(self.cbo_año.currentText())
+        except:
+            return
         
         total_ingresos = 0
         total_gastos = 0
@@ -122,7 +185,9 @@ class CierreView(QWidget):
 
         for i, nombre_mes in enumerate(meses):
             num_mes = i + 1
-            movs = self.data.movimientos_por_mes(num_mes, año)
+            # Usar data.movimientos_por_mes (asumimos que existe y filtra bien)
+            # Si quieres hacerlo robusto manual:
+            movs = self._filtrar_movimientos_robust(num_mes, año)
             
             ing = sum(float(m.get("haber", 0)) for m in movs)
             gas = sum(float(m.get("debe", 0)) for m in movs)
@@ -131,7 +196,6 @@ class CierreView(QWidget):
             total_ingresos += ing
             total_gastos += gas
             
-            # Añadir fila solo si hay movimiento (opcional, aquí mostramos todos para ver el año completo)
             row = self.tabla.rowCount()
             self.tabla.insertRow(row)
             
@@ -161,21 +225,121 @@ class CierreView(QWidget):
         color_res = "#16a34a" if resultado >= 0 else "#dc2626"
         self.kpi_resultado.valor_lbl.setStyleSheet(f"color: {color_res}; font-weight: 800; font-size: 32px;")
 
-    def _exportar_evolutivo(self):
-        # Reutilizamos la lógica del Informe Evolutivo si existe el motor
+    def _filtrar_movimientos_robust(self, mes, año):
+        """Filtrado manual robusto que soporta fechas con guiones y barras."""
+        filtrados = []
+        for m in self.data.movimientos:
+            f_str = str(m.get("fecha", ""))
+            try:
+                if "/" in f_str: d, mm, a = map(int, f_str.split("/"))
+                elif "-" in f_str:
+                    parts = list(map(int, f_str.split("-")))
+                    if parts[0] > 1000: a, mm, d = parts
+                    else: d, mm, a = parts
+                else: continue
+                
+                if mm == mes and a == año:
+                    filtrados.append(m)
+            except: continue
+        return filtrados
+
+    # ============================================================
+    # EXPORTACIONES (NUEVAS Y POTENTES)
+    # ============================================================
+    
+    def _recopilar_datos_anuales(self):
+        """Recopila y enriquece TODOS los movimientos del año seleccionado."""
         año = int(self.cbo_año.currentText())
-        archivo, _ = QFileDialog.getSaveFileName(self, "Guardar Evolutivo Anual", f"Evolutivo_{año}.xlsx", "Excel (*.xlsx)")
+        datos_prep = []
+        saldo = 0
         
-        if not archivo: return
+        # Recorremos todos los meses para asegurar orden cronológico o filtrar todo de golpe
+        todos_movs = []
+        for m in self.data.movimientos:
+            f_str = str(m.get("fecha", ""))
+            try:
+                if "/" in f_str: d, mm, a = map(int, f_str.split("/"))
+                elif "-" in f_str:
+                    parts = list(map(int, f_str.split("-")))
+                    if parts[0] > 1000: a, mm, d = parts
+                    else: d, mm, a = parts
+                else: continue
+                
+                if a == año:
+                    todos_movs.append(m)
+            except: continue
+            
+        # Ordenar (opcional)
+        # todos_movs.sort(...) 
+
+        for m in todos_movs:
+            d = float(m.get("debe", 0))
+            h = float(m.get("haber", 0))
+            saldo += h - d
+            
+            item = m.copy()
+            item["saldo"] = saldo
+            item["categoria"] = self._categoria_de_cuenta(m.get("cuenta"))
+            item["nombre_cuenta"] = self.data.obtener_nombre_cuenta(m.get("cuenta"))
+            datos_prep.append(item)
+            
+        return datos_prep
+
+    def _exportar_base(self, modo):
         if ExportadorExcelMensual is None:
             QMessageBox.critical(self, "Error", "Motor de exportación no disponible.")
             return
 
-        # Preparar datos
+        año = self.cbo_año.currentText()
+        nombres = {
+            "general": f"Anual_Detallado_{año}.xlsx",
+            "categoria": f"Anual_Categorias_{año}.xlsx",
+            "cuenta": f"Anual_Cuentas_{año}.xlsx"
+        }
+        
+        archivo, _ = QFileDialog.getSaveFileName(self, "Guardar Excel Anual", nombres[modo], "Excel (*.xlsx)")
+        if not archivo: return
+
+        datos = self._recopilar_datos_anuales()
+        periodo = f"EJERCICIO {año}"
+
+        try:
+            if modo == "general":
+                ExportadorExcelMensual.exportar_general(archivo, datos, periodo)
+            elif modo == "categoria":
+                g = defaultdict(list)
+                for x in datos: g[x["categoria"]].append(x)
+                ExportadorExcelMensual.exportar_agrupado(archivo, dict(sorted(g.items())), periodo, "Categoría")
+            elif modo == "cuenta":
+                g = defaultdict(list)
+                for x in datos: g[f"{x['cuenta']} - {x['nombre_cuenta']}"].append(x)
+                ExportadorExcelMensual.exportar_agrupado(archivo, dict(sorted(g.items())), periodo, "Cuenta")
+                
+            QMessageBox.information(self, "Éxito", f"Reporte Anual '{modo}' generado.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+    def _exportar_general_anual(self): self._exportar_base("general")
+    def _exportar_categorias_anual(self): self._exportar_base("categoria")
+    def _exportar_cuentas_anual(self): self._exportar_base("cuenta")
+
+    def _exportar_evolutivo(self):
+        """Exporta la matriz de evolución mensual (El original)."""
+        año = int(self.cbo_año.currentText())
+        archivo, _ = QFileDialog.getSaveFileName(self, "Guardar Evolutivo", f"Evolutivo_{año}.xlsx", "Excel (*.xlsx)")
+        
+        if not archivo: return
+        if ExportadorExcelMensual is None:
+            return
+
+        # Preparar datos matriz
         matriz = defaultdict(lambda: [0.0]*12)
         nombres = {}
+        
+        # Reutilizamos la lógica de recopilación para no repetir bucles feos
+        # Pero el evolutivo necesita estructura específica, así que lo hacemos manual rápido
         for m in range(1, 13):
-            movs = self.data.movimientos_por_mes(m, año)
+            movs = self._filtrar_movimientos_robust(m, año)
             for x in movs:
                 if float(x.get("debe", 0)) > 0:
                     cta = str(x.get("cuenta", "S/N"))
@@ -185,7 +349,12 @@ class CierreView(QWidget):
         datos = {k: (nombres.get(k, ""), v, sum(v)) for k, v in matriz.items()}
         
         try:
-            ExportadorExcelMensual.exportar_evolutivo_anual(archivo, dict(sorted(datos.items())), año)
-            QMessageBox.information(self, "Éxito", "Evolutivo generado correctamente.")
+            # Asumimos que el motor tiene 'exportar_evolutivo_anual', si no, habría que añadirlo
+            # Si falla, es porque el motor no tiene este método específico.
+            if hasattr(ExportadorExcelMensual, "exportar_evolutivo_anual"):
+                ExportadorExcelMensual.exportar_evolutivo_anual(archivo, dict(sorted(datos.items())), año)
+                QMessageBox.information(self, "Éxito", "Evolutivo generado.")
+            else:
+                QMessageBox.warning(self, "Aviso", "El motor no soporta exportación de matriz evolutiva.")
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))

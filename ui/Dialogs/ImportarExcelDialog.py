@@ -1,311 +1,267 @@
 # -*- coding: utf-8 -*-
 """
-ImportarExcelDialog — SHILLONG CONTABILIDAD v3 PRO (2025 FINAL)
-Importador profesional robusto, sin errores y totalmente compatible
+ImportarExcelDialog.py — SHILLONG CONTABILIDAD v3.6 PRO
+Versión DIRECTA: Sin preguntas intermedias que bloqueen la importación.
 """
 
-import pandas as pd
-from datetime import datetime
-import os
-import json
-
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget,
-    QTabWidget, QFileDialog, QTableWidget, QTableWidgetItem, QMessageBox,
-    QComboBox, QScrollArea
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
+    QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
+    QProgressBar
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+import csv
+import datetime
 
-from models.CuentasMotor import MotorCuentas
-
+# Intentamos importar openpyxl
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None
 
 class ImportarExcelDialog(QDialog):
-    def __init__(self, parent, data_model):
+    def __init__(self, parent, data_manager):
         super().__init__(parent)
-        self.data = data_model
-        self.motor = MotorCuentas()
-        self.df = None
-        self.resultado_validacion = None
-        self.bancos = self._cargar_bancos()
-
-        self.setWindowTitle("Importar Excel — SHILLONG v3 PRO")
-        self.resize(1150, 720)
-
+        self.setWindowTitle("📥 Importar Movimientos")
+        self.resize(850, 550)
+        self.data_manager = data_manager
+        self.datos_leidos = [] 
+        
         self._build_ui()
-
-    def _cargar_bancos(self):
-        try:
-            with open("data/bancos.json", "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return [b["nombre"] for b in data.get("banks", [])] + ["Caja"]
-        except:
-            return ["Caja", "Federal Bank", "SBI", "Union Bank", "Otro"]
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
 
-        self.tabs = QTabWidget()
-        layout.addWidget(self.tabs)
+        # Info
+        lbl_info = QLabel(
+            "<b>Instrucciones:</b> Seleccione su archivo CSV o Excel.<br>"
+            "El sistema buscará automáticamente las columnas necesarias.<br>"
+            "Al pulsar 'Confirmar', los datos se guardarán inmediatamente."
+        )
+        lbl_info.setWordWrap(True)
+        lbl_info.setStyleSheet("color: #334155; font-size: 13px; background: #f1f5f9; padding: 10px; border-radius: 5px;")
+        layout.addWidget(lbl_info)
 
-        # Tab 1 - Selección
-        self.tab1 = QWidget()
-        self._build_tab1()
-        self.tabs.addTab(self.tab1, "1. Seleccionar archivo")
+        # Botón selección
+        btn_layout = QHBoxLayout()
+        self.btn_select = QPushButton("📂 Seleccionar Archivo...")
+        self.btn_select.setCursor(Qt.PointingHandCursor)
+        self.btn_select.setStyleSheet("""
+            QPushButton { background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 14px; }
+            QPushButton:hover { background-color: #1d4ed8; }
+        """)
+        self.btn_select.clicked.connect(self._seleccionar_archivo)
+        btn_layout.addWidget(self.btn_select)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
 
-        # Tab 2 - Validación
-        self.tab2 = QWidget()
-        self._build_tab2()
-        self.tabs.addTab(self.tab2, "2. Validación")
-        self.tabs.setTabEnabled(1, False)
+        # Tabla Preview
+        self.tabla = QTableWidget()
+        self.tabla.setColumnCount(8)
+        self.tabla.setHorizontalHeaderLabels(["Fecha", "Doc", "Concepto", "Cuenta", "Debe", "Haber", "Banco", "Estado"])
+        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tabla.setAlternatingRowColors(True)
+        self.tabla.setStyleSheet("QHeaderView::section { background-color: #f8fafc; padding: 4px; border: none; font-weight: bold; }")
+        layout.addWidget(self.tabla)
 
-        # Tab 3 - Importar
-        self.tab3 = QWidget()
-        self._build_tab3()
-        self.tabs.addTab(self.tab3, "3. Importar datos")
-        self.tabs.setTabEnabled(2, False)
+        # Progreso
+        self.progress = QProgressBar()
+        self.progress.setTextVisible(True)
+        self.progress.setVisible(False)
+        layout.addWidget(self.progress)
 
-    def _build_tab1(self):
-        layout = QVBoxLayout(self.tab1)
-        layout.setSpacing(20)
+        # Botones finales
+        actions = QHBoxLayout()
+        self.lbl_status = QLabel("")
+        self.lbl_status.setStyleSheet("font-weight: bold; color: #0f172a;")
+        actions.addWidget(self.lbl_status)
+        actions.addStretch()
+        
+        self.btn_cancel = QPushButton("Cancelar")
+        self.btn_cancel.clicked.connect(self.reject)
+        
+        self.btn_import = QPushButton("✅ IMPORTAR AHORA")
+        self.btn_import.setCursor(Qt.PointingHandCursor)
+        self.btn_import.setStyleSheet("""
+            QPushButton { background-color: #16a34a; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; }
+            QPushButton:hover { background-color: #15803d; }
+            QPushButton:disabled { background-color: #cbd5e1; color: #94a3b8; }
+        """)
+        self.btn_import.setEnabled(False)
+        self.btn_import.clicked.connect(self._procesar_importacion)
 
-        lbl = QLabel("Seleccione el archivo Excel para importar")
-        lbl.setStyleSheet("font-size:18px; font-weight:600;")
-        layout.addWidget(lbl)
-
-        btn = QPushButton("Seleccionar archivo Excel")
-        btn.clicked.connect(self._seleccionar_archivo)
-        btn.setStyleSheet("padding:14px; font-size:16px;")
-        layout.addWidget(btn)
-
-        self.lbl_archivo = QLabel("Ningún archivo seleccionado")
-        self.lbl_archivo.setStyleSheet("color:#64748b; font-size:14px;")
-        layout.addWidget(self.lbl_archivo)
-
-        layout.addStretch()
-
-    def _build_tab2(self):
-        layout = QVBoxLayout(self.tab2)
-
-        lbl = QLabel("Vista previa y validación de datos")
-        lbl.setStyleSheet("font-size:18px; font-weight:600;")
-        layout.addWidget(lbl)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        self.preview = QTableWidget()
-        scroll.setWidget(self.preview)
-        layout.addWidget(scroll)
-
-    def _build_tab3(self):
-        layout = QVBoxLayout(self.tab3)
-        layout.setSpacing(20)
-
-        lbl = QLabel("Configuración final de importación")
-        lbl.setStyleSheet("font-size:18px; font-weight:600;")
-        layout.addWidget(lbl)
-
-        form = QHBoxLayout()
-        form.addWidget(QLabel("Banco:"))
-        self.cbo_banco = QComboBox()
-        self.cbo_banco.addItems(self.bancos)
-        self.cbo_banco.setCurrentText("Caja")
-        form.addWidget(self.cbo_banco)
-
-        form.addWidget(QLabel("Moneda (ingresos):"))
-        self.cbo_moneda = QComboBox()
-        self.cbo_moneda.addItems(["INR", "EUR", "USD"])
-        self.cbo_moneda.setCurrentText("INR")
-        form.addWidget(self.cbo_moneda)
-
-        form.addStretch()
-        layout.addLayout(form)
-
-        self.lbl_resumen = QLabel()
-        self.lbl_resumen.setStyleSheet("font-size:16px; padding:10px; background:#f3f4f6; border-radius:8px;")
-        layout.addWidget(self.lbl_resumen)
-
-        btn = QPushButton("Importar movimientos válidos")
-        btn.clicked.connect(self._importar)
-        btn.setStyleSheet("background:#16a34a; color:white; padding:14px; font-size:16px;")
-        layout.addWidget(btn)
-
-        layout.addStretch()
+        actions.addWidget(self.btn_cancel)
+        actions.addWidget(self.btn_import)
+        layout.addLayout(actions)
 
     def _seleccionar_archivo(self):
-        ruta, _ = QFileDialog.getOpenFileName(self, "Seleccionar Excel", "", "Excel (*.xlsx *.xls)")
-        if not ruta:
-            return
+        archivo, _ = QFileDialog.getOpenFileName(self, "Abrir Archivo", "", "Archivos de Datos (*.csv *.xlsx *.xls)")
+        if not archivo: return
 
-        self.lbl_archivo.setText(os.path.basename(ruta))
+        self.lbl_status.setText("Analizando archivo...")
+        self.datos_leidos = []
+        
         try:
-            self.df = pd.read_excel(ruta, header=None, dtype=str)
-            self._procesar_excel()
+            if archivo.endswith(".csv"):
+                self._leer_csv(archivo)
+            elif archivo.endswith((".xlsx", ".xls")):
+                if openpyxl:
+                    self._leer_excel(archivo)
+                else:
+                    QMessageBox.warning(self, "Falta Librería", "Para leer Excel necesita instalar openpyxl. Use CSV por ahora.")
+                    return
+            else:
+                return
+
+            self._llenar_tabla_preview()
+            
+            if self.datos_leidos:
+                self.btn_import.setEnabled(True)
+                self.lbl_status.setText(f"✅ Listo para importar {len(self.datos_leidos)} movimientos.")
+            else:
+                self.btn_import.setEnabled(False)
+                self.lbl_status.setText("⚠️ No se encontraron datos válidos.")
+
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"No se pudo leer el archivo:\n{str(e)}")
+            QMessageBox.critical(self, "Error Crítico", f"Error al leer el archivo:\n{str(e)}")
+            self.lbl_status.setText("Error de lectura.")
 
-    def _buscar_fila_cabecera(self):
-        for i in range(min(15, len(self.df))):
-            row_text = " ".join(self.df.iloc[i].astype(str).str.lower())
-            if all(word in row_text for word in ["fecha", "concepto", "cuenta"]) or \
-               all(word in row_text for word in ["date", "description", "account"]):
-                return i
-        return 0
+    def _leer_csv(self, ruta):
+        try:
+            with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
+                sample = f.read(2048)
+                dialect = csv.Sniffer().sniff(sample)
+        except:
+            dialect = 'excel'
 
-    def _ajustar_cabecera(self):
-        header = self.df.iloc[self.cabecera_idx]
-        mapping = {}
-        for idx, val in enumerate(header):
-            txt = str(val).lower()
-            if any(k in txt for k in ["fecha", "date", "day"]):
-                mapping[idx] = "fecha"
-            elif any(k in txt for k in ["concepto", "descrip", "detalle", "description", "concept"]):
-                mapping[idx] = "concepto"
-            elif any(k in txt for k in ["cuenta", "account", "ledger"]):
-                mapping[idx] = "cuenta"
-            elif any(k in txt for k in ["debe", "debit", "dr"]):
-                mapping[idx] = "debe"
-            elif any(k in txt for k in ["haber", "credit", "cr", "amount"]):
-                mapping[idx] = "haber"
-            elif any(k in txt for k in ["estado", "status"]):
-                mapping[idx] = "estado"
-        new_cols = [mapping.get(i, f"col_{i}") for i in range(len(header))]
-        self.df.columns = new_cols
+        with open(ruta, 'r', encoding='utf-8', errors='replace') as f:
+            reader = csv.reader(f, dialect)
+            rows = list(reader)
+            self._parsear_filas(rows)
 
-    def _limpiar_columnas(self):
-        validas = ["fecha", "concepto", "cuenta", "debe", "haber", "estado"]
-        existentes = [c for c in validas if c in self.df.columns]
-        self.df = self.df[existentes]
+    def _leer_excel(self, ruta):
+        wb = openpyxl.load_workbook(ruta, data_only=True)
+        ws = wb.active
+        rows = []
+        for row in ws.iter_rows(values_only=True):
+            rows.append([str(c).strip() if c is not None else "" for c in row])
+        self._parsear_filas(rows)
 
-    def _procesar_excel(self):
-        self.cabecera_idx = self._buscar_fila_cabecera()
-        self.df = self.df.iloc[self.cabecera_idx + 1:].copy()
-        self.df.reset_index(drop=True, inplace=True)
-        self._ajustar_cabecera()
-        self._limpiar_columnas()
+    def _parsear_filas(self, rows):
+        header_map = {}
+        start_index = -1
+        
+        # BUSCAR CABECERA
+        for i, row in enumerate(rows):
+            row_lower = [str(x).lower().strip() for x in row]
+            if "fecha" in row_lower and "cuenta" in row_lower:
+                start_index = i
+                for col_idx, val in enumerate(row_lower):
+                    if "fecha" in val: header_map["fecha"] = col_idx
+                    elif "doc" in val: header_map["documento"] = col_idx
+                    elif "concepto" in val: header_map["concepto"] = col_idx
+                    elif "cuenta" in val: header_map["cuenta"] = col_idx
+                    elif "debe" in val or "cargo" in val: header_map["debe"] = col_idx
+                    elif "haber" in val or "abono" in val: header_map["haber"] = col_idx
+                    elif "banco" in val: header_map["banco"] = col_idx
+                    elif "estado" in val: header_map["estado"] = col_idx
+                break
+        
+        if start_index == -1:
+            raise Exception("No se encontró la fila de cabeceras (Busqué 'Fecha' y 'Cuenta').")
 
-        # Eliminar filas basura
-        self.df = self.df.dropna(how="all")
-        basura = ["saldo anterior", "balance", "total", "subtotal", "resultado"]
-        mask = self.df["concepto"].astype(str).str.lower().str.contains("|".join(basura), na=False)
-        self.df = self.df[~mask]
-
-        self._validar()
-        self.tabs.setTabEnabled(1, True)
-        self.tabs.setCurrentIndex(1)
-
-    def _validar(self):
-        df = self.df.copy()
-        df["error"] = ""
-
-        for idx in df.index:
-            errores = []
-
-            # Fecha
-            if "fecha" not in df.columns or pd.isna(df.at[idx, "fecha"]) or str(df.at[idx, "fecha"]).strip() == "":
-                df.at[idx, "fecha"] = datetime.today().strftime("%d/%m/%Y")
-            else:
-                try:
-                    pd.to_datetime(df.at[idx, "fecha"], dayfirst=True)
-                except:
-                    errores.append("Fecha inválida")
-
-            # Concepto
-            if "concepto" not in df.columns or pd.isna(df.at[idx, "concepto"]) or str(df.at[idx, "concepto"]).strip() == "":
-                errores.append("Falta concepto")
-
-            # Cuenta
-            if "cuenta" not in df.columns or pd.isna(df.at[idx, "cuenta"]) or str(df.at[idx, "cuenta"]).strip() == "":
-                errores.append("Falta cuenta")
-            else:
-                cuenta = str(df.at[idx, "cuenta"]).strip()
-                if not cuenta.isdigit():
-                    errores.append("Cuenta no numérica")
-                elif not self.motor.get_nombre(cuenta):
-                    errores.append("Cuenta inexistente")
-                elif "concepto" in df.columns and not self.motor.es_concepto_valido(cuenta, str(df.at[idx, "concepto"])):
-                    errores.append("Concepto no permitido")
-
-            # Debe/Haber
-            debe = float(df.at[idx, "debe"]) if "debe" in df.columns and pd.notna(df.at[idx, "debe"]) else 0.0
-            haber = float(df.at[idx, "haber"]) if "haber" in df.columns and pd.notna(df.at[idx, "haber"]) else 0.0
+        # PROCESAR DATOS
+        for i in range(start_index + 1, len(rows)):
+            row = rows[i]
+            if not row or len(row) <= header_map.get("fecha", 0): continue
+            
             try:
-                debe = float(debe)
-                haber = float(haber)
-            except:
-                errores.append("Importe inválido")
-                debe = haber = 0.0
+                def get(k): 
+                    idx = header_map.get(k)
+                    return str(row[idx]).strip() if idx is not None and idx < len(row) else ""
 
-            if debe == 0 and haber == 0:
-                errores.append("Importe cero")
+                fecha_raw = get("fecha")
+                if not fecha_raw: continue
 
-            # Estado
-            if "estado" not in df.columns or pd.isna(df.at[idx, "estado"]):
-                df.at[idx, "estado"] = "pagado"
+                # Normalizar Fecha
+                fecha_fmt = fecha_raw
+                if "-" in fecha_raw and len(fecha_raw.split("-")) == 3: 
+                    parts = fecha_raw.split(" ")[0].split("-")
+                    if len(parts[0]) == 4:
+                        fecha_fmt = f"{parts[2]}/{parts[1]}/{parts[0]}"
+                
+                # Normalizar importes
+                debe = float(get("debe").replace(",", ".") or 0)
+                haber = float(get("haber").replace(",", ".") or 0)
 
-            if errores:
-                df.at[idx, "error"] = " | ".join(errores)
+                if debe == 0 and haber == 0: continue
 
-        self.resultado_validacion = df.reset_index(drop=True)
-        self._pintar_tabla()
-        self._ir_a_tab3()
+                mov = {
+                    "fecha": fecha_fmt,
+                    "documento": get("documento"),
+                    "concepto": get("concepto"),
+                    "cuenta": get("cuenta").split(" ")[0],
+                    "debe": debe,
+                    "haber": haber,
+                    "banco": get("banco") or "Caja",
+                    "estado": get("estado").lower() or "pagado",
+                    "moneda": "INR"
+                }
+                self.datos_leidos.append(mov)
 
-    def _pintar_tabla(self):
-        df = self.resultado_validacion
-        self.preview.setRowCount(len(df))
-        self.preview.setColumnCount(len(df.columns))
-        self.preview.setHorizontalHeaderLabels(df.columns.tolist())
+            except Exception as e:
+                print(f"Fila {i} ignorada: {e}")
 
-        for i in range(len(df)):
-            for j, col in enumerate(df.columns):
-                val = df.iat[i, j]
-                item = QTableWidgetItem("" if pd.isna(val) else str(val))
-                if df.iat[i, df.columns.get_loc("error")]:
-                    item.setBackground(QColor("#fee2e2"))
-                    item.setForeground(QColor("#dc2626"))
-                self.preview.setItem(i, j, item)
+    def _llenar_tabla_preview(self):
+        self.tabla.setRowCount(len(self.datos_leidos))
+        for i, m in enumerate(self.datos_leidos):
+            self.tabla.setItem(i, 0, QTableWidgetItem(m["fecha"]))
+            self.tabla.setItem(i, 1, QTableWidgetItem(m["documento"]))
+            self.tabla.setItem(i, 2, QTableWidgetItem(m["concepto"]))
+            self.tabla.setItem(i, 3, QTableWidgetItem(m["cuenta"]))
+            self.tabla.setItem(i, 4, QTableWidgetItem(f"{m['debe']:.2f}"))
+            self.tabla.setItem(i, 5, QTableWidgetItem(f"{m['haber']:.2f}"))
+            self.tabla.setItem(i, 6, QTableWidgetItem(m["banco"]))
+            self.tabla.setItem(i, 7, QTableWidgetItem(m["estado"]))
 
-        self.preview.resizeColumnsToContents()
-
-    def _ir_a_tab3(self):
-        df = self.resultado_validacion
-        errores = (df["error"] != "").sum()
-        validas = len(df) - errores
-        self.lbl_resumen.setText(f"Movimientos válidos: {validas}\nMovimientos con errores: {errores}")
-        self.tabs.setTabEnabled(2, True)
-        self.tabs.setCurrentIndex(2)
-
-    def _importar(self):
-        df = self.resultado_validacion[self.resultado_validacion["error"] == ""]
-        if df.empty:
-            QMessageBox.warning(self, "Sin datos", "No hay movimientos válidos para importar.")
-            return
-
-        saldo_actual = 0
-        if self.data.movimientos:
-            saldo_actual = self.data.movimientos[-1].get("saldo", 0)
-
-        for idx in df.index:
-            row = df.loc[idx]
-            debe = float(row.get("debe", 0))
-            haber = float(row.get("haber", 0))
-            moneda = "INR" if debe > 0 else self.cbo_moneda.currentText()
-            saldo_actual += haber - debe
-
-            mov = {
-                "fecha": pd.to_datetime(row["fecha"], dayfirst=True).strftime("%d/%m/%Y"),
-                "documento": "",
-                "concepto": str(row["concepto"]),
-                "cuenta": str(row["cuenta"]).strip(),
-                "debe": debe,
-                "haber": haber,
-                "estado": str(row.get("estado", "pagado")).lower(),
-                "moneda": moneda,
-                "banco": self.cbo_banco.currentText(),
-                "saldo": saldo_actual
-            }
-            self.data.movimientos.append(mov)
-
-        self.data.guardar()
-        QMessageBox.information(self, "Éxito", "Importación completada correctamente.")
+    def _procesar_importacion(self):
+        """
+        Versión simplificada: Sin pregunta SI/NO. 
+        Guarda directamente y muestra progreso.
+        """
+        if not self.datos_leidos: return
+        
+        # Bloquear botón para no doble clic
+        self.btn_import.setEnabled(False)
+        self.progress.setVisible(True)
+        self.progress.setMaximum(len(self.datos_leidos))
+        self.lbl_status.setText("Guardando datos...")
+        
+        # 1. Añadir a memoria
+        for i, mov in enumerate(self.datos_leidos):
+            self.data_manager.agregar_movimiento(
+                fecha=mov["fecha"],
+                documento=mov["documento"],
+                concepto=mov["concepto"],
+                cuenta=mov["cuenta"],
+                debe=mov["debe"],
+                haber=mov["haber"],
+                moneda=mov["moneda"],
+                banco=mov["banco"],
+                estado=mov["estado"]
+            )
+            self.progress.setValue(i + 1)
+        
+        # 2. Forzar escritura en disco (usando el método seguro que creamos antes)
+        if hasattr(self.data_manager, "guardar_datos"):
+            self.data_manager.guardar_datos()
+        elif hasattr(self.data_manager, "save_data"):
+            self.data_manager.save_data()
+        elif hasattr(self.data_manager, "guardar"):
+            self.data_manager.guardar()
+            
+        # 3. Éxito
+        QMessageBox.information(self, "¡Completado!", f"Se han importado {len(self.datos_leidos)} movimientos correctamente.")
         self.accept()

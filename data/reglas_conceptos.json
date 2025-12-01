@@ -6,10 +6,8 @@
             "programa",
             "licencia",
             "aplicacion",
-            "informatica",
-            "instalacion software",
-            "pan",
-            "leche"
+            "app",
+            "subscription"
         ]
     },
     "211000": {
@@ -17,13 +15,14 @@
         "permitidos": [
             "construccion",
             "obra",
-            "estructuras",
             "edificio",
             "techo",
             "paredes",
-            "moldes",
             "bloques",
-            "laon"
+            "building",
+            "roof",
+            "cement",
+            "sand"
         ]
     },
     "213000": {
@@ -33,7 +32,9 @@
             "frigorifico",
             "vitro",
             "secadora",
-            "electrodomestico"
+            "electrodomestico",
+            "washing machine",
+            "fridge"
         ]
     },
     "214000": {
@@ -42,7 +43,9 @@
             "robot cocina",
             "herramienta",
             "utillaje",
-            "aparato pequeño"
+            "kitchen robot",
+            "tool",
+            "utensil"
         ]
     },
     "215000": {
@@ -52,7 +55,10 @@
             "agua",
             "gas",
             "telefonia",
-            "instalacion"
+            "instalacion",
+            "electricity",
+            "water",
+            "pipe"
         ]
     },
     "216000": {
@@ -62,8 +68,11 @@
             "sofa",
             "televisor",
             "video",
-            "equipo musica",
-            "mueble"
+            "mueble",
+            "bed",
+            "tv",
+            "furniture",
+            "mattress"
         ]
     },
     "217000": {
@@ -73,7 +82,9 @@
             "pc",
             "impresora",
             "portatil",
-            "fotocopiadora"
+            "computer",
+            "printer",
+            "laptop"
         ]
     },
     "400": {
@@ -82,48 +93,26 @@
             "proveedor",
             "compra material",
             "factura",
-            "suministro"
-        ]
-    },
-    "410": {
-        "categoria": "Acreedores",
-        "permitidos": [
-            "acreedor",
-            "suministro",
-            "servicio",
-            "mantenimiento"
-        ]
-    },
-    "550000": {
-        "categoria": "Cuentas corrientes con provincia",
-        "permitidos": [
-            "provincia",
-            "transferencia",
-            "traspaso"
-        ]
-    },
-    "551000": {
-        "categoria": "Cuentas corrientes con el centro",
-        "permitidos": [
-            "centro",
-            "prestamo interno",
-            "saldo interno"
+            "supplier",
+            "invoice"
         ]
     },
     "555000": {
-        "categoria": "Partidas pendientes de aplicación",
+        "categoria": "Partidas pendientes",
         "permitidos": [
-            "pendiente aplicacion",
+            "pendiente",
             "ajuste",
-            "error banco",
-            "regularizacion"
+            "error",
+            "temporary loan",
+            "loan"
         ]
     },
     "570000": {
-        "categoria": "Caja de comunidad",
+        "categoria": "Caja",
         "permitidos": [
             "caja",
-            "efectivo"
+            "efectivo",
+            "cash"
         ]
     },
     "572000": {
@@ -131,34 +120,34 @@
         "permitidos": [
             "transferencia",
             "cargo",
-            "abono",
-            "banco"
-        ]
-    },
-    "574": {
-        "categoria": "Cuentas ahorro",
-        "permitidos": [
-            "ahorro",
-            "libreta",
-            "interes"
+            "banco",
+            "bank",
+            "transfer"
         ]
     },
     "600000": {
-        "categoria": "Farmacia y material sanitario",
+        "categoria": "Farmacia y Sanitario",
         "permitidos": [
             "medic",
             "ibuprofeno",
             "paracetamol",
             "venda",
-            "gasas",
-            "tiritas",
             "crema",
             "pomada",
             "farmacia",
-            "material sanitario",
+            "sanitario",
             "jarabe",
             "vitamin",
-            "antibiotico"
+            "antibiotico",
+            "medicine",
+            "pharmacy",
+            "syrup",
+            "cream",
+            "ointment",
+            "doctor",
+            "dentist",
+            "sr juliana",
+            "sr elisa"
         ]
     },
     "602100": {
@@ -167,7 +156,9 @@
             "gasolina",
             "diesel",
             "combustible",
-            "carburante"
+            "gas cylinder",
+            "fuel",
+            "petrol"
         ]
     },
     "602300": {
@@ -179,8 +170,15 @@
             "repuesto",
             "maceta",
             "planta",
-            "material reparacion",
-            "pilas"
+            "reparacion",
+            "pilas",
+            "bulb",
+            "repair material",
+            "battery",
+            "led tub",
+            "chappel",
+            "heater repair",
+            "material for heater"
         ]
     },
     "602400": {
@@ -189,50 +187,32 @@
             "limpieza",
             "lejia",
             "detergente",
-            "desinfectante",
             "escoba",
-            "fregona"
-        ]
-    },
-    "620401": {
-        "categoria": "Lavandería",
-        "permitidos": [
-            "detergente",
-            "suavizante",
-            "lavanderia",
-            "lejia"
-        ]
-    },
-    "602402": {
-        "categoria": "Aseo personal",
-        "permitidos": [
-            "jabón",
-            "gel",
-            "colonia",
-            "compresa",
-            "champu"
-        ]
-    },
-    "602403": {
-        "categoria": "Peluquería",
-        "permitidos": [
-            "peluqueria",
-            "tinte",
-            "peine",
-            "corte pelo"
+            "fregona",
+            "cleaning",
+            "bleach",
+            "detergent",
+            "soap",
+            "powder"
         ]
     },
     "602500": {
-        "categoria": "Material oficina e informática",
+        "categoria": "Material oficina",
         "permitidos": [
             "papel",
             "boligrafo",
             "toner",
-            "lapiz",
             "cuaderno",
             "carpeta",
             "impresora",
-            "material oficina"
+            "paper",
+            "pen",
+            "notebook",
+            "folder",
+            "printer",
+            "binding",
+            "book binding",
+            "note-book"
         ]
     },
     "603000": {
@@ -250,28 +230,55 @@
             "fruta",
             "bebida",
             "yogur",
-            "pasta"
+            "pasta",
+            "egg",
+            "milk",
+            "bread",
+            "vegetable",
+            "meat",
+            "chicken",
+            "rice",
+            "coffee",
+            "sugar",
+            "fruit",
+            "drink",
+            "yogurt",
+            "pork",
+            "beef",
+            "banana",
+            "sujee",
+            "food",
+            "fish",
+            "onion",
+            "atta",
+            "soya",
+            "dal",
+            "snacks"
         ]
     },
     "605000": {
-        "categoria": "Utillaje, vajilla, adorno",
+        "categoria": "Utillaje y vajilla",
         "permitidos": [
             "vajilla",
             "tostador",
             "cafetera",
-            "cuberteria",
-            "adorno"
+            "dishes",
+            "toaster",
+            "kettle"
         ]
     },
     "606000": {
-        "categoria": "Ropería y objetos personales",
+        "categoria": "Ropería",
         "permitidos": [
             "sabanas",
             "mantas",
             "ropa",
             "cortinas",
             "costura",
-            "calzado"
+            "ribbon",
+            "sheets",
+            "blankets",
+            "clothes"
         ]
     },
     "607000": {
@@ -280,75 +287,34 @@
             "trabajo",
             "servicio",
             "profesional",
-            "contratado"
-        ]
-    },
-    "607400": {
-        "categoria": "Empresa cocina",
-        "permitidos": [
-            "cocina",
-            "menu",
-            "alimento",
-            "catering"
-        ]
-    },
-    "607500": {
-        "categoria": "Empresa limpieza",
-        "permitidos": [
-            "limpieza",
-            "cristales",
-            "jardin",
-            "empresa limpieza"
-        ]
-    },
-    "607900": {
-        "categoria": "Lavandería",
-        "permitidos": [
-            "lavanderia",
-            "tintoreria",
-            "plancha"
+            "work",
+            "labor",
+            "labour"
         ]
     },
     "622000": {
-        "categoria": "Reparaciones y conservación",
+        "categoria": "Reparaciones",
         "permitidos": [
             "carpinter",
             "pintu",
             "albañil",
-            "electric",
             "fontaner",
             "mantenimiento",
             "arreglo",
-            "itv",
-            "electrodomestico"
+            "repair",
+            "maintenance"
         ]
     },
     "622150": {
         "categoria": "Mantenimiento instalaciones",
         "permitidos": [
-            "mantenimiento",
             "instalacion",
             "ascensor",
             "calefaccion",
-            "extintor"
-        ]
-    },
-    "623000": {
-        "categoria": "Servicios profesionales",
-        "permitidos": [
-            "abogado",
-            "notario",
-            "medico",
-            "asesoria"
-        ]
-    },
-    "625000": {
-        "categoria": "Seguros",
-        "permitidos": [
-            "seguro",
-            "prima",
-            "aseguradora",
-            "vehiculo"
+            "labor",
+            "heater",
+            "repairing kettle",
+            "reparing kettle"
         ]
     },
     "628010": {
@@ -357,31 +323,26 @@
             "gas"
         ]
     },
-    "628020": {
-        "categoria": "Suministro agua",
-        "permitidos": [
-            "agua",
-            "canon",
-            "factura agua"
-        ]
-    },
     "628030": {
-        "categoria": "Suministro electricidad",
+        "categoria": "Electricidad",
         "permitidos": [
             "luz",
             "electricidad",
-            "energia"
+            "energia",
+            "light",
+            "electricity"
         ]
     },
     "629100": {
         "categoria": "Viajes",
         "permitidos": [
             "viaje",
-            "transporte",
             "taxi",
             "bus",
             "tren",
-            "hotel"
+            "hotel",
+            "travel",
+            "transport"
         ]
     },
     "629200": {
@@ -391,64 +352,10 @@
             "internet",
             "movil",
             "correo",
-            "mensajeria"
-        ]
-    },
-    "629990": {
-        "categoria": "Gastos comunidad vecinos",
-        "permitidos": [
-            "comunidad vecinos",
-            "cuota comunidad"
-        ]
-    },
-    "631000": {
-        "categoria": "Tributos varios",
-        "permitidos": [
-            "impuesto",
-            "tasa",
-            "circulacion",
-            "basura",
-            "vado"
-        ]
-    },
-    "640000": {
-        "categoria": "Sueldos y salarios",
-        "permitidos": [
-            "nomina",
-            "salario",
-            "pago trabajador"
-        ]
-    },
-    "642000": {
-        "categoria": "Seguridad social",
-        "permitidos": [
-            "seguridad social",
-            "cuota ss"
-        ]
-    },
-    "650110": {
-        "categoria": "Odontología",
-        "permitidos": [
-            "dentista",
-            "protesis",
-            "implante",
-            "papel"
-        ]
-    },
-    "650120": {
-        "categoria": "Oftalmología",
-        "permitidos": [
-            "gafa",
-            "optica",
-            "ocular"
-        ]
-    },
-    "650130": {
-        "categoria": "Prótesis",
-        "permitidos": [
-            "protesis",
-            "silla ruedas",
-            "audifono"
+            "recharge",
+            "post",
+            "phone",
+            "mobile"
         ]
     },
     "650140": {
@@ -456,103 +363,49 @@
         "permitidos": [
             "medico",
             "analisis",
-            "laboratorio"
-        ]
-    },
-    "650160": {
-        "categoria": "Hospitalización",
-        "permitidos": [
-            "hospital",
-            "internamiento"
-        ]
-    },
-    "650300": {
-        "categoria": "Atenciones comunitarias",
-        "permitidos": [
-            "obsequio",
-            "atencion"
-        ]
-    },
-    "650310": {
-        "categoria": "Celebraciones comunitarias",
-        "permitidos": [
-            "fiesta",
-            "celebracion"
-        ]
-    },
-    "650320": {
-        "categoria": "Salidas comunitarias",
-        "permitidos": [
-            "excursion",
-            "cine",
-            "teatro"
-        ]
-    },
-    "650330": {
-        "categoria": "Regalos comunitarios",
-        "permitidos": [
-            "regalo",
-            "onomastico",
-            "reyes"
-        ]
-    },
-    "650400": {
-        "categoria": "Vacaciones",
-        "permitidos": [
-            "vacacion",
-            "viaje"
-        ]
-    },
-    "650510": {
-        "categoria": "Gastos hermanas otras provincias",
-        "permitidos": [
-            "formacion",
-            "estancia"
+            "doctor",
+            "dentist",
+            "sr sindhu"
         ]
     },
     "650530": {
-        "categoria": "Formación permanente",
+        "categoria": "Formación",
         "permitidos": [
             "curso",
-            "formacion"
+            "formacion",
+            "cri meeting",
+            "meeting",
+            "training"
         ]
     },
     "650560": {
         "categoria": "Ejercicios y retiros",
         "permitidos": [
             "retiro",
-            "ejercicio espiritual"
+            "ejercicio",
+            "recollection",
+            "retreat"
         ]
     },
     "650570": {
-        "categoria": "Libros y suscripciones",
+        "categoria": "Prensa y libros",
         "permitidos": [
             "libro",
             "revista",
-            "periodico"
-        ]
-    },
-    "652000": {
-        "categoria": "Pastoral juvenil y vocacional",
-        "permitidos": [
-            "reunion",
-            "vocacional",
-            "publicidad"
-        ]
-    },
-    "658000": {
-        "categoria": "Donativos y obras sociales",
-        "permitidos": [
-            "donativo",
-            "caridad",
-            "obra social"
+            "periodico",
+            "newspaper",
+            "book",
+            "magazine"
         ]
     },
     "659010": {
-        "categoria": "Cuotas y afiliaciones",
+        "categoria": "Cuotas",
         "permitidos": [
             "cuota",
-            "afiliacion"
+            "afiliacion",
+            "fees",
+            "fee",
+            "cri"
         ]
     },
     "659020": {
@@ -561,102 +414,23 @@
             "misa",
             "vela",
             "flor",
-            "capellan",
-            "objeto liturgico"
-        ]
-    },
-    "659030": {
-        "categoria": "Servicios funerarios",
-        "permitidos": [
-            "funeraria",
-            "entierro"
+            "mass",
+            "candle",
+            "flower",
+            "stipend",
+            "intention"
         ]
     },
     "659034": {
-        "categoria": "Documentación y audiovisuales",
+        "categoria": "Documentación",
         "permitidos": [
             "documento",
             "foto",
-            "video",
             "pasaporte",
-            "dni"
-        ]
-    },
-    "659060": {
-        "categoria": "Presupuesto personal solidario",
-        "permitidos": [
-            "personal",
-            "gasto personal"
-        ]
-    },
-    "659090": {
-        "categoria": "Otros gastos",
-        "permitidos": [
-            "multa",
-            "robo",
-            "gasto varios"
-        ]
-    },
-    "669000": {
-        "categoria": "Gastos financieros",
-        "permitidos": [
-            "gasto bancario",
-            "comision banco"
-        ]
-    },
-    "750000": {
-        "categoria": "Pensiones de jubilación",
-        "permitidos": [
-            "pension"
-        ]
-    },
-    "750100": {
-        "categoria": "Prestación servicios internos",
-        "permitidos": [
-            "servicio interno"
-        ]
-    },
-    "750200": {
-        "categoria": "Sueldos y salarios",
-        "permitidos": [
-            "salario",
-            "nomina"
-        ]
-    },
-    "750600": {
-        "categoria": "Norma 9.2",
-        "permitidos": [
-            "norma 9.2",
-            "salario hermana"
-        ]
-    },
-    "75330X": {
-        "categoria": "Comunicación bienes provincia",
-        "permitidos": [
-            "traspaso provincia"
-        ]
-    },
-    "758000": {
-        "categoria": "Donativos",
-        "permitidos": [
-            "donativo",
-            "aportacion"
-        ]
-    },
-    "759100": {
-        "categoria": "Otros ingresos",
-        "permitidos": [
-            "ingreso",
-            "venta",
-            "chatarra"
-        ]
-    },
-    "769000": {
-        "categoria": "Ingresos financieros",
-        "permitidos": [
-            "interes",
-            "banco",
-            "rendimiento"
+            "dni",
+            "form c",
+            "registration",
+            "passport"
         ]
     }
 }
