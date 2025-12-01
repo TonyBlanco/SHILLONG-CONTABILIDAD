@@ -58,7 +58,8 @@ Source: "dist\SHILLONG_v3_PRO\*"; DestDir: "{app}"; Excludes: "\data\*"; Flags: 
 
 ; --- 2. DATOS INICIALES (PROTEGIDOS) ---
 ; Copia los JSON solo si no existen, para no borrar datos previos.
-Source: "data\*"; DestDir: "{app}\data"; Flags: onlyifdoesntexist recursesubdirs createallsubdirs
+; Copia configuraciones (bancos, reglas, plan) pero IGNORA el archivo de movimientos del desarrollador
+Source: "data\*"; DestDir: "{app}\data"; Excludes: "shillong_*.json"; Flags: onlyifdoesntexist recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\{#MyAppIconName}"
@@ -73,6 +74,13 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 Name: "{app}\backups"; Permissions: users-modify
 Name: "{app}\data"; Permissions: users-modify
 Name: "{app}\logs"; Permissions: users-modify
+
+[Registry]
+; --- FORZAR EJECUCIÓN COMO ADMINISTRADOR ---
+; Esto marca automáticamente la casilla "Ejecutar como administrador" en el exe instalado.
+Root: HKCU; Subkey: "Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"; \
+    ValueType: string; ValueName: "{app}\{#MyAppExeName}"; ValueData: "~ RUNASADMIN"; \
+    Flags: uninsdeletevalue
 
 [Code]
 // --- LÓGICA DE INICIO ---
