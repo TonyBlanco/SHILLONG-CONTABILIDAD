@@ -2,10 +2,8 @@
 """
 LibroMensualView.py — SHILLONG CONTABILIDAD v3.7.2 PRO
 ---------------------------------------------------------
-FIX: Restaurado menú "Exportar como..." con 3 opciones:
-1. General
-2. Por Categorías
-3. Por Cuentas
+FIX: Orden de columnas Excel ajustado estrictamente a petición:
+A=Cuenta, B=Fecha, C=Concepto, D=Debe, E=Haber, F=Estado, G=Documento.
 ---------------------------------------------------------
 """
 
@@ -274,7 +272,7 @@ class LibroMensualView(QWidget):
         self._update_card(self.card_saldo, total_haber - total_debe)
 
     # ============================================================
-    # MÉTODOS DE EXPORTACIÓN RESTAURADOS
+    # MÉTODOS DE EXPORTACIÓN (ORDEN ESTRICTO A-G)
     # ============================================================
     def _exportar_excel_general(self):
         self._exportar_excel_base("general")
@@ -286,7 +284,7 @@ class LibroMensualView(QWidget):
         self._exportar_excel_base("cuenta")
 
     def _exportar_excel_base(self, modo):
-        """Método centralizado para exportar los 3 tipos de reportes."""
+        """Método centralizado con ORDEN EXACTO SOLICITADO."""
         if ExportadorExcelMensual is None:
             QMessageBox.critical(self, "Error", "Falta el módulo ExportadorExcelMensual.")
             return
@@ -317,11 +315,25 @@ class LibroMensualView(QWidget):
             h = float(m.get("haber", 0))
             saldo += h - d
             
-            item = m.copy()
-            item["saldo"] = saldo
-            item["categoria"] = self._categoria_de_cuenta(m.get("cuenta"))
-            item["nombre_cuenta"] = self.data.obtener_nombre_cuenta(m.get("cuenta"))
-            datos_prep.append(item)
+            # --- CONSTRUCCIÓN ORDENADA ESTRICTA (COMO EL CÓDIGO ANTIGUO) ---
+            item_ordenado = {}
+            
+            # COLUMNAS SOLICITADAS (A-G)
+            item_ordenado["cuenta"] = str(m.get("cuenta", ""))    # A: Cuenta
+            item_ordenado["fecha"] = m.get("fecha", "")           # B: Fecha
+            item_ordenado["concepto"] = m.get("concepto", "")     # C: Concepto
+            item_ordenado["debe"] = d                             # D: Debe
+            item_ordenado["haber"] = h                            # E: Haber
+            item_ordenado["estado"] = m.get("estado", "")         # F: Estado
+            item_ordenado["documento"] = m.get("documento", "")   # G: Documento
+            
+            # DATOS ADICIONALES (Necesarios para agrupación, puestos al final)
+            item_ordenado["nombre_cuenta"] = self.data.obtener_nombre_cuenta(m.get("cuenta"))
+            item_ordenado["saldo"] = saldo
+            item_ordenado["banco"] = m.get("banco", "")
+            item_ordenado["categoria"] = self._categoria_de_cuenta(m.get("cuenta"))
+            
+            datos_prep.append(item_ordenado)
 
         try:
             periodo = f"{self.cbo_mes.currentText()} {año}"
@@ -341,6 +353,7 @@ class LibroMensualView(QWidget):
                 # Agrupar por Cuenta
                 grupos = defaultdict(list)
                 for x in datos_prep: 
+                    # Usamos cuenta + nombre para la cabecera del grupo
                     clave = f"{x['cuenta']} - {x['nombre_cuenta']}"
                     grupos[clave].append(x)
                 # Ordenar por número de cuenta

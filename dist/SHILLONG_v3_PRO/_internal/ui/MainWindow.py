@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.views["sistema"])
 
         # Ayuda (ID 'ayuda' en tu sidebar)
-        self.views["ayuda"] = HelpView()
+        self.views["ayuda"] = HelpView(self.data)
         self.stack.addWidget(self.views["ayuda"])
 
     def cambiar_vista(self, id_vista):

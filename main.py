@@ -111,7 +111,8 @@ def main():
     # 1. ACTIVAR LOGS ANTES DE NADA
     setup_logging()
 
-    print(f"🔥 Cargando SHILLONG v{APP_VERSION} PRO...")
+    print("🔥 SHILLONG CONTABILIDAD v3.7.7 PRO — Engine v4.3.2 Iniciado")
+
     disable_windows_dpi_scaling()
 
     app = QApplication(sys.argv)

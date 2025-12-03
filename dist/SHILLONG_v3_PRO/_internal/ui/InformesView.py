@@ -1,364 +1,623 @@
 # -*- coding: utf-8 -*-
 """
-InformesView.py — SHILLONG CONTABILIDAD v3.7.7 PRO
----------------------------------------------------------
-FIX FINAL BLINDADO:
-- Protección contra rangos de fechas sin datos.
-- Inicialización segura de variables.
-- Manejo de errores en exportación.
----------------------------------------------------------
+INFORMESVIEW v4.3 — SHILLONG Contabilidad 3.7.7 PRO BI
+-------------------------------------------------------
+INCLUYE:
+- Diario general
+- Libro mayor agrupado (vista + Excel profesional)
+- Balance de Sumas y Saldos (vista + Excel profesional)
+- Resumen mensual por cuentas
+BOTONES:
+- Generar Informe
+- Exportar Vista Actual
+- Exportar Libro Mayor Profesional
+- Exportar Balance Profesional
+COLORES SHILLONG:
+- Morado Encabezado: #7030A0
+- Verde Total: #E2EFDA
 """
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
-    QPushButton, QTableWidget, QTableWidgetItem, QFrame, 
-    QHeaderView, QMessageBox, QFileDialog, QMenu, QDateEdit,
-    QGridLayout
+    QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox,
+    QTableWidget, QTableWidgetItem, QFileDialog, QDateEdit, QScrollArea
 )
 from PySide6.QtCore import Qt, QDate
-from PySide6.QtGui import QColor, QFont, QTextDocument
-from PySide6.QtPrintSupport import QPrinter
+from PySide6.QtGui import QFont
 
 import datetime
-import json
 from collections import defaultdict
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 
-# Intentamos importar el motor de exportación
-try:
-    from models.ExportadorExcelMensual import ExportadorExcelMensual
-except ImportError:
-    ExportadorExcelMensual = None
 
 class InformesView(QWidget):
+
     def __init__(self, data):
         super().__init__()
         self.data = data
-        self.datos_actuales = [] # Inicializamos vacío para evitar errores
-        
-        # Carga segura de auxiliares
-        self.reglas_cache = self._cargar_reglas()
-        self.cuentas = self._cargar_cuentas()
-        
         self._build_ui()
-        
-        # Intentamos cargar el reporte inicial protegiendo fallos
-        try:
-            self.actualizar_reporte()
-        except Exception as e:
-            print(f"Aviso: No se pudo cargar el reporte inicial: {e}")
 
-    def _cargar_reglas(self):
-        try:
-            with open("data/reglas_conceptos.json", "r", encoding="utf-8") as f:
-                return json.load(f)
-        except: return {}
-
-    def _cargar_cuentas(self):
-        cuentas = []
-        try:
-            with open("data/plan_contable_v3.json", "r", encoding="utf-8") as f:
-                plan = json.load(f)
-                cuentas = [f"{k} – {v['nombre']}" for k, v in plan.items()]
-        except: pass
-        return cuentas
-
-    def _categoria_de_cuenta(self, cuenta):
-        cta = str(cuenta).split(" ")[0].strip()
-        if cta in self.reglas_cache:
-            cat = self.reglas_cache[cta].get("categoria","").upper()
-            mapeo = {"COMESTIBLES Y BEBIDAS":"FOOD", "ALIMENTACIÓN":"FOOD", "FARMACIA":"MEDICINE", "SUELDOS Y SALARIOS":"SALARY"}
-            if cat in mapeo: return mapeo[cat]
-            return cat
-        return "OTROS"
-
+    # ================================================================
+    # UI PRINCIPAL
+    # ================================================================
     def _build_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 20, 30, 20)
-        layout.setSpacing(15)
+        layout.setSpacing(12)
 
-        # Header
-        h = QHBoxLayout()
-        tit = QLabel("📈 Informes & Business Intelligence")
-        tit.setStyleSheet("font-size: 26px; font-weight: 800; color: #1e293b;")
-        h.addWidget(tit); h.addStretch()
+        # TÍTULO
+        titulo = QLabel("📊 Informes Contables")
+        titulo.setFont(QFont("Segoe UI", 22, QFont.Bold))
+        titulo.setStyleSheet("color: #334155;")
+        layout.addWidget(titulo)
 
-        # Botón Exportar
-        self.btn_exportar = QPushButton("📤 Exportar Reporte ▼")
-        self.btn_exportar.setStyleSheet("background-color: #2563eb; color: white; font-weight: bold; padding: 8px 15px; border-radius: 6px;")
-        
-        self.menu_exp = QMenu(self)
-        self.menu_exp.addAction("📄 PDF Reporte Actual", self._pdf)
-        self.menu_exp.addSeparator()
-        self.menu_exp.addAction("📊 Excel General", lambda: self._excel("general"))
-        self.menu_exp.addAction("📂 Excel Agrupado (Cat)", lambda: self._excel("categoria"))
-        
-        self.btn_exportar.setMenu(self.menu_exp)
-        h.addWidget(self.btn_exportar)
-        layout.addLayout(h)
+        # ------------------------------------------------------------
+        # Selector tipo informe
+        # ------------------------------------------------------------
+        h_sel = QHBoxLayout()
+        h_sel.addWidget(QLabel("Tipo de Informe:"))
 
-        # Panel Filtros
-        panel = QFrame()
-        panel.setStyleSheet("background:white; border:1px solid #e2e8f0; border-radius:10px;")
-        pl = QGridLayout(panel); pl.setContentsMargins(15,15,15,15)
-
-        pl.addWidget(QLabel("Tipo de Informe:"), 0, 0)
         self.cbo_tipo = QComboBox()
-        self.cbo_tipo.addItems(["📘 Diario General (Rango)", "📒 Libro Mayor (Por Cuenta)", "⚖️ Balance de Sumas y Saldos"])
-        self.cbo_tipo.currentIndexChanged.connect(self._cambiar_modo)
-        pl.addWidget(self.cbo_tipo, 0, 1)
+        self.cbo_tipo.addItems([
+            "📘 Diario General (Rango)",
+            "📒 Libro Mayor (Por Cuenta)",
+            "⚖️ Balance de Sumas y Saldos",
+            "🧮 Resumen Mensual por Cuentas"
+        ])
+        self.cbo_tipo.currentIndexChanged.connect(self._cambiar_tipo)
+        h_sel.addWidget(self.cbo_tipo)
+        h_sel.addStretch()
+        layout.addLayout(h_sel)
 
-        # Fechas
-        pl.addWidget(QLabel("Desde:"), 0, 2)
-        # Fecha inicio: 1 del mes actual para evitar rangos vacíos
-        hoy = QDate.currentDate()
-        inicio_mes = QDate(hoy.year(), hoy.month(), 1)
-        self.date_ini = QDateEdit(inicio_mes) 
-        self.date_ini.setCalendarPopup(True)
-        pl.addWidget(self.date_ini, 0, 3)
+        # ------------------------------------------------------------
+        # Filtros dinámicos
+        # ------------------------------------------------------------
+        self.filtros = QHBoxLayout()
+        layout.addLayout(self.filtros)
 
-        pl.addWidget(QLabel("Hasta:"), 0, 4)
-        self.date_fin = QDateEdit(hoy)
-        self.date_fin.setCalendarPopup(True)
-        pl.addWidget(self.date_fin, 0, 5)
+        # ------------------------------------------------------------
+        # BOTONES SUPERIORES
+        # ------------------------------------------------------------
+        self.btn_generar = QPushButton("Generar Informe")
+        self.btn_generar.setStyleSheet(
+            "background:#2563eb; color:white; padding:6px 20px; font-weight:bold;"
+        )
+        self.btn_generar.clicked.connect(self._generar)
 
-        # Cuenta
-        self.lbl_cta = QLabel("Cuenta:")
-        self.cbo_cta = QComboBox()
-        self.cbo_cta.addItems(self.cuentas)
-        self.cbo_cta.setEnabled(False)
-        pl.addWidget(self.lbl_cta, 1, 0)
-        pl.addWidget(self.cbo_cta, 1, 1, 1, 3)
+        self.btn_export_vista = QPushButton("Exportar Vista a Excel")
+        self.btn_export_vista.setStyleSheet(
+            "background:#475569; color:white; padding:6px 20px; font-weight:bold;"
+        )
+        self.btn_export_vista.clicked.connect(self._exportar_excel_vista)
 
-        btn_gen = QPushButton("🔍 Generar Informe")
-        btn_gen.setStyleSheet("background:#3b82f6; color:white; font-weight:bold; border-radius:6px; padding:6px;")
-        btn_gen.clicked.connect(self.actualizar_reporte)
-        pl.addWidget(btn_gen, 1, 4, 1, 2)
+        self.btn_export_mayor = QPushButton("📘 Exportar Libro Mayor Profesional (Excel)")
+        self.btn_export_mayor.setStyleSheet(
+            "background:#7030A0; color:white; padding:6px 20px; font-weight:bold;"
+        )
+        self.btn_export_mayor.clicked.connect(self._exportar_libro_mayor)
 
-        layout.addWidget(panel)
+        self.btn_export_balance = QPushButton("📊 Exportar Balance Profesional (Excel)")
+        self.btn_export_balance.setStyleSheet(
+            "background:#7030A0; color:white; padding:6px 20px; font-weight:bold;"
+        )
+        self.btn_export_balance.clicked.connect(self._exportar_balance)
 
-        # Tabla
-        self.tabla = QTableWidget()
-        self.tabla.setAlternatingRowColors(True)
-        self.tabla.verticalHeader().setVisible(False)
-        self.tabla.setStyleSheet("QHeaderView::section { background-color: #f1f5f9; font-weight: bold; border: none; padding: 6px; }")
-        layout.addWidget(self.tabla)
+        h_btns = QHBoxLayout()
+        h_btns.addWidget(self.btn_generar)
+        h_btns.addWidget(self.btn_export_vista)
+        h_btns.addWidget(self.btn_export_mayor)
+        h_btns.addWidget(self.btn_export_balance)
+        h_btns.addStretch()
+        layout.addLayout(h_btns)
 
-        # Totales
-        self.lbl_totales = QLabel("Totales: ---")
-        self.lbl_totales.setStyleSheet("font-size: 16px; font-weight: bold; color: #334155; padding: 10px; background: #e2e8f0; border-radius: 6px;")
-        self.lbl_totales.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.lbl_totales)
+        # ------------------------------------------------------------
+        # SCROLL PARA LAS TABLAS
+        # ------------------------------------------------------------
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
 
-    def _cambiar_modo(self):
-        modo = self.cbo_tipo.currentText()
-        if "Mayor" in modo:
-            self.cbo_cta.setEnabled(True)
-            self.lbl_cta.setStyleSheet("color: black;")
+        self.contenedor = QWidget()
+        self.contenedor_layout = QVBoxLayout(self.contenedor)
+
+        self.scroll_area.setWidget(self.contenedor)
+        layout.addWidget(self.scroll_area)
+
+        self._cambiar_tipo()
+
+    # ================================================================
+    # CAMBIO DE TIPO DE INFORME
+    # ================================================================
+    def _cambiar_tipo(self):
+        tipo = self.cbo_tipo.currentIndex()
+        self._limpiar_filtros()
+
+        # recrear widgets
+        self.fecha_ini = QDateEdit()
+        self.fecha_ini.setCalendarPopup(True)
+        self.fecha_ini.setDate(QDate.currentDate().addMonths(-1))
+
+        self.fecha_fin = QDateEdit()
+        self.fecha_fin.setCalendarPopup(True)
+        self.fecha_fin.setDate(QDate.currentDate())
+
+        self.cbo_cuenta = QComboBox()
+        self.cbo_cuenta.addItem("Todas")
+        for cta, d in self.data.cuentas.items():
+            self.cbo_cuenta.addItem(f"{cta} — {d.get('nombre','')}")
+
+        self.cbo_mes = QComboBox()
+        self.cbo_mes.addItems([
+            "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+            "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+        ])
+        self.cbo_mes.setCurrentIndex(datetime.date.today().month - 1)
+
+        self.cbo_anio = QComboBox()
+        for a in range(2020, 2036):
+            self.cbo_anio.addItem(str(a))
+        self.cbo_anio.setCurrentText(str(datetime.date.today().year))
+
+        # Mostrar filtros
+        if tipo == 0:  # DIARIO
+            self.filtros.addWidget(QLabel("Fecha inicio:"))
+            self.filtros.addWidget(self.fecha_ini)
+            self.filtros.addWidget(QLabel("Fecha fin:"))
+            self.filtros.addWidget(self.fecha_fin)
+
+        elif tipo == 1:
+            self.filtros.addWidget(QLabel("Cuenta:"))
+            self.filtros.addWidget(self.cbo_cuenta)
+
+        elif tipo == 2:
+            lab = QLabel("Balance profesional SHILLONG agrupado por cuentas.")
+            lab.setStyleSheet("color:#475569; font-style:italic;")
+            self.filtros.addWidget(lab)
+
+        elif tipo == 3:
+            self.filtros.addWidget(QLabel("Mes:"))
+            self.filtros.addWidget(self.cbo_mes)
+            self.filtros.addWidget(QLabel("Año:"))
+            self.filtros.addWidget(self.cbo_anio)
+
+        # visibilidad de botones
+        self.btn_export_mayor.setVisible(tipo == 1)
+        self.btn_export_balance.setVisible(tipo == 2)
+
+    def _limpiar_filtros(self):
+        while self.filtros.count():
+            item = self.filtros.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    # ================================================================
+    # GENERAR INFORME
+    # ================================================================
+    def _generar(self):
+        tipo = self.cbo_tipo.currentIndex()
+        self._limpiar_vista()
+
+        if tipo == 0:
+            self._mostrar_diario()
+        elif tipo == 1:
+            self._mostrar_libro_mayor_agrupado()
+        elif tipo == 2:
+            self._mostrar_sumas_saldos()
+        elif tipo == 3:
+            self._mostrar_resumen_mensual()
+
+    def _limpiar_vista(self):
+        for i in reversed(range(self.contenedor_layout.count())):
+            item = self.contenedor_layout.takeAt(i)
+            if item.widget():
+                item.widget().deleteLater()
+
+    # ================================================================
+    # DIARIO GENERAL
+    # ================================================================
+    def _mostrar_diario(self):
+        ini = self.fecha_ini.date().toPython()
+        fin = self.fecha_fin.date().toPython()
+        datos = self.data.get_movimientos_rango(ini, fin)
+        tabla = QTableWidget(0, 8)
+        tabla.setHorizontalHeaderLabels(
+            ["Fecha","Documento","Concepto","Cuenta","Debe","Haber","Saldo","Banco"]
+        )
+
+        for m in datos:
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            fila = [
+                m.get("fecha",""),
+                m.get("documento",""),
+                m.get("concepto",""),
+                m.get("cuenta",""),
+                m.get("debe",0),
+                m.get("haber",0),
+                m.get("saldo",0),
+                m.get("banco","")
+            ]
+            for c, val in enumerate(fila):
+                it = QTableWidgetItem(str(val))
+                if c >= 4:
+                    it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                tabla.setItem(r,c,it)
+
+        self.contenedor_layout.addWidget(tabla)
+
+    # ================================================================
+    # LIBRO MAYOR AGRUPADO
+    # ================================================================
+    def _mostrar_libro_mayor_agrupado(self):
+
+        texto = self.cbo_cuenta.currentText()
+        if texto == "Todas":
+            cuentas = sorted(self.data.cuentas.keys())
         else:
-            self.cbo_cta.setEnabled(False)
-            self.lbl_cta.setStyleSheet("color: gray;")
+            cuentas = [texto.split(" — ")[0]]
 
-    def _parse_fecha(self, f_str):
-        try:
-            if "/" in f_str: d,m,a = map(int, f_str.split("/"))
-            elif "-" in f_str: 
-                p=list(map(int, f_str.split("-")))
-                a,m,d = p if p[0]>1000 else (p[2],p[1],p[0])
-            else: return None
-            return datetime.date(a,m,d)
-        except: return None
+        for cta in cuentas:
+            movs = self.data.movimientos_por_cuenta(cta)
+            if not movs:
+                continue
 
-    def actualizar_reporte(self):
-        try:
-            modo = self.cbo_tipo.currentText()
-            d_ini = self.date_ini.date().toPython()
-            d_fin = self.date_fin.date().toPython()
-            
-            self.datos_actuales = [] 
+            nombre = self.data.cuentas[cta].get("nombre","")
 
-            if "Sumas y Saldos" in modo:
-                self._generar_sumas_saldos(d_ini, d_fin)
-            elif "Mayor" in modo:
-                self._generar_mayor(d_ini, d_fin)
-            else:
-                self._generar_diario(d_ini, d_fin)
-        except Exception as e:
-            print(f"Error generando reporte: {e}")
-            self.lbl_totales.setText("Error al procesar datos. Revise fechas.")
+            header = QLabel(f"{cta} — {nombre}")
+            header.setStyleSheet(
+                "background:#7030A0; color:white; font-size:16px;"
+                "padding:6px; font-weight:bold;"
+            )
+            self.contenedor_layout.addWidget(header)
 
-    def _generar_diario(self, ini, fin):
-        self.tabla.setColumnCount(7)
-        self.tabla.setHorizontalHeaderLabels(["Fecha", "Concepto", "Cuenta", "Nombre", "Debe", "Haber", "Categoría"])
-        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        
-        datos = []
-        t_debe, t_haber = 0, 0
-        
+            tabla = QTableWidget(0, 6)
+            tabla.setHorizontalHeaderLabels(
+                ["Fecha","Documento","Desglose","Debe","Haber","Saldo"]
+            )
+
+            total_debe=0
+            total_haber=0
+            saldo_acum=0
+
+            for m in movs:
+                r = tabla.rowCount()
+                tabla.insertRow(r)
+
+                concepto = m.get("concepto","").strip()
+                if concepto:
+                    des = concepto
+                else:
+                    des = m.get("nombre_cuenta","")
+
+                debe = float(m.get("debe",0))
+                haber = float(m.get("haber",0))
+
+                saldo_acum += (haber - debe)
+                total_debe += debe
+                total_haber += haber
+
+                fila = [
+                    m.get("fecha",""),
+                    m.get("documento",""),
+                    des,
+                    debe,
+                    haber,
+                    saldo_acum
+                ]
+
+                for c,val in enumerate(fila):
+                    it = QTableWidgetItem(str(val))
+                    if c>=3:
+                        it.setTextAlignment(Qt.AlignRight|Qt.AlignVCenter)
+                    tabla.setItem(r,c,it)
+
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            tabla.setItem(r,2, QTableWidgetItem("TOTAL"))
+            tabla.setItem(r,3, QTableWidgetItem(str(total_debe)))
+            tabla.setItem(r,4, QTableWidgetItem(str(total_haber)))
+            tabla.setItem(r,5, QTableWidgetItem(str(total_haber-total_debe)))
+
+            self.contenedor_layout.addWidget(tabla)
+
+    # ================================================================
+    # SUMAS & SALDOS — VISTA SHILLONG
+    # ================================================================
+    def _mostrar_sumas_saldos(self):
+
+        tabla = QTableWidget(0,5)
+        tabla.setHorizontalHeaderLabels(
+            ["Cuenta","Nombre","Debe","Haber","Saldo"]
+        )
+
+        resumen = defaultdict(lambda: {"nombre":"", "debe":0, "haber":0})
+
         for m in self.data.movimientos:
-            f = self._parse_fecha(m.get("fecha",""))
-            if f and ini <= f <= fin:
-                d = float(m.get("debe",0))
-                h = float(m.get("haber",0))
-                t_debe += d; t_haber += h
-                
-                m_copy = m.copy()
-                m_copy["categoria"] = self._categoria_de_cuenta(m.get("cuenta"))
-                m_copy["nombre_cuenta"] = self.data.obtener_nombre_cuenta(m.get("cuenta"))
-                datos.append(m_copy)
+            cta = str(m.get("cuenta",""))
+            resumen[cta]["nombre"] = m.get("nombre_cuenta","")
+            resumen[cta]["debe"] += float(m.get("debe",0))
+            resumen[cta]["haber"] += float(m.get("haber",0))
 
-        datos.sort(key=lambda x: self._parse_fecha(x["fecha"]) or datetime.date.min)
-        self.datos_actuales = datos
+        total_debe=0
+        total_haber=0
 
-        self.tabla.setRowCount(len(datos))
-        for r, m in enumerate(datos):
-            self.tabla.setItem(r,0, QTableWidgetItem(m.get("fecha","")))
-            self.tabla.setItem(r,1, QTableWidgetItem(m.get("concepto","")))
-            self.tabla.setItem(r,2, QTableWidgetItem(str(m.get("cuenta",""))))
-            self.tabla.setItem(r,3, QTableWidgetItem(m.get("nombre_cuenta","")))
-            self.tabla.setItem(r,4, QTableWidgetItem(f"{m.get('debe',0):,.2f}"))
-            self.tabla.setItem(r,5, QTableWidgetItem(f"{m.get('haber',0):,.2f}"))
-            self.tabla.setItem(r,6, QTableWidgetItem(m.get("categoria","")))
+        for cta in sorted(resumen.keys()):
+            d = resumen[cta]
+            saldo = d["haber"]-d["debe"]
 
-        self.lbl_totales.setText(f"TOTAL DEBE: {t_debe:,.2f}  |  TOTAL HABER: {t_haber:,.2f}  |  BALANCE: {t_haber-t_debe:,.2f}")
+            total_debe += d["debe"]
+            total_haber+= d["haber"]
 
-    def _generar_mayor(self, ini, fin):
-        txt_cta = self.cbo_cta.currentText()
-        if not txt_cta: return # Protección
-        cuenta_target = txt_cta.split(" – ")[0]
-        
-        self.tabla.setColumnCount(6)
-        self.tabla.setHorizontalHeaderLabels(["Fecha", "Doc", "Concepto", "Debe", "Haber", "Saldo Acum."])
-        self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
-        
-        datos = []
-        saldo = 0
-        t_debe, t_haber = 0, 0
-        
-        temp = []
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            fila=[cta, d["nombre"], d["debe"], d["haber"], saldo]
+
+            for c,val in enumerate(fila):
+                it = QTableWidgetItem(str(val))
+                if c>=2:
+                    it.setTextAlignment(Qt.AlignRight|Qt.AlignVCenter)
+                tabla.setItem(r,c,it)
+
+        r = tabla.rowCount()
+        tabla.insertRow(r)
+        tabla.setItem(r,1, QTableWidgetItem("TOTAL GENERAL"))
+        tabla.setItem(r,2, QTableWidgetItem(str(total_debe)))
+        tabla.setItem(r,3, QTableWidgetItem(str(total_haber)))
+        tabla.setItem(r,4, QTableWidgetItem(str(total_haber-total_debe)))
+
+        self.contenedor_layout.addWidget(tabla)
+
+    # ================================================================
+    # RESUMEN MENSUAL
+    # ================================================================
+    def _mostrar_resumen_mensual(self):
+
+        mes = self.cbo_mes.currentIndex()+1
+        anio = int(self.cbo_anio.currentText())
+
+        movs = self.data.movimientos_por_mes(mes, anio)
+
+        resumen = defaultdict(lambda: {"nombre":"", "debe":0, "haber":0})
+
+        for m in movs:
+            cta=str(m.get("cuenta",""))
+            resumen[cta]["nombre"]=m.get("nombre_cuenta","")
+            resumen[cta]["debe"]+=float(m.get("debe",0))
+            resumen[cta]["haber"]+=float(m.get("haber",0))
+
+        tabla = QTableWidget(0,5)
+        tabla.setHorizontalHeaderLabels(
+            ["Cuenta","Nombre","Debe","Haber","Saldo"]
+        )
+
+        for cta in sorted(resumen.keys()):
+            d=resumen[cta]
+            saldo=d["haber"]-d["debe"]
+
+            r=tabla.rowCount()
+            tabla.insertRow(r)
+            fila=[cta, d["nombre"], d["debe"], d["haber"], saldo]
+
+            for c,val in enumerate(fila):
+                it=QTableWidgetItem(str(val))
+                if c>=2:
+                    it.setTextAlignment(Qt.AlignRight|Qt.AlignVCenter)
+                tabla.setItem(r,c,it)
+
+        self.contenedor_layout.addWidget(tabla)
+
+    # ================================================================
+    # EXPORTAR VISTA ACTUAL
+    # ================================================================
+    def _exportar_excel_vista(self):
+
+        ruta,_ = QFileDialog.getSaveFileName(
+            self, "Exportar Vista", "Vista.xlsx", "Excel (*.xlsx)"
+        )
+        if not ruta:
+            return
+
+        wb=openpyxl.Workbook()
+        ws=wb.active
+
+        row=1
+
+        # Vuelca todas las tablas y encabezados de la vista actual
+        for i in range(self.contenedor_layout.count()):
+            w = self.contenedor_layout.itemAt(i).widget()
+
+            if isinstance(w, QLabel):
+                ws.cell(row=row,column=1,value=w.text()).font=Font(bold=True)
+                row+=2
+
+            if isinstance(w, QTableWidget):
+                tabla = w
+
+                # Encabezados
+                for c in range(tabla.columnCount()):
+                    ws.cell(row=row,column=c+1,
+                        value=tabla.horizontalHeaderItem(c).text())
+                row+=1
+
+                # Datos
+                for r2 in range(tabla.rowCount()):
+                    for c2 in range(tabla.columnCount()):
+                        it=tabla.item(r2,c2)
+                        ws.cell(row=row,column=c2+1,
+                            value=it.text() if it else "")
+                    row+=1
+
+                row+=2
+
+        wb.save(ruta)
+
+    # ================================================================
+    # EXPORTAR LIBRO MAYOR PROFESIONAL SHILLONG
+    # ================================================================
+    def _exportar_libro_mayor(self):
+
+        ruta,_= QFileDialog.getSaveFileName(
+            self,"Exportar Libro Mayor SHILLONG",
+            "LibroMayor.xlsx","Excel (*.xlsx)"
+        )
+        if not ruta:
+            return
+
+        wb=openpyxl.Workbook()
+        ws=wb.active
+
+        morado=PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        verde=PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        borde=Border(
+            left=Side(style="thin",color="000000"),
+            right=Side(style="thin",color="000000"),
+            top=Side(style="thin",color="000000"),
+            bottom=Side(style="thin",color="000000")
+        )
+
+        row=1
+
+        cuentas=sorted(self.data.cuentas.keys())
+
+        for cta in cuentas:
+            movs=self.data.movimientos_por_cuenta(cta)
+            if not movs:
+                continue
+
+            nombre=self.data.cuentas[cta].get("nombre","")
+
+            # ENCABEZADO CUENTA
+            cell=ws.cell(row=row,column=1,value=f"{cta} — {nombre}")
+            cell.font=Font(bold=True,color="FFFFFF")
+            cell.fill=morado
+            row+=2
+
+            headers=["Fecha","Documento","Desglose","Debe","Haber","Saldo"]
+            for c,h in enumerate(headers, start=1):
+                cell=ws.cell(row=row,column=c,value=h)
+                cell.font=Font(bold=True,color="FFFFFF")
+                cell.fill=morado
+                cell.border=borde
+            row+=1
+
+            saldo_acum=0
+            total_debe=0
+            total_haber=0
+
+            for m in movs:
+                concepto=m.get("concepto","").strip()
+                if concepto:
+                    des=concepto
+                else:
+                    des=m.get("nombre_cuenta","")
+
+                debe=float(m.get("debe",0))
+                haber=float(m.get("haber",0))
+
+                saldo_acum+=(haber-debe)
+                total_debe+=debe
+                total_haber+=haber
+
+                fila=[
+                    m.get("fecha",""),
+                    m.get("documento",""),
+                    des,
+                    debe,
+                    haber,
+                    saldo_acum
+                ]
+
+                for c,val in enumerate(fila,start=1):
+                    cell=ws.cell(row=row,column=c,value=val)
+                    cell.border=borde
+                    if c>=4:
+                        cell.alignment=Alignment(horizontal="right")
+                row+=1
+
+            # TOTAL
+            for c in range(1,7):
+                cell=ws.cell(row=row,column=c)
+                cell.border=borde
+                cell.fill=verde
+
+            ws.cell(row=row,column=3,value="TOTAL").font=Font(bold=True)
+            ws.cell(row=row,column=4,value=total_debe)
+            ws.cell(row=row,column=5,value=total_haber)
+            ws.cell(row=row,column=6,value=(total_haber-total_debe))
+
+            row+=3
+
+        wb.save(ruta)
+
+    # ================================================================
+    # EXPORTAR BALANCE SHILLONG (SUMAS & SALDOS)
+    # ================================================================
+    def _exportar_balance(self):
+
+        ruta,_= QFileDialog.getSaveFileName(
+            self,"Exportar Balance SHILLONG",
+            "Balance_Sumas_Saldos.xlsx","Excel (*.xlsx)"
+        )
+        if not ruta:
+            return
+
+        wb=openpyxl.Workbook()
+        ws=wb.active
+
+        morado=PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        verde=PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        borde=Border(
+            left=Side(style="thin",color="000000"),
+            right=Side(style="thin",color="000000"),
+            top=Side(style="thin",color="000000"),
+            bottom=Side(style="thin",color="000000")
+        )
+
+        headers=["Cuenta","Nombre","Debe","Haber","Saldo"]
+
+        row=1
+        for c,h in enumerate(headers,start=1):
+            cell=ws.cell(row=row,column=c,value=h)
+            cell.font=Font(bold=True,color="FFFFFF")
+            cell.fill=morado
+            cell.border=borde
+        row+=1
+
+        resumen=defaultdict(lambda:{"nombre":"", "debe":0, "haber":0})
+
         for m in self.data.movimientos:
-            f = self._parse_fecha(m.get("fecha",""))
-            if f and ini <= f <= fin and str(m.get("cuenta")) == cuenta_target:
-                temp.append(m)
-        temp.sort(key=lambda x: self._parse_fecha(x["fecha"]) or datetime.date.min)
-        
-        self.tabla.setRowCount(len(temp))
-        for r, m in enumerate(temp):
-            d = float(m.get("debe",0))
-            h = float(m.get("haber",0))
-            saldo += (h - d)
-            t_debe += d; t_haber += h
-            
-            m_copy = m.copy()
-            m_copy["saldo_acum"] = saldo
-            self.datos_actuales.append(m_copy)
+            cta=str(m.get("cuenta",""))
+            resumen[cta]["nombre"]=m.get("nombre_cuenta","")
+            resumen[cta]["debe"]+=float(m.get("debe",0))
+            resumen[cta]["haber"]+=float(m.get("haber",0))
 
-            self.tabla.setItem(r,0, QTableWidgetItem(m.get("fecha","")))
-            self.tabla.setItem(r,1, QTableWidgetItem(m.get("documento","")))
-            self.tabla.setItem(r,2, QTableWidgetItem(m.get("concepto","")))
-            self.tabla.setItem(r,3, QTableWidgetItem(f"{d:,.2f}"))
-            self.tabla.setItem(r,4, QTableWidgetItem(f"{h:,.2f}"))
-            
-            it_sal = QTableWidgetItem(f"{saldo:,.2f}")
-            if saldo < 0: it_sal.setForeground(QColor("red"))
-            self.tabla.setItem(r,5, it_sal)
+        total_debe=0
+        total_haber=0
 
-        nomb = self.data.obtener_nombre_cuenta(cuenta_target)
-        self.lbl_totales.setText(f"MAYOR DE: {nomb}  |  TOTAL DEBE: {t_debe:,.2f}  |  TOTAL HABER: {t_haber:,.2f}  |  SALDO FINAL: {saldo:,.2f}")
+        for cta in sorted(resumen.keys()):
+            d=resumen[cta]
+            saldo=d["haber"]-d["debe"]
 
-    def _generar_sumas_saldos(self, ini, fin):
-        self.tabla.setColumnCount(5)
-        self.tabla.setHorizontalHeaderLabels(["Cuenta", "Nombre", "Suma Debe", "Suma Haber", "Saldo Final"])
-        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        
-        agrupado = defaultdict(lambda: {"d":0.0, "h":0.0})
-        
-        for m in self.data.movimientos:
-            f = self._parse_fecha(m.get("fecha",""))
-            if f and ini <= f <= fin:
-                c = str(m.get("cuenta"))
-                agrupado[c]["d"] += float(m.get("debe",0))
-                agrupado[c]["h"] += float(m.get("haber",0))
-        
-        lista = []
-        t_d, t_h = 0, 0
-        for cta, vals in agrupado.items():
-            saldo = vals["h"] - vals["d"]
-            lista.append({
-                "cuenta": cta,
-                "nombre": self.data.obtener_nombre_cuenta(cta),
-                "debe": vals["d"],
-                "haber": vals["h"],
-                "saldo": saldo
-            })
-            t_d += vals["d"]; t_h += vals["h"]
-            
-        lista.sort(key=lambda x: x["cuenta"])
-        self.datos_actuales = lista 
-        
-        self.tabla.setRowCount(len(lista))
-        for r, item in enumerate(lista):
-            self.tabla.setItem(r,0, QTableWidgetItem(item["cuenta"]))
-            self.tabla.setItem(r,1, QTableWidgetItem(item["nombre"]))
-            self.tabla.setItem(r,2, QTableWidgetItem(f"{item['debe']:,.2f}"))
-            self.tabla.setItem(r,3, QTableWidgetItem(f"{item['haber']:,.2f}"))
-            
-            it_s = QTableWidgetItem(f"{item['saldo']:,.2f}")
-            if item["saldo"] < 0: it_s.setForeground(QColor("red"))
-            elif item["saldo"] > 0: it_s.setForeground(QColor("green"))
-            self.tabla.setItem(r,4, it_s)
-            
-        self.lbl_totales.setText(f"BALANCE GLOBAL  |  DEBE: {t_d:,.2f}  |  HABER: {t_h:,.2f}  |  NETO: {t_h-t_d:,.2f}")
+            fila=[cta, d["nombre"], d["debe"], d["haber"], saldo]
 
-    def _pdf(self):
-        ruta, _ = QFileDialog.getSaveFileName(self, "PDF", "Informe.pdf", "PDF (*.pdf)")
-        if not ruta: return
-        
-        html = """<h1>Informe Contable</h1><table border=1 cellspacing=0 cellpadding=5 width="100%">"""
-        html += "<tr>"
-        for c in range(self.tabla.columnCount()):
-            it = self.tabla.horizontalHeaderItem(c)
-            html += f"<th bgcolor='#eee'>{it.text() if it else ''}</th>"
-        html += "</tr>"
-        
-        for r in range(self.tabla.rowCount()):
-            html += "<tr>"
-            for c in range(self.tabla.columnCount()):
-                it = self.tabla.item(r, c)
-                txt = it.text() if it else ""
-                align = "right" if c > 1 else "left"
-                html += f"<td align='{align}'>{txt}</td>"
-            html += "</tr>"
-        html += "</table>"
-        html += f"<br><h3>{self.lbl_totales.text()}</h3>"
+            for c,val in enumerate(fila,start=1):
+                cell=ws.cell(row=row,column=c,value=val)
+                cell.border=borde
+                if c>=3:
+                    cell.alignment=Alignment(horizontal="right")
 
-        doc = QTextDocument(); doc.setHtml(html)
-        printer = QPrinter(QPrinter.HighResolution)
-        printer.setOutputFormat(QPrinter.PdfFormat)
-        printer.setOutputFileName(ruta)
-        doc.print_(printer)
-        QMessageBox.information(self, "OK", "PDF Generado.")
+            total_debe+=d["debe"]
+            total_haber+=d["haber"]
+            row+=1
 
-    def _excel(self, modo):
-        if not ExportadorExcelMensual: return
-        ruta, _ = QFileDialog.getSaveFileName(self, "Excel", "Informe.xlsx", "Excel (*.xlsx)")
-        if not ruta: return
-        
-        tipo_rep = self.cbo_tipo.currentText()
-        datos_export = []
-        
-        if "Sumas" in tipo_rep:
-            for row in self.datos_actuales:
-                datos_export.append({
-                    "fecha": "-", "documento": "-", "concepto": "Balance", 
-                    "cuenta": row.get("cuenta",""), "nombre_cuenta": row.get("nombre",""),
-                    "debe": row.get("debe",0), "haber": row.get("haber",0),
-                    "saldo": row.get("saldo",0), "banco": "-", "estado": "-", "categoria": "-"
-                })
-        else:
-            datos_export = self.datos_actuales
+        # TOTAL GENERAL
+        for c in range(1,6):
+            cell=ws.cell(row=row,column=c)
+            cell.border=borde
+            cell.fill=verde
 
-        try:
-            ExportadorExcelMensual.exportar_general(ruta, datos_export, f"Informe: {tipo_rep}")
-            QMessageBox.information(self, "OK", "Excel generado.")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+        ws.cell(row=row,column=2,value="TOTAL GENERAL").font=Font(bold=True)
+        ws.cell(row=row,column=3,value=total_debe)
+        ws.cell(row=row,column=4,value=total_haber)
+        ws.cell(row=row,column=5,value=(total_haber-total_debe))
+
+        wb.save(ruta)
