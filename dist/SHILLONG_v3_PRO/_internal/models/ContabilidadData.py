@@ -109,6 +109,11 @@ class ContabilidadData:
         except Exception as e:
             print("[ContabilidadData] CRASH al guardar:", e)
 
+    def asignar_archivo(self, nueva_ruta):
+        """Cambia el archivo JSON activo y recarga datos."""
+        self.archivo_json = Path(nueva_ruta)
+        self.cargar()
+
     # ============================================================
     # AGREGAR MOVIMIENTO (con features)
     # ============================================================
