@@ -1,5 +1,5 @@
 #define MyAppName "SHILLONG CONTABILIDAD v3 PRO"
-#define MyAppVersion "3.7.7"
+#define MyAppVersion "3.7.8"
 #define MyAppPublisher "Shillong Soft"
 #define MyAppURL "https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD"
 #define MyAppExeName "SHILLONG_v3_PRO.exe"
@@ -17,7 +17,7 @@ AllowNetworkDrive=yes
 AllowUNCPath=yes
 PrivilegesRequired=admin
 OutputDir=Output
-OutputBaseFilename=Instalador_Shillong_v3.7.7_PRO
+OutputBaseFilename=Instalador_Shillong_v3.7.8_PRO
 SetupIconFile=assets\shillong_logov3.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -57,7 +57,7 @@ var
   Respuesta: Integer;
 begin
   MsgBox('SHALOM' + #13#10 + #13#10 +
-         'Bienvenido al instalador de Shillong Contabilidad v3.7 PRO.' + #13#10 +
+         'Bienvenido al instalador de Shillong Contabilidad v3.7.8 PRO.' + #13#10 +
          'Que este software sea de gran bendición y utilidad.', mbInformation, MB_OK);
 
   Respuesta := MsgBox('AVISO IMPORTANTE' + #13#10 + #13#10 +

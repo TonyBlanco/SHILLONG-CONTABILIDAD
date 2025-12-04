@@ -29,12 +29,14 @@ except ImportError:
     ImportarExcelDialog = None
 
 try:
-    from updater import Updater
-    from version import APP_VERSION
-    APP_VERSION = "3.7.7" 
+    from core.updater import check_for_updates, get_update_info, get_local_version
+    from core.version import APP_VERSION, get_full_version
 except ImportError:
-    Updater = None
-    APP_VERSION = "3.7.7"
+    check_for_updates = None
+    get_update_info = None
+    get_local_version = lambda: "3.7.8"
+    APP_VERSION = "3.7.8"
+    get_full_version = lambda: f"v{APP_VERSION} PRO"
 
 try:
     from models.fix_data import reparar_json
@@ -47,8 +49,14 @@ except ImportError:
     ejecutar_aprendizaje = None
 
 try:
+    # --- NUEVO: Importación segura del diálogo de auditoría ---
+    from ui.Dialogs.VerificadorBalanceDialog import VerificadorBalanceDialog
+except ImportError:
+    VerificadorBalanceDialog = None
+# ---------------------------------------------
+try:
     locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-except:
+except locale.Error:
     pass
 
 # =====================================================================
@@ -128,7 +136,7 @@ class CalendarDialog(QDialog):
                     self.nombres_list = [d["nombre"] for d in data]
                     while len(self.nombres_list) < 72:
                         self.nombres_list.append("???")
-        except:
+        except (IOError, json.JSONDecodeError, KeyError):
             pass
         
         layout = QVBoxLayout(self)
@@ -301,7 +309,7 @@ class ToolsView(QWidget):
             if os.path.exists(path):
                 with open(path, "r", encoding="utf-8") as f:
                     self.data_kabbalah = json.load(f)
-        except:
+        except (IOError, json.JSONDecodeError):
             self.data_kabbalah = []
 
     def _setup_salmo(self, l):
@@ -426,8 +434,10 @@ class ToolsView(QWidget):
         g.addWidget(mk_btn("Abrir Carpeta", self._carpeta, "#3b82f6"), 1, 1)
         g.addWidget(mk_btn("Auto-Aprender Conceptos", self._aprender, "#8b5cf6"), 2, 0)
         g.addWidget(mk_btn("Reparar Debe/Haber", self._reparar, "#db2777"), 2, 1)
-        # --- NUEVA HERRAMIENTA AÑADIDA ---
+        # --- NUEVA HERRAMIENTA 1: Reconciliación (EXISTENTE) ---
         g.addWidget(mk_btn("Reconciliar/Depurar Datos", self._reconciliar_duplicados, "#059669"), 3, 0, 1, 2)
+        # --- NUEVA HERRAMIENTA 2: Auditoría Debe/Haber (AÑADIDA) ---
+        g.addWidget(mk_btn("Auditoría Balance (Corregir Debe/Haber)", self._abrir_verificador, "#3b82f6"), 4, 0, 1, 2) 
         # -----------------------------------
         return f
 
@@ -455,6 +465,67 @@ class ToolsView(QWidget):
         return f
 
     # ================================================================
+    # LÓGICA DE AUDITORÍA (NUEVO CÓDIGO AÑADIDO)
+    # ================================================================
+    def _auditar_movimientos(self):
+        """Busca errores de Debe/Haber y devuelve una lista."""
+        errores = []
+        
+        # Función local para normalizar los valores del JSON (que vienen como strings)
+        def _normalizar(txt):
+            try:
+                # Esta función es crucial si los valores en el JSON están como "1.550,00" o "1550"
+                return float(str(txt).replace(",", "."))
+            except (ValueError, TypeError):
+                return 0.0
+
+        if not hasattr(self.data, 'movimientos'):
+            QMessageBox.critical(self, "Error de Datos", "La propiedad 'movimientos' no está disponible en self.data.")
+            return []
+            
+        for i, mov in enumerate(self.data.movimientos):
+            debe = _normalizar(mov.get("debe", "0.00"))
+            haber = _normalizar(mov.get("haber", "0.00"))
+            
+            error_msg = None
+            
+            # Regla A: Ambos son cero (No es un movimiento contable válido)
+            if debe == 0.0 and haber == 0.0:
+                error_msg = "Ambos Debe y Haber son CERO."
+            
+            # Regla B: Ambos son mayores que cero (Rompe la partida doble a nivel de registro simple)
+            elif debe > 0.0 and haber > 0.0:
+                error_msg = "Debe y Haber coexisten (> 0)."
+            
+            if error_msg:
+                errores.append({
+                    "index": i,
+                    "movimiento": mov,
+                    "error": error_msg,
+                })
+                
+        return errores
+
+    def _abrir_verificador(self):
+        """Ejecuta la auditoría y muestra la ventana de corrección si hay errores."""
+        if VerificadorBalanceDialog is None:
+            QMessageBox.critical(self, "Error", "No se encontró el módulo VerificadorBalanceDialog.py. Asegúrese de crearlo.")
+            return
+
+        errores = self._auditar_movimientos()
+        
+        if not errores:
+            QMessageBox.information(self, "Verificación OK", "🎉 ¡Base de Datos limpia! No se encontraron errores de Debe/Haber.")
+            return
+
+        # Abrir la ventana de corrección
+        dlg = VerificadorBalanceDialog(self.data, errores, self)
+        if dlg.exec():
+            # Si el usuario hace clic en Guardar
+            if hasattr(self.parent(), "actualizar_vistas"):
+                 self.parent().actualizar_vistas()
+                 
+    # ================================================================
     # CALCULADORA DEL SISTEMA (FUNCIÓN RESTAURADA)
     # ================================================================
     def _abrir_calculadora(self):
@@ -475,7 +546,7 @@ class ToolsView(QWidget):
             QMessageBox.warning(self, "Error", f"No se pudo abrir la calculadora:\n{e}")
 
     # ================================================================
-    # FUNCIONES RESTANTES
+    # FUNCIONES RESTANTES (EXISTENTES)
     # ================================================================
     def _verificar_json(self):
         ruta = str(self.data.archivo_json)
@@ -551,7 +622,76 @@ class ToolsView(QWidget):
         app.setPalette(p)
 
     def _update(self):
-        QMessageBox.information(self, "Versión", f"SHILLONG CONTABILIDAD v{APP_VERSION}\nEngine v4.3.2") 
+        """Check for updates and notify user."""
+        if check_for_updates is None or get_update_info is None:
+            QMessageBox.information(
+                self, 
+                "Versión", 
+                f"SHILLONG CONTABILIDAD v{APP_VERSION}\nEngine v4.3.2\n\n"
+                "⚠️ El verificador de actualizaciones no está disponible."
+            )
+            return
+        
+        # Show loading cursor
+        self.setCursor(Qt.WaitCursor)
+        
+        try:
+            info = get_update_info()
+            self.setCursor(Qt.ArrowCursor)
+            
+            if info["available"]:
+                # Update available - show detailed dialog
+                msg = QMessageBox(self)
+                msg.setWindowTitle("🎉 ¡Actualización Disponible!")
+                msg.setIcon(QMessageBox.Information)
+                msg.setText(
+                    f"<h3>Nueva versión disponible: v{info['remote_version']}</h3>"
+                    f"<p>Tu versión actual: v{info['local_version']}</p>"
+                )
+                
+                # Add release notes if available
+                if info.get("release_notes"):
+                    notes = info["release_notes"][:400]
+                    if len(info["release_notes"]) > 400:
+                        notes += "..."
+                    msg.setInformativeText(f"📋 Notas de la versión:\n{notes}")
+                
+                # Add buttons
+                btn_download = msg.addButton("⬇️ Descargar Ahora", QMessageBox.AcceptRole)
+                btn_later = msg.addButton("Más Tarde", QMessageBox.RejectRole)
+                
+                msg.exec()
+                
+                if msg.clickedButton() == btn_download:
+                    # Open download URL in browser
+                    if info.get("download_url"):
+                        QDesktopServices.openUrl(QUrl(info["download_url"]))
+                        QMessageBox.information(
+                            self,
+                            "Descarga Iniciada",
+                            "Se ha abierto tu navegador para descargar la actualización.\n\n"
+                            "Después de instalar, reinicia SHILLONG para aplicar los cambios."
+                        )
+            else:
+                # No update available
+                QMessageBox.information(
+                    self,
+                    "✅ Versión Actualizada",
+                    f"<h3>Estás usando la última versión</h3>"
+                    f"<p><b>Versión:</b> v{info['local_version']} PRO</p>"
+                    f"<p><b>Engine:</b> v4.3.2</p>"
+                    f"<p>No hay actualizaciones disponibles.</p>"
+                )
+                
+        except Exception as e:
+            self.setCursor(Qt.ArrowCursor)
+            QMessageBox.warning(
+                self,
+                "Error de Conexión",
+                f"No se pudo verificar actualizaciones.\n\n"
+                f"Versión actual: v{APP_VERSION} PRO\n\n"
+                f"Error: {str(e)[:100]}"
+            ) 
 
     def _reparar(self):
         if reparar_json and QMessageBox.question(self, "Reparar", "¿Corregir Debe/Haber invertidos?", QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:

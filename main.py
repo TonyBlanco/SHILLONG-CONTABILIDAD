@@ -13,9 +13,22 @@ if getattr(sys, 'frozen', False):
 else:
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Asegurar que Python encuentre los módulos
+# Asegurar que Python encuentre los módulos base
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+
+# --- PRIORIDAD PARA MÓDULOS EXTERNOS (HOT-UPDATE) ---
+# Con esto, cuando modifiques ui/*.py o models/*.py,
+# Python intentará usar primero los archivos del disco
+# antes que los módulos empaquetados en el EXE.
+UI_DIR = os.path.join(ROOT_DIR, "ui")
+MODELS_DIR = os.path.join(ROOT_DIR, "models")
+
+if UI_DIR not in sys.path:
+    sys.path.insert(0, UI_DIR)
+
+if MODELS_DIR not in sys.path:
+    sys.path.insert(0, MODELS_DIR)
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import Qt
@@ -26,7 +39,7 @@ from models.ContabilidadData import ContabilidadData
 from ui.MainWindow import MainWindow
 
 # --- CONSTANTES ---
-APP_VERSION = "3.7.7"
+APP_VERSION = "3.7.8"
 
 # ============================================================
 #  SISTEMA DE LOGS (LA CAJA NEGRA) 📦
@@ -62,7 +75,7 @@ def setup_logging():
         
         # Opcional: Mostrar alerta visual al usuario antes de morir
         error_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-        print("CRITICAL ERROR:", error_msg) # Para consola si existe
+        print("CRITICAL ERROR:", error_msg)  # Para consola si existe
         
         # Intentar mostrar ventana de error (si Qt sigue vivo)
         try:
@@ -111,7 +124,10 @@ def main():
     # 1. ACTIVAR LOGS ANTES DE NADA
     setup_logging()
 
-    print("🔥 SHILLONG CONTABILIDAD v3.7.7 PRO — Engine v4.3.2 Iniciado")
+    print("🔥 SHILLONG CONTABILIDAD v3.7.8 PRO — Engine v4.3.2 Iniciado")
+    print(f"ROOT_DIR detectado: {ROOT_DIR}")
+    print(f"UI_DIR: {UI_DIR}")
+    print(f"MODELS_DIR: {MODELS_DIR}")
 
     disable_windows_dpi_scaling()
 

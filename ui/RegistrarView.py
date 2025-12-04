@@ -1,28 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-RegistrarView — SHILLONG CONTABILIDAD v3.7.7 PRO
-Versión DEFINITIVA (Diseño original + Botón Importar Excel)
+RegistrarView — SHILLONG CONTABILIDAD v3.7.8 PRO
+Versión COMPLETAMENTE CORREGIDA
 """
 
 from models.CuentasMotor import MotorCuentas
-
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit, QDateEdit,
     QComboBox, QPushButton, QLabel, QTableWidget, QTableWidgetItem,
     QMessageBox, QCompleter, QHeaderView, QAbstractItemView,
-    QGroupBox, QRadioButton, QButtonGroup
+    QRadioButton, QButtonGroup
 )
-from PySide6.QtCore import Qt, QDate
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QDate, QLocale
 from datetime import datetime
 import random
 
-# --- NUEVO: Importación segura del diálogo ---
 try:
     from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
 except ImportError:
     ImportarExcelDialog = None
-# ---------------------------------------------
+
 
 class RegistrarView(QWidget):
 
@@ -30,83 +27,46 @@ class RegistrarView(QWidget):
         super().__init__()
         self.data = data
         self.motor = MotorCuentas()
-
+        self.locale = QLocale(QLocale.Spanish)
         self.tema_oscuro = False
+        self.movimientos_filtrados = []
 
         self.setStyleSheet(self._estilo_claro())
         self._build_ui()
         self._cargar_ultimos()
 
     # ============================================================
-    # ESTILOS DPI-SAFE (ORIGINALES)
+    # ESTILOS
     # ============================================================
     def _estilo_claro(self):
         return """
-            QWidget { background: #f8fafc; font-family: 'Segoe UI'; }
-            QLabel { color: #1e293b; font-size: 14px; }
-            QLineEdit, QDateEdit, QComboBox {
-                padding: 10px 14px;
-                border: 2px solid #e2e8f0;
-                border-radius: 8px;
-                background: white;
-                font-size: 15px;
-            }
-            QLineEdit:focus, QComboBox:focus { border-color: #3b82f6; }
-
-            QPushButton {
-                padding: 10px 20px;
-                border-radius: 10px;
-                font-weight: bold;
-                font-size: 14px;
-                color: white;
-            }
-            QPushButton#refresh { background: #64748b; }
-            QPushButton#duplicar { background: #7c3aed; }
-            QPushButton#guardar { background: #2563eb; }
-            QPushButton#limpiar { background: #0ea5e9; }
-            QPushButton#limpiar_dh { background: #6b7280; }
-            QPushButton#nuevo { background: #059669; }
-            QPushButton#tema { background: #475569; }
-            
-            /* NUEVO: ESTILO PARA BOTÓN IMPORTAR */
-            QPushButton#importar { background: #10b981; } 
-            QPushButton#importar:hover { background: #059669; }
-
-            QHeaderView::section {
-                background: #e0e7ff;
-                padding: 8px;
-                font-weight: bold;
-            }
-            QGroupBox {
-                border: 2px solid #cbd5e1;
-                border-radius: 10px;
-                padding: 10px;
-            }
+        QWidget { background: #f8fafc; font-family:'Segoe UI'; }
+        QLabel { color:#1e293b; font-size:14px; }
+        QLineEdit, QDateEdit, QComboBox {
+            padding:10px; border:2px solid #e2e8f0;
+            border-radius:8px; background:white;
+        }
+        QPushButton {
+            padding:10px 20px; border-radius:10px;
+            color:white; font-weight:bold;
+        }
+        QPushButton#guardar { background:#2563eb; }
+        QPushButton#nuevo { background:#059669; }
+        QPushButton#limpiar { background:#0ea5e9; }
+        QPushButton#limpiar_dh { background:#64748b; }
+        QPushButton#duplicar { background:#7c3aed; }
+        QPushButton#refresh { background:#475569; }
         """
 
     def _estilo_oscuro(self):
         return """
-            QWidget { background: #0f172a; color: #e2e8f0; }
-            QLabel { color: #e2e8f0; }
-            QLineEdit, QDateEdit, QComboBox {
-                background: #1e293b;
-                color: #e2e8f0;
-                border: 2px solid #334155;
-                padding: 10px 14px;
-                border-radius: 8px;
-            }
-            QPushButton#refresh { background: #64748b; }
-            QPushButton#duplicar { background: #8b5cf6; }
-            QPushButton#guardar { background: #3b82f6; }
-            QPushButton#limpiar { background: #0ea5e9; }
-            QPushButton#limpiar_dh { background: #6b7280; }
-            QPushButton#nuevo { background: #059669; }
-            QPushButton#tema { background: #475569; }
-            
-            /* NUEVO: ESTILO PARA BOTÓN IMPORTAR EN MODO OSCURO */
-            QPushButton#importar { background: #059669; }
-
-            QHeaderView::section { background: #334155; color: white; }
+        QWidget { background:#0f172a; color:#e2e8f0; }
+        QLabel { color:#e2e8f0; }
+        QLineEdit, QDateEdit, QComboBox {
+            background:#1e293b; color:#e2e8f0;
+            border:2px solid #334155; padding:10px;
+            border-radius:8px;
+        }
         """
 
     def _cambiar_tema(self):
@@ -114,29 +74,27 @@ class RegistrarView(QWidget):
         self.setStyleSheet(
             self._estilo_oscuro() if self.tema_oscuro else self._estilo_claro()
         )
-        self.btn_tema.setText("Modo claro" if self.tema_oscuro else "Modo oscuro")
+        self.btn_tema.setText(
+            "Modo claro" if self.tema_oscuro else "Modo oscuro"
+        )
 
     # ============================================================
-    # UI PRINCIPAL (ORIGINAL EXACTA + Botón Importar)
+    # UI PRINCIPAL
     # ============================================================
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(30, 20, 30, 20)
-        layout.setSpacing(15)
+        layout.setContentsMargins(30,20,30,20)
 
-        # -----------------------------
-        # TÍTULO + BOTÓN TEMA
-        # -----------------------------
+        # --------------------------
+        # Título y botones superiores
+        # --------------------------
         top = QHBoxLayout()
-        titulo = QLabel("REGISTRAR MOVIMIENTO CONTABLE")
-        titulo.setStyleSheet("font-size: 26px; font-weight: 800;")
-        
-        # --- NUEVO: BOTÓN IMPORTAR ---
+        titulo = QLabel("REGISTRAR MOVIMIENTO")
+        titulo.setStyleSheet("font-size:26px;font-weight:800;")
+
         self.btn_importar = QPushButton("📥 Importar Excel")
         self.btn_importar.setObjectName("importar")
-        self.btn_importar.setCursor(Qt.PointingHandCursor)
         self.btn_importar.clicked.connect(self._abrir_importador)
-        # -----------------------------
 
         self.btn_tema = QPushButton("Modo oscuro")
         self.btn_tema.setObjectName("tema")
@@ -144,102 +102,113 @@ class RegistrarView(QWidget):
 
         top.addWidget(titulo)
         top.addStretch()
-        top.addWidget(self.btn_importar) # Añadido
+        top.addWidget(self.btn_importar)
         top.addWidget(self.btn_tema)
         layout.addLayout(top)
 
+        # -------------------------------------
+        # FORMULARIO PRINCIPAL
+        # -------------------------------------
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignRight)
 
-        # FECHA
+        # Fecha
         self.fecha = QDateEdit()
         self.fecha.setCalendarPopup(True)
         self.fecha.setDisplayFormat("dd/MM/yyyy")
         self.fecha.setDate(QDate.currentDate())
         form.addRow("Fecha:", self.fecha)
 
-        # DOCUMENTO
+        # Documento
         self.documento = QLineEdit()
-        self.documento.setPlaceholderText("Opcional — si está vacío se genera automático")
+        self.documento.setPlaceholderText("Opcional — se genera uno si está vacío")
         form.addRow("Documento:", self.documento)
 
-        # CUENTA CONTABLE — ORIGINAL COMPLETA
+        # Cuenta contable
         self.cuenta_combo = QComboBox()
         self.cuenta_combo.setEditable(True)
 
         opciones = []
         try:
             opciones = self.motor.todas_las_opciones()
-        except:
-            pass
+        except (AttributeError, Exception) as e:
+            print(f"[RegistrarView] Error cargando opciones de cuentas: {e}")
 
         self.cuenta_combo.addItems(opciones)
 
-        completer = QCompleter(opciones, self)
-        completer.setFilterMode(Qt.MatchContains)
-        completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.cuenta_combo.setCompleter(completer)
-
+        comp = QCompleter(opciones, self)
+        comp.setFilterMode(Qt.MatchContains)
+        comp.setCaseSensitivity(Qt.CaseInsensitive)
+        self.cuenta_combo.setCompleter(comp)
         self.cuenta_combo.currentTextChanged.connect(self._on_cuenta_changed)
-        form.addRow("Cuenta contable:", self.cuenta_combo)
+        form.addRow("Cuenta:", self.cuenta_combo)
 
-        # NOMBRE CUENTA
+        # Nombre cuenta
         self.lbl_nombre = QLabel("Seleccione una cuenta")
-        self.lbl_nombre.setStyleSheet("font-style: italic; color: #64748b;")
+        self.lbl_nombre.setStyleSheet("font-style:italic;color:#64748b;")
         form.addRow("", self.lbl_nombre)
 
-        # SUGERENCIAS
-        self.lbl_sugerencias = QLabel("")
-        self.lbl_sugerencias.setWordWrap(True)
-        self.lbl_sugerencias.setStyleSheet("color:#6366f1; font-size:13px;")
-        form.addRow("", self.lbl_sugerencias)
-
-        # CONCEPTO
+        # Concepto
         self.concepto = QLineEdit()
-        self.concepto.setPlaceholderText("Descripción del movimiento…")
+        self.concepto.setPlaceholderText("Descripción…")
         self.concepto.textChanged.connect(self._validar_concepto_live)
         form.addRow("Concepto:", self.concepto)
 
-        # DEBE / HABER
-        box_dh = QHBoxLayout()
-        self.debe = QLineEdit("0,00")
-        self.haber = QLineEdit("0,00")
+        # --------------------------------------------------------
+        # DEBE / HABER (INTERFAZ CORRECTA)
+        # --------------------------------------------------------
+        box_dh = QVBoxLayout()
 
-        self.debe.textChanged.connect(self._calcular_importe)
-        self.haber.textChanged.connect(self._calcular_importe)
+        # INGRESO (HABER contable)
+        fila_ing = QHBoxLayout()
+        fila_ing.addWidget(QLabel("ENTRADA / INGRESO (+ dinero):"))
+        self.ui_ingreso = QLineEdit("0,00")
+        self.ui_ingreso.textChanged.connect(self._calcular_importe)
+        fila_ing.addWidget(self.ui_ingreso)
 
-        box_dh.addWidget(QLabel("Debe:"))
-        box_dh.addWidget(self.debe)
-        box_dh.addWidget(QLabel("Haber:"))
-        box_dh.addWidget(self.haber)
+        info_ing = QLabel("→ Todo lo que entra (donaciones, ventas).")
+        info_ing.setStyleSheet("color:#059669;font-size:12px;")
+
+        # GASTO (DEBE contable)
+        fila_gas = QHBoxLayout()
+        fila_gas.addWidget(QLabel("SALIDA / GASTO (- dinero):"))
+        self.ui_gasto = QLineEdit("0,00")
+        self.ui_gasto.textChanged.connect(self._calcular_importe)
+        fila_gas.addWidget(self.ui_gasto)
+
+        info_gas = QLabel("→ Todo lo que sale (compras, pagos).")
+        info_gas.setStyleSheet("color:#dc2626;font-size:12px;")
+
+        box_dh.addLayout(fila_ing)
+        box_dh.addWidget(info_ing)
+        box_dh.addLayout(fila_gas)
+        box_dh.addWidget(info_gas)
+
         form.addRow("Importe:", box_dh)
 
-        # ----------------------------------------------------
-        # BANCO / ESTADO (ORIGINAL CHIP STYLE)
-        # ----------------------------------------------------
+        # --------------------------------------------------------
+        # BANCO / ESTADO
+        # --------------------------------------------------------
         banco_estado = QHBoxLayout()
 
-        # BANCO
+        # Bancos
         banco_layout = QHBoxLayout()
         self.banco_buttons = QButtonGroup(self)
-        chip_banco = """
+
+        estilo_chip = """
             QRadioButton {
-                padding: 6px 14px;
-                border-radius: 14px;
-                background: #f1f5f9;
-                border: 1px solid #cbd5e1;
+                padding:6px 14px; border-radius:16px;
+                background:#f1f5f9; border:1px solid #cbd5e1;
             }
             QRadioButton:checked {
-                background: #3b82f6;
-                color: white;
-                font-weight: bold;
+                background:#3b82f6; color:white; font-weight:bold;
             }
-            QRadioButton::indicator { width:0; height:0; }
+            QRadioButton::indicator { width:0;height:0; }
         """
 
-        for b in ["Caja", "Federal Bank", "SBI", "Union Bank", "Otro"]:
+        for b in ["Caja","Federal Bank","SBI","Union Bank","Otro"]:
             rb = QRadioButton(b)
-            rb.setStyleSheet(chip_banco)
+            rb.setStyleSheet(estilo_chip)
             banco_layout.addWidget(rb)
             self.banco_buttons.addButton(rb)
             if b == "Caja":
@@ -247,48 +216,44 @@ class RegistrarView(QWidget):
 
         banco_estado.addLayout(banco_layout)
 
-        # ESTADO
+        # Estado (Pagado/Pendiente)
         estado_layout = QHBoxLayout()
         self.estado_buttons = QButtonGroup(self)
 
-        chip_estado = """
+        estilo_estado = """
             QRadioButton {
-                padding: 6px 14px;
-                border-radius: 14px;
-                background: #f1f5f9;
-                border: 1px solid #cbd5e1;
+                padding:6px 14px; border-radius:16px;
+                background:#f1f5f9; border:1px solid #cbd5e1;
             }
             QRadioButton:checked {
-                background: #10b981;
-                color: white;
-                font-weight: bold;
+                background:#10b981; color:white; font-weight:bold;
             }
-            QRadioButton::indicator { width:0; height:0; }
+            QRadioButton::indicator { width:0;height:0; }
         """
 
-        for e in ["Pagado", "Pendiente"]:
+        for e in ["Pagado","Pendiente"]:
             rb = QRadioButton(e)
-            rb.setStyleSheet(chip_estado)
+            rb.setStyleSheet(estilo_estado)
             estado_layout.addWidget(rb)
             self.estado_buttons.addButton(rb)
             if e == "Pagado":
                 rb.setChecked(True)
 
         banco_estado.addLayout(estado_layout)
-        banco_estado.addStretch()
-
         form.addRow("Banco / Estado:", banco_estado)
 
         layout.addLayout(form)
 
-        # BOTONES GRANDES — ORIGINAL
+        # --------------------------------------------------------
+        # BOTONES
+        # --------------------------------------------------------
         botones = QHBoxLayout()
 
         self.btn_refresh = QPushButton("Actualizar lista")
         self.btn_refresh.setObjectName("refresh")
         self.btn_refresh.clicked.connect(self._cargar_ultimos)
 
-        self.btn_duplicar = QPushButton("Duplicar movimiento")
+        self.btn_duplicar = QPushButton("Duplicar")
         self.btn_duplicar.setObjectName("duplicar")
         self.btn_duplicar.clicked.connect(self._duplicar)
 
@@ -298,7 +263,7 @@ class RegistrarView(QWidget):
 
         self.btn_limpiar = QPushButton("Limpiar Formulario")
         self.btn_limpiar.setObjectName("limpiar")
-        self.btn_limpiar.clicked.connect(self._limpiar)
+        self.btn_limpiar.clicked.connect(self._limpiar_formulario)
 
         self.btn_limpiar_dh = QPushButton("Limpiar Debe/Haber")
         self.btn_limpiar_dh.setObjectName("limpiar_dh")
@@ -306,28 +271,28 @@ class RegistrarView(QWidget):
 
         self.btn_nuevo = QPushButton("Nuevo Registro")
         self.btn_nuevo.setObjectName("nuevo")
-        self.btn_nuevo.clicked.connect(self._nuevo_registro)
+        self.btn_nuevo.clicked.connect(self._limpiar_formulario)
 
-        for b in [
+        for w in [
             self.btn_refresh, self.btn_duplicar, self.btn_guardar,
             self.btn_limpiar, self.btn_limpiar_dh, self.btn_nuevo
         ]:
-            botones.addWidget(b)
+            botones.addWidget(w)
 
         layout.addLayout(botones)
 
         # BUSCADOR
         self.buscador = QLineEdit()
-        self.buscador.setPlaceholderText("Buscar en movimientos…")
+        self.buscador.setPlaceholderText("Buscar…")
         self.buscador.textChanged.connect(self._filtrar_tabla)
         layout.addWidget(self.buscador)
 
         # TABLA
-        self.tabla = QTableWidget(0, 10)
+        self.tabla = QTableWidget(0,10)
         self.tabla.setHorizontalHeaderLabels([
-            "Fecha", "Documento", "Concepto", "Cuenta",
-            "Nombre Cuenta", "Debe", "Haber",
-            "Banco", "Estado", "Saldo"
+            "Fecha","Documento","Concepto","Cuenta",
+            "Nombre Cuenta","Debe","Haber",
+            "Banco","Estado","Saldo"
         ])
         self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tabla.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -338,226 +303,311 @@ class RegistrarView(QWidget):
         self.lbl_totales = QLabel()
         self.lbl_totales.setAlignment(Qt.AlignCenter)
         self.lbl_totales.setStyleSheet(
-            "font-weight:bold;font-size:15px;padding:10px;background:#e0e7ff;border-radius:8px;"
+            "font-size:15px;font-weight:bold;padding:10px;background:#e0e7ff;"
+            "border-radius:8px;"
         )
         layout.addWidget(self.lbl_totales)
 
     # ============================================================
-    # NUEVO: LÓGICA DE IMPORTACIÓN
+    # PARSEOS
+    # ============================================================
+    def _parse_float(self, txt):
+        """
+        Parse float from string handling both Spanish and standard decimal formats.
+        Spanish: 1.234,56 → 1234.56
+        Standard: 1234.56 → 1234.56
+        US: 1,234.56 → 1234.56
+        """
+        if not txt:
+            return 0.0
+        
+        # Handle numeric types directly
+        if isinstance(txt, (int, float)):
+            return float(txt)
+        
+        txt = str(txt).strip()
+        try:
+            # Count separators to determine format
+            dot_count = txt.count(".")
+            comma_count = txt.count(",")
+            
+            # Standard decimal format: "1234.56" (no comma, one dot)
+            if comma_count == 0 and dot_count == 1:
+                return float(txt)
+            
+            # US format with thousands: "1,234.56" (dot is after comma)
+            if comma_count >= 1 and dot_count == 1 and txt.rfind(".") > txt.rfind(","):
+                return float(txt.replace(",", ""))
+            
+            # Simple Spanish decimal: "1234,56" (no dot, one comma)
+            if dot_count == 0 and comma_count == 1:
+                return float(txt.replace(",", "."))
+            
+            # Full Spanish format: "1.234,56" (comma is after dot)
+            if dot_count >= 1 and comma_count == 1 and txt.rfind(",") > txt.rfind("."):
+                return float(txt.replace(".", "").replace(",", "."))
+            
+            # Integer or simple number
+            return float(txt)
+        except (ValueError, TypeError):
+            return 0.0
+
+    def _fmt(self, v):
+        try:
+            return self.locale.toString(float(v), 'f', 2)
+        except (ValueError, TypeError):
+            return "0,00"
+
+    # ============================================================
+    # IMPORTADOR
     # ============================================================
     def _abrir_importador(self):
         if ImportarExcelDialog is None:
-            QMessageBox.critical(self, "Error", "No se encontró el módulo ui/Dialogs/ImportarExcelDialog.py")
+            QMessageBox.critical(
+                self,"Error",
+                "No se encontró ImportarExcelDialog en ui/Dialogs/"
+            )
             return
-            
-        dlg = ImportarExcelDialog(self, self.data)
-        if dlg.exec():
-            # Refrescar la tabla si se importó algo
-            self._cargar_ultimos()
+        try:
+            dlg = ImportarExcelDialog(self, self.data)
+            if dlg.exec():
+                self._cargar_ultimos()
+        except Exception as e:
+            QMessageBox.critical(self,"Error",str(e))
 
     # ============================================================
-    # INTERACCIÓN CUENTA
+    # GUARDAR MOVIMIENTO (FIX DEFINITIVO DE DEBE/HABER)
+    # ============================================================
+    def _guardar(self):
+
+        documento = self.documento.text().strip() or \
+                    f"SIN-DOC-{random.randint(10000,99999)}"
+
+        concepto = self.concepto.text().strip()
+        if not concepto:
+            QMessageBox.warning(self,"Atención","El concepto no puede estar vacío.")
+            return
+
+        # -------------------------------------------------------
+        # FIX DEFINITIVO: INGRESO = HABER, GASTO = DEBE
+        # -------------------------------------------------------
+        try:
+            ingreso_ui = self._parse_float(self.ui_ingreso.text())
+            gasto_ui   = self._parse_float(self.ui_gasto.text())
+
+            haber = ingreso_ui  # INGRESO → HABER
+            debe  = gasto_ui    # GASTO → DEBE
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,"Error",
+                f"Error al procesar importes:\n{str(e)}"
+            )
+            return
+
+        # Reglas básicas
+        if debe == 0 and haber == 0:
+            QMessageBox.warning(
+                self,"Atención","Debe ingresar un importe en DEBE o HABER."
+            )
+            return
+
+        if debe > 0 and haber > 0:
+            QMessageBox.critical(
+                self,"Error Fatal",
+                "Un movimiento no puede tener valores en DEBE y HABER simultáneamente."
+            )
+            return
+
+        # Cuenta contable
+        cuenta_txt = self.cuenta_combo.currentText()
+        if " – " not in cuenta_txt:
+            QMessageBox.warning(self,"Error","Seleccione una cuenta válida.")
+            return
+
+        codigo = cuenta_txt.split(" – ")[0]
+
+        # Banco y estado
+        banco = next(
+            (b.text() for b in self.banco_buttons.buttons() if b.isChecked()), 
+            "Caja"
+        )
+
+        estado = (
+            "pagado" if any(
+                rb.text()=="Pagado" and rb.isChecked()
+                for rb in self.estado_buttons.buttons()
+            ) else "pendiente"
+        )
+
+        fecha_str = self.fecha.date().toString("dd/MM/yyyy")
+
+        # -------------------------------------------------------
+        # Autocorrección: gasto colocado por error en ingreso
+        # -------------------------------------------------------
+        gasto_keywords = [
+            "vegetable","milk","fish","rice","bread","egg","onion",
+            "chicken","medicine","medical","clean","gas","taxi",
+            "gasto","pago","compra","servicio","equipo"
+        ]
+
+        if haber > 0 and any(k in concepto.lower() for k in gasto_keywords):
+            msg = QMessageBox(self)
+            msg.setWindowTitle("⚠️ ERROR CONTABLE DETECTADO")
+            msg.setText(
+                "Se detectó un GASTO pero el importe está como INGRESO.\n"
+                "¿Desea moverlo al DEBE?"
+            )
+            msg.setIcon(QMessageBox.Warning)
+            btn_si = msg.addButton("Sí, mover a DEBE", QMessageBox.YesRole)
+            btn_no = msg.addButton("Cancelar", QMessageBox.NoRole)
+            msg.exec()
+
+            if msg.clickedButton() == btn_si:
+                debe = haber
+                haber = 0.0
+            else:
+                return
+
+        # -------------------------------------------------------
+        # Crear movimiento limpio
+        # -------------------------------------------------------
+        movimiento = {
+            "fecha": fecha_str,
+            "documento": documento,
+            "concepto": concepto,
+            "cuenta": codigo,
+            "debe": f"{debe:.2f}",
+            "haber": f"{haber:.2f}",
+            "moneda": "INR",
+            "banco": banco,
+            "estado": estado
+        }
+
+        # Guardar
+        try:
+            self.data.agregar_movimiento(**movimiento)
+        except Exception as e:
+            QMessageBox.critical(self,"Error",str(e))
+            return
+
+        self._limpiar_formulario()
+        self._cargar_ultimos()
+
+        QMessageBox.information(
+            self,"Éxito","Movimiento guardado correctamente."
+        )
+
+    # ============================================================
+    # AUXILIARES
     # ============================================================
     def _on_cuenta_changed(self, texto):
         if " – " not in texto:
             self.lbl_nombre.setText("Seleccione una cuenta")
-            self.lbl_sugerencias.setText("")
             return
 
         codigo = texto.split(" – ")[0]
-        self.lbl_nombre.setText("→ " + self.motor.get_nombre(codigo))
+        try:
+            nombre = self.motor.get_nombre(codigo)
+            self.lbl_nombre.setText("→ " + nombre)
+        except (AttributeError, KeyError):
+            self.lbl_nombre.setText("→ Cuenta desconocida")
 
-        regla = self.motor.reglas.get(codigo, {})
-        sugeridos = regla.get("permitidos", [])
-
-        if sugeridos:
-            self.lbl_sugerencias.setText("Ejemplos: " + ", ".join(sugeridos[:5]))
-        else:
-            self.lbl_sugerencias.setText("No hay sugerencias")
-
-    # ============================================================
-    # VALIDACIÓN LIVE (verde / amarillo)
-    # ============================================================
     def _validar_concepto_live(self):
-        concepto = self.concepto.text().lower()
+        concepto_txt = self.concepto.text().lower()
         cuenta_txt = self.cuenta_combo.currentText()
+
         if " – " not in cuenta_txt:
+            self.concepto.setStyleSheet("")
             return
+
         codigo = cuenta_txt.split(" – ")[0]
 
-        if self.motor.es_concepto_valido(codigo, concepto):
-            self.concepto.setStyleSheet("border:2px solid #22c55e;background:#f0fdf4;")
-        else:
-            self.concepto.setStyleSheet("border:2px solid #facc15;background:#fffbeb;")
-
-    # ============================================================
-    # IMPORTES
-    # ============================================================
-    def _calcular_importe(self):
-        debe = self._normalizar(self.debe.text())
-        haber = self._normalizar(self.haber.text())
-
-        if debe > 0:
-            self.haber.setText("0,00")
-        elif haber > 0:
-            self.debe.setText("0,00")
-
-    def _normalizar(self, txt):
-        if not txt:
-            return 0
         try:
-            return float(txt.replace(".", "").replace(",", "."))
-        except:
-            return 0
+            if self.motor.es_concepto_valido(codigo, concepto_txt):
+                self.concepto.setStyleSheet(
+                    "border:2px solid #22c55e;background:#f0fdf4;"
+                )
+            else:
+                self.concepto.setStyleSheet(
+                    "border:2px solid #facc15;background:#fffbeb;"
+                )
+        except (AttributeError, KeyError):
+            self.concepto.setStyleSheet("")
 
-    def _fmt(self, v):
-        return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    def _calcular_importe(self):
+        """Evita que ambos campos tengan valor simultáneo."""
+        try:
+            ing = self._parse_float(self.ui_ingreso.text())
+            gas = self._parse_float(self.ui_gasto.text())
 
-    # ============================================================
-    # GUARDAR (Mejorado + FIX QMessageBox)
-    # ============================================================
-    def _guardar(self):
+            if ing > 0 and gas > 0:
+                self.ui_gasto.setText("0,00")
 
-        documento = self.documento.text().strip() or f"SIN-DOC-{random.randint(10000,99999)}"
+        except (ValueError, TypeError):
+            pass
 
-        # Documento duplicado
-        if any(m.get("documento","") == documento for m in self.data.movimientos):
-            QMessageBox.critical(self, "Error", "Documento duplicado.")
-            return
-
-        if not self.concepto.text().strip():
-            QMessageBox.warning(self, "Faltan datos", "Debe ingresar concepto.")
-            return
-
-        if " – " not in self.cuenta_combo.currentText():
-            QMessageBox.warning(self, "Error", "Seleccione una cuenta válida.")
-            return
-
-        debe = self._normalizar(self.debe.text())
-        haber = self._normalizar(self.haber.text())
-
-        if debe == 0 and haber == 0:
-            QMessageBox.warning(self, "Error", "Debe ingresar Debe o Haber.")
-            return
-
-        if debe > 0 and haber > 0:
-            QMessageBox.warning(self, "Error", "Debe y Haber no pueden coexistir.")
-            return
-
-        codigo = self.cuenta_combo.currentText().split(" – ")[0]
-        concepto = self.concepto.text().strip()
-
-        # 🔥 VALIDACIÓN SUAVE + FIX botones SI/NO
-        if not self.motor.es_concepto_valido(codigo, concepto):
-
-            msg = QMessageBox(self)
-            msg.setWindowTitle("Validación")
-            msg.setText("El concepto no coincide con las reglas típicas.\n¿Guardar de todos modos?")
-            msg.setIcon(QMessageBox.Question)
-
-            btn_si = msg.addButton("Sí", QMessageBox.YesRole)
-            btn_no = msg.addButton("No", QMessageBox.NoRole)
-
-            btn_si.setStyleSheet("""
-                padding: 8px 20px; background:#2563eb; color:white;
-                border-radius:8px; font-weight:bold;
-            """)
-            btn_no.setStyleSheet("""
-                padding: 8px 20px; background:#64748b; color:white;
-                border-radius:8px; font-weight:bold;
-            """)
-
-            msg.exec()
-
-            if msg.clickedButton() != btn_si:
-                return
-
-            # Aprendizaje
-            self.motor.agregar_concepto_a_reglas(codigo, concepto)
-
-        # Banco
-        banco = next((b.text() for b in self.banco_buttons.buttons() if b.isChecked()), "Caja")
-
-        # Estado (SIN usar checkedId porque no siempre devuelve orden)
-        estado = "pagado" if any(rb.isChecked() and rb.text()=="Pagado"
-                                 for rb in self.estado_buttons.buttons()) else "pendiente"
-
-        self.data.agregar_movimiento(
-            fecha=self.fecha.date().toString("dd/MM/yyyy"),
-            documento=documento,
-            concepto=concepto,
-            cuenta=codigo,
-            debe=debe,
-            haber=haber,
-            moneda="INR",
-            banco=banco,
-            estado=estado
-        )
-
-        self._limpiar()
-        self._cargar_ultimos()
-
-        QMessageBox.information(self, "Éxito", "Movimiento guardado correctamente.")
-
-    # ============================================================
-    # DUPLICAR
-    # ============================================================
     def _duplicar(self):
         row = self.tabla.currentRow()
         if row < 0:
-            QMessageBox.information(self, "Duplicar", "Seleccione un movimiento.")
+            QMessageBox.information(self,"Duplicar","Seleccione un movimiento.")
+            return
+
+        if not self.movimientos_filtrados:
             return
 
         m = self.movimientos_filtrados[row]
 
-        self.fecha.setDate(QDate.fromString(m["fecha"], "dd/MM/yyyy"))
+        self.fecha.setDate(QDate.fromString(m["fecha"],"dd/MM/yyyy"))
         self.documento.clear()
-        self.concepto.setText(m["concepto"])
+        self.concepto.setText(m.get("concepto",""))
 
-        self.cuenta_combo.setCurrentText(
-            f"{m['cuenta']} – {self.data.obtener_nombre_cuenta(m['cuenta'])}"
-        )
+        try:
+            nombre = self.data.obtener_nombre_cuenta(m["cuenta"])
+            self.cuenta_combo.setCurrentText(f"{m['cuenta']} – {nombre}")
+        except (KeyError, AttributeError):
+            pass
 
-        self.debe.setText(self._fmt(float(m["debe"])))
-        self.haber.setText(self._fmt(float(m["haber"])))
+        self.ui_ingreso.setText(m.get("haber","0,00"))
+        self.ui_gasto.setText(m.get("debe","0,00"))
 
         for rb in self.banco_buttons.buttons():
             if rb.text() == m.get("banco","Caja"):
                 rb.setChecked(True)
+                break
 
+        estado_txt = m.get("estado","pagado").capitalize()
         for rb in self.estado_buttons.buttons():
-            if rb.text() == m.get("estado","pagado"):
+            if rb.text() == estado_txt:
                 rb.setChecked(True)
+                break
 
-    # ============================================================
-    # LIMPIAR
-    # ============================================================
-    def _limpiar(self):
+    def _limpiar_formulario(self):
         self.fecha.setDate(QDate.currentDate())
         self.documento.clear()
         self.concepto.clear()
-        self.debe.setText("0,00")
-        self.haber.setText("0,00")
+        self.ui_ingreso.setText("0,00")
+        self.ui_gasto.setText("0,00")
         self.cuenta_combo.setCurrentIndex(-1)
         self.lbl_nombre.setText("Seleccione una cuenta")
-        self.lbl_sugerencias.setText("")
+        self.concepto.setStyleSheet("")
 
     def _limpiar_dh(self):
-        self.debe.setText("0,00")
-        self.haber.setText("0,00")
-
-    def _nuevo_registro(self):
-        self._limpiar()
+        self.ui_ingreso.setText("0,00")
+        self.ui_gasto.setText("0,00")
 
     # ============================================================
-    # TABLA
+    # TABLA + FILTRO + TOTALES
     # ============================================================
     def _cargar_ultimos(self):
-        movs = sorted(
-            self.data.movimientos,
-            key=lambda m: datetime.strptime(m["fecha"], "%d/%m/%Y"),
-            reverse=True
-        )[:20]
+        try:
+            movs = sorted(
+                self.data.movimientos,
+                key=lambda m: datetime.strptime(m["fecha"], "%d/%m/%Y"),
+                reverse=True
+            )[:20]
+        except (ValueError, KeyError, TypeError):
+            movs = self.data.movimientos[:20]
 
         self.movimientos_filtrados = movs
         self.tabla.setRowCount(0)
@@ -567,43 +617,54 @@ class RegistrarView(QWidget):
         saldo = 0
 
         for m in movs:
-            d = float(m["debe"])
-            h = float(m["haber"])
-            saldo += h - d
+            d = self._parse_float(m.get("debe","0"))
+            h = self._parse_float(m.get("haber","0"))
+
+            saldo += d - h
             total_debe += d
             total_haber += h
 
             row = self.tabla.rowCount()
             self.tabla.insertRow(row)
 
+            try:
+                nombre_cta = self.data.obtener_nombre_cuenta(m["cuenta"])
+            except (KeyError, AttributeError):
+                nombre_cta = "Desconocida"
+
             datos = [
-                m["fecha"], m["documento"], m["concepto"], m["cuenta"],
-                self.data.obtener_nombre_cuenta(m["cuenta"]),
-                self._fmt(d), self._fmt(h),
-                m["banco"], m["estado"], self._fmt(saldo)
+                m.get("fecha",""),
+                m.get("documento",""),
+                m.get("concepto",""),
+                m.get("cuenta",""),
+                nombre_cta,
+                self._fmt(d),
+                self._fmt(h),
+                m.get("banco","Caja"),
+                m.get("estado","pagado"),
+                self._fmt(saldo)
             ]
 
-            for col, val in enumerate(datos):
-                it = QTableWidgetItem(str(val))
-                if col in (5, 6, 9):
-                    it.setTextAlignment(Qt.AlignRight)
-                self.tabla.setItem(row, col, it)
+            for col,val in enumerate(datos):
+                item = QTableWidgetItem(str(val))
+                if col in (5,6,9):
+                    item.setTextAlignment(Qt.AlignRight|Qt.AlignVCenter)
+                self.tabla.setItem(row,col,item)
 
         self.lbl_totales.setText(
             f"TOTAL DEBE: {self._fmt(total_debe)}  |  "
             f"TOTAL HABER: {self._fmt(total_haber)}  |  "
-            f"SALDO: {self._fmt(total_haber-total_debe)}"
+            f"SALDO NETO: {self._fmt(total_debe-total_haber)}"
         )
 
-    # ============================================================
-    # FILTRAR TABLA
-    # ============================================================
     def _filtrar_tabla(self):
         txt = self.buscador.text().lower()
+
         for row in range(self.tabla.rowCount()):
-            mostrar = any(
-                txt in (self.tabla.item(row, col).text().lower()
-                        if self.tabla.item(row, col) else "")
-                for col in range(10)
-            )
+            mostrar = False
+            for col in range(self.tabla.columnCount()):
+                it = self.tabla.item(row,col)
+                if it and txt in it.text().lower():
+                    mostrar = True
+                    break
             self.tabla.setRowHidden(row, not mostrar)

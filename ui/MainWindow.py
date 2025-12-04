@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MainWindow.py — SHILLONG CONTABILIDAD v3.7.7 PRO
+MainWindow.py — SHILLONG CONTABILIDAD v3.7.8 PRO
 Versión Restaurada: Sidebar Azul Original + SistemaView + Imports correctos.
 """
 
@@ -8,7 +8,16 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QStackedWidget, QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QUrl
+
+# Import update checker
+try:
+    from core.updater import check_for_updates, get_update_info
+    UPDATE_CHECKER_AVAILABLE = True
+except ImportError:
+    UPDATE_CHECKER_AVAILABLE = False
 
 # =======================================================
 # 1. TUS IMPORTACIONES ORIGINALES (EXACTAS)
@@ -32,13 +41,17 @@ class MainWindow(QMainWindow):
     def __init__(self, data):
         super().__init__()
         self.data = data
-        self.setWindowTitle("Shillong Contabilidad v3.7.7 PRO")
+        self.setWindowTitle("Shillong Contabilidad v3.7.8 PRO")
         self.resize(1280, 800)
         
         # Mapa para conectar los IDs de tu Sidebar con los Widgets reales
         self.views = {} 
 
         self._init_ui()
+        
+        # Check for updates after window is shown (delayed to not slow startup)
+        if UPDATE_CHECKER_AVAILABLE:
+            QTimer.singleShot(3000, self._check_updates_on_startup)
 
     def _init_ui(self):
         # Widget Central
@@ -165,3 +178,34 @@ class MainWindow(QMainWindow):
             elif hasattr(view, "actualizar_datos"): view.actualizar_datos()
             elif hasattr(view, "_cargar_ultimos"): view._cargar_ultimos()
             elif hasattr(view, "_filtrar"): view._filtrar()
+
+    def _check_updates_on_startup(self):
+        """
+        Check for updates silently on startup and notify user if available.
+        """
+        try:
+            info = get_update_info()
+            
+            if info["available"]:
+                # Show non-intrusive notification
+                msg = QMessageBox(self)
+                msg.setWindowTitle("🎉 Actualización Disponible")
+                msg.setIcon(QMessageBox.Information)
+                msg.setText(
+                    f"<h3>Nueva versión v{info['remote_version']} disponible</h3>"
+                    f"<p>Tu versión actual: v{info['local_version']}</p>"
+                    f"<p>¿Deseas descargar la actualización ahora?</p>"
+                )
+                
+                btn_download = msg.addButton("⬇️ Descargar", QMessageBox.AcceptRole)
+                btn_later = msg.addButton("Recordar Más Tarde", QMessageBox.RejectRole)
+                
+                msg.exec()
+                
+                if msg.clickedButton() == btn_download:
+                    if info.get("download_url"):
+                        QDesktopServices.openUrl(QUrl(info["download_url"]))
+                        
+        except Exception as e:
+            # Silent fail - don't bother user if update check fails
+            print(f"[MainWindow] Update check failed: {e}")

@@ -19,7 +19,10 @@ a = Analysis(
         'pandas', 
         'openpyxl', 
         'PySide6.QtCharts', 
-        'PySide6.QtPrintSupport'
+        'PySide6.QtPrintSupport',
+        'requests',
+        'packaging',
+        'packaging.version'
     ],
     hookspath=[],
     hooksconfig={},
