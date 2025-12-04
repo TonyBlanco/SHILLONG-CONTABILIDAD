@@ -13,7 +13,14 @@ a = Analysis(
         ('utils', 'utils'),   # Aseguramos que utils (rutas.py) esté incluido
         ('themes', 'themes'),
         ('assets', 'assets'), # Vital para los iconos
-        ('data', 'data')      # Vital para los JSON iniciales
+        # Solo archivos de configuración BASE (no datos de usuario)
+        ('data/plan_contable_v3.json', 'data'),
+        ('data/bancos.json', 'data'),
+        ('data/reglas_conceptos.json', 'data'),
+        ('data/presupuesto_2025.json', 'data'),
+        ('data/kabbalah_72.json', 'data'),
+        ('data/manual_shillong.pdf', 'data'),
+        # EXCLUIDOS: shillong_*.json, cierres/*, *.backup, update_cache.json
     ],
     hiddenimports=[
         'pandas', 

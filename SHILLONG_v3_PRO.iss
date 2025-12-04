@@ -33,8 +33,18 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
 
 [Files]
-Source: "dist\SHILLONG_v3_PRO\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "data\*"; DestDir: "{app}\data"; Excludes: "shillong_*.json"; Flags: onlyifdoesntexist recursesubdirs createallsubdirs
+; Archivos de la aplicación (EXE, DLLs, etc.) - Se actualizan siempre
+Source: "dist\SHILLONG_v3_PRO\*"; DestDir: "{app}"; Excludes: "data\shillong_*.json,data\*.backup,data\update_cache.json,data\cierres\*"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Archivos de configuración BASE - Solo si NO existen (no sobrescribe datos del cliente)
+Source: "data\plan_contable_v3.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
+Source: "data\bancos.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
+Source: "data\reglas_conceptos.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
+Source: "data\presupuesto_2025.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
+Source: "data\kabbalah_72.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
+Source: "data\manual_shillong.pdf"; DestDir: "{app}\data"; Flags: ignoreversion
+
+; NUNCA incluir: shillong_*.json, *.backup, update_cache.json, cierres/*, archivos de test
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\shillong_logov3.ico"
