@@ -15,7 +15,7 @@ DisableDirPage=no
 AllowRootDirectory=yes
 AllowNetworkDrive=yes
 AllowUNCPath=yes
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
 OutputDir=Output
 OutputBaseFilename=Instalador_Shillong_v3.7.8_PRO
 SetupIconFile=assets\shillong_logov3.ico
@@ -58,8 +58,9 @@ Name: "{app}\backups"; Permissions: users-modify
 Name: "{app}\data"; Permissions: users-modify
 Name: "{app}\logs"; Permissions: users-modify
 
-[Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"; ValueType: string; ValueName: "{app}\{#MyAppExeName}"; ValueData: "~ RUNASADMIN"; Flags: uninsdeletevalue
+; [Registry]
+; REMOVIDO: Ya no forzamos RUNASADMIN - la app no necesita privilegios de admin
+; Root: HKCU; Subkey: "Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"; ValueType: string; ValueName: "{app}\{#MyAppExeName}"; ValueData: "~ RUNASADMIN"; Flags: uninsdeletevalue
 
 [Code]
 function InitializeSetup(): Boolean;
