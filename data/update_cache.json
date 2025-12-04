@@ -1,0 +1,8 @@
+{
+  "update_available": true,
+  "remote_version": "3.7.8PRO",
+  "local_version": "3.7.8",
+  "download_url": "https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD/releases/download/v3.7.8PRO/Instalador_Shillong_v3.7.8_PRO.exe",
+  "release_notes": "\u2705 Bug Fixes\r\nSaldo calculation bug in ui/RegistrarView.py - Fixed the inverted balance calculation from saldo += d - h to saldo += h - d\r\n_parse_float method - Rewrote to correctly handle Spanish (1.234,56), standard (100.00), and US (1,234.56) decimal formats\r\nMissing method - Added cargar_datos alias in ContabilidadData.py for DashboardView compatibility\r\nMissing method - Implemented get_movimientos_rango() in ContabilidadData.py for InformesView\r\n\u2705 Exception Handling Improvements\r\nReplaced ba",
+  "timestamp": 1764846921.453529
+}

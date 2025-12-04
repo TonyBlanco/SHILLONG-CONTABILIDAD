@@ -30,7 +30,7 @@ CACHE_DURATION_HOURS = 6  # Check every 6 hours
 def clean_version(v_str):
     """
     Clean version string by removing common prefixes and characters.
-    Handles formats like: v3.7.8, 3.7.7_4.3.2, 3.7.8-PRO, etc.
+    Handles formats like: v3.7.8, 3.7.7_4.3.2, 3.7.8-PRO, 3.7.8PRO, etc.
     """
     if not v_str:
         return "0.0.0"
@@ -44,6 +44,11 @@ def clean_version(v_str):
     # Remove underscore suffix (e.g., 3.7.7_4.3.2 -> 3.7.7)
     if "_" in v_str:
         v_str = v_str.split("_")[0]
+    # Remove text suffixes attached directly (e.g., 3.7.8PRO -> 3.7.8)
+    import re
+    match = re.match(r'^(\d+\.\d+\.?\d*)', v_str)
+    if match:
+        v_str = match.group(1)
     return v_str
 
 
