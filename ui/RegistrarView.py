@@ -568,8 +568,9 @@ class RegistrarView(QWidget):
         except (KeyError, AttributeError):
             pass
 
-        self.ui_ingreso.setText(m.get("haber","0,00"))
-        self.ui_gasto.setText(m.get("debe","0,00"))
+        # Convert to string using _fmt to handle both float and string values
+        self.ui_ingreso.setText(self._fmt(m.get("haber", 0)))
+        self.ui_gasto.setText(self._fmt(m.get("debe", 0)))
 
         for rb in self.banco_buttons.buttons():
             if rb.text() == m.get("banco","Caja"):
@@ -620,7 +621,7 @@ class RegistrarView(QWidget):
             d = self._parse_float(m.get("debe","0"))
             h = self._parse_float(m.get("haber","0"))
 
-            saldo += d - h
+            saldo += h - d  # SALDO = HABER - DEBE (ingresos - gastos)
             total_debe += d
             total_haber += h
 
@@ -654,7 +655,7 @@ class RegistrarView(QWidget):
         self.lbl_totales.setText(
             f"TOTAL DEBE: {self._fmt(total_debe)}  |  "
             f"TOTAL HABER: {self._fmt(total_haber)}  |  "
-            f"SALDO NETO: {self._fmt(total_debe-total_haber)}"
+            f"SALDO NETO: {self._fmt(total_haber-total_debe)}"  # SALDO = HABER - DEBE
         )
 
     def _filtrar_tabla(self):

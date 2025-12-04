@@ -43,7 +43,8 @@ class CierreView(QWidget):
             if os.path.exists("data/reglas_conceptos.json"):
                 with open("data/reglas_conceptos.json", "r", encoding="utf-8") as f:
                     return json.load(f)
-        except: pass
+        except (IOError, json.JSONDecodeError):
+            pass
         return {}
 
     # --- CATEGORIZACIÓN INTELIGENTE (IGUAL QUE EN LIBRO MENSUAL) ---
@@ -75,7 +76,8 @@ class CierreView(QWidget):
             if 620401 <= c <= 620499: return "HYGIENE"
             if 640000 <= c <= 649999: return "SALARY"
             if 629200 <= c <= 629299: return "ONLINE"
-        except: pass
+        except (ValueError, TypeError):
+            pass
         
         return "OTROS"
 
@@ -173,7 +175,7 @@ class CierreView(QWidget):
     def actualizar(self):
         try:
             año = int(self.cbo_año.currentText())
-        except:
+        except (ValueError, TypeError):
             return
         
         total_ingresos = 0
@@ -240,7 +242,8 @@ class CierreView(QWidget):
                 
                 if mm == mes and a == año:
                     filtrados.append(m)
-            except: continue
+            except (ValueError, IndexError):
+                continue
         return filtrados
 
     # ============================================================
@@ -267,7 +270,8 @@ class CierreView(QWidget):
                 
                 if a == año:
                     todos_movs.append(m)
-            except: continue
+            except (ValueError, IndexError):
+                continue
             
         # Ordenar (opcional)
         # todos_movs.sort(...) 

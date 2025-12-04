@@ -1,0 +1,8 @@
+{
+  "update_available": true,
+  "remote_version": "3.7.7_4.3.2",
+  "local_version": "3.7.8",
+  "download_url": "https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD/releases/download/v3.7.7_4.3.2/Instalador_Shillong_v3.7.7_PRO.exe",
+  "release_notes": "**Full Changelog**: https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD/compare/v3.7.7...v3.7.7_4.3.2\r\nfeat(installer): actualizaci\u00f3n completa del instalador Inno Setup v3.7.7 PRO\r\n\r\n- Correcci\u00f3n total del archivo ISS para asegurar compatibilidad con Inno Setup 6.3\r\n- Eliminados caracteres Unicode (emojis) que causaban fallo de compilaci\u00f3n\r\n- Eliminadas rutas con caracteres no ASCII (\u201c\u00f1\u201d) en im\u00e1genes del asistente\r\n- Correcci\u00f3n del bloque [Tasks] unificado en una sola l\u00ednea para evitar error \u201cRe",
+  "timestamp": 1764843041.7843103
+}

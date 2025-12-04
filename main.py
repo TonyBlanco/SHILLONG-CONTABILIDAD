@@ -92,7 +92,7 @@ def setup_logging():
             pass
 
     sys.excepthook = handle_exception
-    print(f"✅ Sistema de Logs activado en: {log_file}")
+    print(f"[OK] Sistema de Logs activado en: {log_file}")
 
 # ============================================================
 #  CONFIGURACIÓN VISUAL
@@ -124,7 +124,7 @@ def main():
     # 1. ACTIVAR LOGS ANTES DE NADA
     setup_logging()
 
-    print("🔥 SHILLONG CONTABILIDAD v3.7.8 PRO — Engine v4.3.2 Iniciado")
+    print("SHILLONG CONTABILIDAD v3.7.8 PRO -- Engine v4.3.2 Iniciado")
     print(f"ROOT_DIR detectado: {ROOT_DIR}")
     print(f"UI_DIR: {UI_DIR}")
     print(f"MODELS_DIR: {MODELS_DIR}")

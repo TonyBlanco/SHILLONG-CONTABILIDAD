@@ -44,7 +44,7 @@ class PendientesView(QWidget):
         try:
             with open("data/bancos.json", "r", encoding="utf-8") as f:
                 return ["Todos"] + [b["nombre"] for b in json.load(f).get("banks", [])]
-        except:
+        except (IOError, json.JSONDecodeError, KeyError):
             return ["Todos", "Caja"]
 
     def _cargar_cuentas(self):
@@ -53,7 +53,7 @@ class PendientesView(QWidget):
             with open("data/plan_contable_v3.json", "r", encoding="utf-8") as f:
                 plan = json.load(f)
                 cuentas.extend([f"{k} – {v['nombre']}" for k, v in plan.items()])
-        except:
+        except (IOError, json.JSONDecodeError, KeyError):
             pass
         return cuentas
 
@@ -61,7 +61,7 @@ class PendientesView(QWidget):
         try:
             with open("data/reglas_conceptos.json", "r", encoding="utf-8") as f:
                 reglas = json.load(f)
-        except:
+        except (IOError, json.JSONDecodeError):
             reglas = {}
 
         cuenta_str = str(cuenta).strip()
@@ -88,7 +88,7 @@ class PendientesView(QWidget):
             if 770000 <= c <= 779999: return "ONLINE"
             if 780000 <= c <= 789999: return "THERAPEUTIC"
             if 790000 <= c <= 799999: return "DIET"
-        except:
+        except (ValueError, TypeError):
             pass
 
         return "OTROS"
@@ -213,7 +213,7 @@ class PendientesView(QWidget):
                     _, mm, _ = m.get("fecha", "").split("/")
                     if int(mm) != mes:
                         continue
-                except:
+                except (ValueError, AttributeError):
                     continue
 
             if año != "Todos" and not m.get("fecha", "").endswith(año):
@@ -253,7 +253,7 @@ class PendientesView(QWidget):
             try:
                 d, mm, a = m.get("fecha", "01/01/1900").split("/")
                 return datetime.datetime(int(a), int(mm), int(d))
-            except:
+            except (ValueError, AttributeError):
                 return datetime.datetime(1900, 1, 1)
 
         filtrados.sort(key=fecha_key, reverse=True)
@@ -275,7 +275,7 @@ class PendientesView(QWidget):
                 d, mm, a = m.get("fecha", "").split("/")
                 fecha_mov = datetime.datetime(int(a), int(mm), int(d))
                 dias = (self.hoy - fecha_mov.date()).days
-            except:
+            except (ValueError, AttributeError):
                 dias = 999
 
             fila = self.tabla.rowCount()

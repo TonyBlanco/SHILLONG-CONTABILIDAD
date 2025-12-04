@@ -45,7 +45,7 @@ class LibroMensualView(QWidget):
         try:
             with open("data/bancos.json", "r", encoding="utf-8") as f:
                 return ["Todos"] + [b["nombre"] for b in json.load(f).get("banks", [])]
-        except:
+        except (IOError, json.JSONDecodeError, KeyError):
             return ["Todos", "Caja"]
 
     def _cargar_reglas(self):
@@ -53,7 +53,8 @@ class LibroMensualView(QWidget):
             if os.path.exists("data/reglas_conceptos.json"):
                 with open("data/reglas_conceptos.json", "r", encoding="utf-8") as f:
                     return json.load(f)
-        except: pass
+        except (IOError, json.JSONDecodeError):
+            pass
         return {}
 
     # --- LÓGICA DE CATEGORÍAS (ROBUSTA) ---
@@ -91,7 +92,7 @@ class LibroMensualView(QWidget):
             if 620401 <= c <= 620499: return "HYGIENE"
             if 640000 <= c <= 649999 or (750000 <= c <= 759999): return "SALARY"
             if 629200 <= c <= 629299: return "ONLINE"
-        except: 
+        except (ValueError, TypeError):
             pass
             
         return "OTROS"
@@ -235,10 +236,14 @@ class LibroMensualView(QWidget):
             row = self.tabla.rowCount()
             self.tabla.insertRow(row)
             
-            try: debe = float(m.get("debe", 0))
-            except: debe = 0.0
-            try: haber = float(m.get("haber", 0))
-            except: haber = 0.0
+            try:
+                debe = float(m.get("debe", 0))
+            except (ValueError, TypeError):
+                debe = 0.0
+            try:
+                haber = float(m.get("haber", 0))
+            except (ValueError, TypeError):
+                haber = 0.0
             
             total_debe += debe
             total_haber += haber

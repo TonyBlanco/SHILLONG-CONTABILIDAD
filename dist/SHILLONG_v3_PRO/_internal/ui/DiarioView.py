@@ -53,15 +53,19 @@ class EditarMovimientoDialog(QDialog):
         # Importes (Conversión segura)
         self.inp_debe = QDoubleSpinBox()
         self.inp_debe.setRange(0, 999999999)
-        try: d = float(str(movimiento.get("debe", 0)).replace(",", "."))
-        except: d = 0.0
+        try:
+            d = float(str(movimiento.get("debe", 0)).replace(",", "."))
+        except (ValueError, TypeError):
+            d = 0.0
         self.inp_debe.setValue(d)
         layout.addRow("Debe (Gasto):", self.inp_debe)
 
         self.inp_haber = QDoubleSpinBox()
         self.inp_haber.setRange(0, 999999999)
-        try: h = float(str(movimiento.get("haber", 0)).replace(",", "."))
-        except: h = 0.0
+        try:
+            h = float(str(movimiento.get("haber", 0)).replace(",", "."))
+        except (ValueError, TypeError):
+            h = 0.0
         self.inp_haber.setValue(h)
         layout.addRow("Haber (Ingreso):", self.inp_haber)
 
@@ -93,9 +97,9 @@ class EditarMovimientoDialog(QDialog):
                 if len(p[0])==4: a,m,d = map(int, p) # YYYY-MM-DD
                 else: d,m,a = map(int, p) # DD-MM-YYYY
             else: 
-                raise Exception()
+                raise ValueError("Invalid date format")
             self.inp_fecha.setDate(QDate(a, m, d))
-        except:
+        except (ValueError, IndexError):
             self.inp_fecha.setDate(QDate.currentDate())
 
     def get_data(self):
@@ -137,15 +141,18 @@ class DiarioView(QWidget):
         try:
             with open("data/plan_contable_v3.json", "r", encoding="utf-8") as f:
                 plan = json.load(f)
-                for c, d in plan.items(): l.append(f"{c} – {d['nombre']}")
-        except: l = ["S/N – Desconocida"]
+                for c, d in plan.items():
+                    l.append(f"{c} – {d['nombre']}")
+        except (IOError, json.JSONDecodeError, KeyError):
+            l = ["S/N – Desconocida"]
         return sorted(l)
 
     def _cargar_bancos(self):
         try:
             with open("data/bancos.json", "r", encoding="utf-8") as f:
                 return [b["nombre"] for b in json.load(f).get("banks", [])]
-        except: return ["Caja"]
+        except (IOError, json.JSONDecodeError, KeyError):
+            return ["Caja"]
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -261,9 +268,12 @@ class DiarioView(QWidget):
                     fecha_mov = QDate(aa, mm, d)
                 elif "-" in f_str: 
                     p = f_str.split("-")
-                    if len(p[0]) == 4: fecha_mov = QDate(int(p[0]), int(p[1]), int(p[2]))
-                    else: fecha_mov = QDate(int(p[2]), int(p[1]), int(p[0]))
-            except: pass
+                    if len(p[0]) == 4:
+                        fecha_mov = QDate(int(p[0]), int(p[1]), int(p[2]))
+                    else:
+                        fecha_mov = QDate(int(p[2]), int(p[1]), int(p[0]))
+            except (ValueError, IndexError):
+                pass
 
             # 2. Filtro Fecha
             mostrar = True
@@ -290,12 +300,13 @@ class DiarioView(QWidget):
 
     def _fecha_key(self, m):
         try:
-            f = str(m.get("fecha","")).replace("-","/")
+            f = str(m.get("fecha", "")).replace("-", "/")
             if "/" in f: 
                 p = f.split("/")
                 return QDate(int(p[2]), int(p[1]), int(p[0]))
-        except: pass
-        return QDate(1900,1,1)
+        except (ValueError, IndexError):
+            pass
+        return QDate(1900, 1, 1)
 
     def _llenar_tabla(self, movs):
         self.tabla.setRowCount(0)
@@ -305,10 +316,14 @@ class DiarioView(QWidget):
         for m in movs:
             r = self.tabla.rowCount()
             self.tabla.insertRow(r)
-            try: d=float(str(m.get("debe",0)).replace(",","."))
-            except: d=0.0
-            try: h=float(str(m.get("haber",0)).replace(",","."))
-            except: h=0.0
+            try:
+                d = float(str(m.get("debe", 0)).replace(",", "."))
+            except (ValueError, TypeError):
+                d = 0.0
+            try:
+                h = float(str(m.get("haber", 0)).replace(",", "."))
+            except (ValueError, TypeError):
+                h = 0.0
             td+=d; th+=h
             
             nom = self.data.obtener_nombre_cuenta(m.get("cuenta"))

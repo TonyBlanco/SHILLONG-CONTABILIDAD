@@ -17,7 +17,7 @@ class BankManager:
             with open(self.archivo, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("banks", [])
-        except:
+        except (IOError, json.JSONDecodeError):
             return []
 
     def _guardar(self):

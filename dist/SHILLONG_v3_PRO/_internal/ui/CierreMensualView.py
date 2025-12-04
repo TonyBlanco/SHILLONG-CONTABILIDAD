@@ -54,7 +54,7 @@ class CierreMensualView(QWidget):
         try:
             with open("data/bancos.json", "r", encoding="utf-8") as f:
                 return ["Todos"] + [b["nombre"] for b in json.load(f).get("banks", [])]
-        except:
+        except (IOError, json.JSONDecodeError, KeyError):
             return ["Todos", "Caja"]
 
     def _cargar_cuentas(self):
@@ -63,7 +63,7 @@ class CierreMensualView(QWidget):
             with open("data/plan_contable_v3.json", "r", encoding="utf-8") as f:
                 plan = json.load(f)
                 cuentas.extend([f"{k} – {v['nombre']}" for k, v in plan.items()])
-        except:
+        except (IOError, json.JSONDecodeError, KeyError):
             pass
         return cuentas
 
@@ -71,7 +71,7 @@ class CierreMensualView(QWidget):
         try:
             with open("data/reglas_conceptos.json", "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
+        except (IOError, json.JSONDecodeError):
             return {}
 
     # ---------------------------------------------------------
@@ -108,7 +108,7 @@ class CierreMensualView(QWidget):
             if 600000 <= c <= 609999: return "MEDICINE"
             if 602400 <= c <= 602499: return "HYGIENE"
             if 629200 <= c <= 629299: return "ONLINE"
-        except:
+        except (ValueError, TypeError):
             pass
 
         return "OTROS"

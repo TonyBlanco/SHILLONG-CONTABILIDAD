@@ -1,0 +1,76 @@
+00:28:21 - ERROR - Error cargando datos iniciales: 'ContabilidadData' object has no attribute 'guardar'
+00:50:27 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 41, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 80, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 114, in _cargar_vistas
+    self.views["libro_mensual"] = LibroMensualView(self.data)
+  File "D:\ShillongV3\ui\LibroMensualView.py", line 42, in __init__
+    self.actualizar()
+  File "D:\ShillongV3\ui\LibroMensualView.py", line 224, in actualizar
+    movs = self.data.movimientos_por_mes(mes, año)
+AttributeError: 'ContabilidadData' object has no attribute 'movimientos_por_mes'
+00:51:11 - ERROR - Error cargando datos iniciales: 'ContabilidadData' object has no attribute 'guardar'
+01:30:53 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 41, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 80, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 138, in _cargar_vistas
+    self.views["ayuda"] = HelpView(self.data)
+  File "D:\ShillongV3\ui\HelpView.py", line 25, in __init__
+    self._build_ui()
+  File "D:\ShillongV3\ui\HelpView.py", line 52, in _build_ui
+    self.layout.addWidget(self._panel_info())
+  File "D:\ShillongV3\ui\HelpView.py", line 86, in _panel_info
+    Base de datos actual: {self.data.archivo_json}
+AttributeError: 'ContabilidadData' object has no attribute 'archivo_json'
+01:32:08 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 41, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 80, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 138, in _cargar_vistas
+    self.views["ayuda"] = HelpView(self.data)
+  File "D:\ShillongV3\ui\HelpView.py", line 25, in __init__
+    self._build_ui()
+  File "D:\ShillongV3\ui\HelpView.py", line 52, in _build_ui
+    self.layout.addWidget(self._panel_info())
+  File "D:\ShillongV3\ui\HelpView.py", line 86, in _panel_info
+    Base de datos actual: {self.data.archivo_json}
+AttributeError: 'ContabilidadData' object has no attribute 'archivo_json'
+11:29:42 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\ui\RegistrarView.py", line 571, in _duplicar
+    self.ui_ingreso.setText(m.get("haber","0,00"))
+TypeError: 'PySide6.QtWidgets.QLineEdit.setText' called with wrong argument types:
+  PySide6.QtWidgets.QLineEdit.setText(float)
+Supported signatures:
+  PySide6.QtWidgets.QLineEdit.setText(arg__1: str | None, /)
+11:36:33 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 125, in main
+    setup_logging()
+  File "D:\ShillongV3\main.py", line 95, in setup_logging
+    print(f"\u2705 Sistema de Logs activado en: {log_file}")
+  File "C:\Python310\lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 0: character maps to <undefined>

@@ -1,6 +1,6 @@
 {
-    "version": "3.6 PRO",
-    "fecha_guardado": "02/12/2025 15:08:34",
+    "version": "3.7.7 PRO",
+    "fecha_guardado": "03/12/2025 22:33:20",
     "movimientos": [
         {
             "fecha": "03/11/2025",
@@ -667,264 +667,264 @@
             "documento": "SIN-DOC-28291",
             "concepto": "Chapel decoration",
             "cuenta": "659020",
-            "debe": 0.0,
-            "haber": 240.0,
+            "debe": 240.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 240.0
+            "saldo": -240.0
         },
         {
             "fecha": "12/11/2025",
             "documento": "SIN-DOC-42108",
             "concepto": "Xerox note",
             "cuenta": "602500",
-            "debe": 0.0,
-            "haber": 140.0,
+            "debe": 140.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 140.0
+            "saldo": -140.0
         },
         {
             "fecha": "08/11/2025",
             "documento": "SIN-DOC-28969",
             "concepto": "First aid  kid",
             "cuenta": "600000",
-            "debe": 0.0,
-            "haber": 304.0,
+            "debe": 304.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 304.0
+            "saldo": -304.0
         },
         {
             "fecha": "08/11/2025",
             "documento": "SIN-DOC-74679",
             "concepto": "First aid kid material",
             "cuenta": "600000",
-            "debe": 0.0,
-            "haber": 341.0,
+            "debe": 341.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 341.0
+            "saldo": -341.0
         },
         {
             "fecha": "30/11/2025",
             "documento": "SIN-DOC-96435",
             "concepto": "Expenses travelling Mary´s College",
             "cuenta": "629100",
-            "debe": 0.0,
-            "haber": 1470.0,
+            "debe": 1470.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 1470.0
+            "saldo": -1470.0
         },
         {
             "fecha": "30/11/2025",
             "documento": "SIN-DOC-87825",
             "concepto": "Donation",
             "cuenta": "658000",
-            "debe": 0.0,
-            "haber": 300.0,
+            "debe": 300.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 300.0
+            "saldo": -300.0
         },
         {
             "fecha": "12/11/2025",
             "documento": "SIN-DOC-38276",
             "concepto": "Medicines sr Juliana",
             "cuenta": "600000",
-            "debe": 0.0,
-            "haber": 164.0,
+            "debe": 164.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 164.0
+            "saldo": -164.0
         },
         {
             "fecha": "28/11/2025",
             "documento": "SIN-DOC-89473",
             "concepto": "Sr Juliana´s shoes",
             "cuenta": "606000",
-            "debe": 0.0,
-            "haber": 300.0,
+            "debe": 300.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 300.0
+            "saldo": -300.0
         },
         {
             "fecha": "06/11/2025",
             "documento": "SIN-DOC-18180",
             "concepto": "Frashers´s day contribution",
             "cuenta": "658000",
-            "debe": 0.0,
-            "haber": 100.0,
+            "debe": 100.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 100.0
+            "saldo": -100.0
         },
         {
             "fecha": "19/11/2025",
             "documento": "SIN-DOC-36438",
             "concepto": "Xerox copies",
             "cuenta": "602500",
-            "debe": 0.0,
-            "haber": 375.0,
+            "debe": 375.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 375.0
+            "saldo": -375.0
         },
         {
             "fecha": "30/11/2025",
             "documento": "SIN-DOC-70572",
             "concepto": "Travelling University MLCU",
             "cuenta": "629100",
-            "debe": 0.0,
-            "haber": 470.0,
+            "debe": 470.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 470.0
+            "saldo": -470.0
         },
         {
             "fecha": "26/11/2025",
             "documento": "SIN-DOC-39392",
             "concepto": "Cake for CRI",
             "cuenta": "650300",
-            "debe": 0.0,
-            "haber": 290.0,
+            "debe": 290.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 290.0
+            "saldo": -290.0
         },
         {
             "fecha": "06/11/2025",
             "documento": "SIN-DOC-49457",
             "concepto": "Batery",
             "cuenta": "605000",
-            "debe": 0.0,
-            "haber": 150.0,
+            "debe": 150.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 150.0
+            "saldo": -150.0
         },
         {
             "fecha": "19/11/2025",
             "documento": "SIN-DOC-26775",
             "concepto": "Shoes",
             "cuenta": "606000",
-            "debe": 0.0,
-            "haber": 400.0,
+            "debe": 400.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 400.0
+            "saldo": -400.0
         },
         {
             "fecha": "05/11/2025",
             "documento": "SIN-DOC-42841",
             "concepto": "Medicines sr Sindhu",
             "cuenta": "600000",
-            "debe": 0.0,
-            "haber": 451.0,
+            "debe": 451.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 451.0
+            "saldo": -451.0
         },
         {
             "fecha": "10/11/2025",
             "documento": "SIN-DOC-56380",
             "concepto": "Dentist",
             "cuenta": "650140",
-            "debe": 0.0,
-            "haber": 300.0,
+            "debe": 300.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 300.0
+            "saldo": -300.0
         },
         {
             "fecha": "30/11/2025",
             "documento": "SIN-DOC-53582",
             "concepto": "Travelling Shanti Bhavan",
             "cuenta": "629100",
-            "debe": 0.0,
-            "haber": 1470.0,
+            "debe": 1470.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 1470.0
+            "saldo": -1470.0
         },
         {
             "fecha": "30/11/2025",
             "documento": "SIN-DOC-80025",
             "concepto": "Monthly expenses Food",
             "cuenta": "603000",
-            "debe": 0.0,
-            "haber": 2230.0,
+            "debe": 2230.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Caja",
-            "saldo": 2230.0
+            "saldo": -2230.0
         },
         {
             "fecha": "14/11/2025",
             "documento": "SIN-DOC-82827",
             "concepto": "Payment electricity",
             "cuenta": "628030",
-            "debe": 0.0,
-            "haber": 3732.0,
+            "debe": 3732.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Union Bank",
-            "saldo": 3732.0
+            "saldo": -3732.0
         },
         {
             "fecha": "15/11/2025",
             "documento": "SIN-DOC-73564",
             "concepto": "BSNL Landline - Individual",
             "cuenta": "629200",
-            "debe": 0.0,
-            "haber": 591.9,
+            "debe": 591.9,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Union Bank",
-            "saldo": 591.9
+            "saldo": -591.9
         },
         {
             "fecha": "20/11/2025",
             "documento": "SIN-DOC-60795",
             "concepto": "Travelling vacation sr Sindhu",
             "cuenta": "629100",
-            "debe": 0.0,
-            "haber": 22614.0,
+            "debe": 22614.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Union Bank",
-            "saldo": 22614.0
+            "saldo": -22614.0
         },
         {
             "fecha": "28/11/2025",
             "documento": "SIN-DOC-35475",
             "concepto": "Tour trips study fees",
             "cuenta": "650530",
-            "debe": 0.0,
-            "haber": 2300.0,
+            "debe": 2300.0,
+            "haber": 0.0,
             "moneda": "INR",
             "estado": "pagado",
             "banco": "Union Bank",
-            "saldo": 2300.0
+            "saldo": -2300.0
         },
         {
             "fecha": "28/11/2025",
@@ -937,6 +937,30 @@
             "estado": "pagado",
             "banco": "Union Bank",
             "saldo": -20000.0
+        },
+        {
+            "fecha": "03/12/2025",
+            "documento": "SIN-DOC-86459",
+            "concepto": "Servidor Dell",
+            "cuenta": "206000",
+            "debe": 1000000.0,
+            "haber": 0.0,
+            "moneda": "INR",
+            "estado": "pagado",
+            "banco": "Caja",
+            "saldo": 100000.0
+        },
+        {
+            "fecha": "03/12/2025",
+            "documento": "TEST-GASTO-INV",
+            "concepto": "Pago de comida y milk",
+            "cuenta": "603000",
+            "debe": 450.0,
+            "haber": 0.0,
+            "moneda": "INR",
+            "estado": "pagado",
+            "banco": "Caja",
+            "saldo": -450.0
         }
     ]
 }
