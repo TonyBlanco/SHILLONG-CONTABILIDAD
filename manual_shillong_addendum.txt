@@ -1,0 +1,27 @@
+SHILLONG CONTABILIDAD v3.8.0 – Anexo rápido para actualizar el manual
+
+Resumen de cambios clave desde 3.7.8:
+- Nuevo hub “Cierres & BI” con pestañas: Libro Mensual, Cierre Mensual, Cierre Anual, Informes BI.
+- Libro Mensual:
+  - Gestor de saldos protegido (contraseña: menni1234). Permite cargar/editar/eliminar saldos por mes y banco, o arrastrar el saldo final del mes anterior.
+  - Al pedir saldo inicial, propone usar el cierre previo si existe y ofrece abrir el gestor.
+  - Exportar Excel pregunta si abrir el archivo y lo guarda en carpetas organizadas: reportes/<YYYY-MM>/<general|categoria|cuenta>/.
+  - Cierre de mes solicita firma, muestra totales Debe/Haber y saldos estimados antes de guardar.
+  - Botones de edición/borrado de movimientos protegidos por contraseña.
+- Herramientas:
+  - Auditoría rápida de datos (faltantes de documento/cuenta/banco, duplicados, Debe/Haber inválidos).
+- Sidebar: logo agregado al pie.
+
+Credenciales y seguridad:
+- Contraseña para acciones sensibles: menni1234 (edición de saldos, cierres, auditorías protegidas).
+
+Rutas y organización de reportes:
+- Exportes Excel se crean en reportes/<YYYY-MM>/<modo>/ con opción de abrir al finalizar.
+
+Build/instalador:
+- Versión de la app: 3.8.0 PRO. El instalador se llama Instalador_Shillong_v3.8.0_PRO.exe.
+
+Notas de operación sugeridas:
+- Antes de cerrar un mes, ejecutar “Auditar” en Libro Mensual y validar saldos iniciales.
+- Usar el gestor de saldos para arrastrar el cierre previo o ajustar manualmente (por banco).
+- Mantener backups en la carpeta “backups” antes de actualizaciones.
