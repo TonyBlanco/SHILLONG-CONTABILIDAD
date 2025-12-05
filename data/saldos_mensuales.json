@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "ultima_actualizacion": "05/12/2025 00:53:06",
+  "saldos": {
+    "2024-11": {
+      "Caja": {
+        "inicial": -39421.0,
+        "final": -142129.0,
+        "ingresos": 0.0,
+        "gastos": 102708.0
+      },
+      "Union Bank": {
+        "inicial": 0.0,
+        "final": -9237.9,
+        "ingresos": 20000.0,
+        "gastos": 29237.9
+      },
+      "Federal Bank": {
+        "inicial": 0.0,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      },
+      "SBI": {
+        "inicial": 0.0,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      },
+      "Otro": {
+        "inicial": 0.0,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      },
+      "fecha_cierre": "30/11/2024",
+      "cerrado": true
+    },
+    "2025-12": {
+      "Caja": {
+        "inicial": 0.0,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      }
+    },
+    "2025-11": {
+      "Caja": {
+        "inicial": 248655.01,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      },
+      "Federal Bank": {
+        "inicial": 1572.30,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      },
+      "SBI": {
+        "inicial": 5109.14,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      },
+      "Union Bank": {
+        "inicial": 56278.81,
+        "final": 0.0,
+        "ingresos": 0.0,
+        "gastos": 0.0
+      }
+    }
+  }
+}

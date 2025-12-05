@@ -1,0 +1,89 @@
+00:41:19 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 50, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 93, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 127, in _cargar_vistas
+    self.views["libro_mensual"] = LibroMensualView(self.data)
+  File "D:\ShillongV3\ui\LibroMensualView.py", line 57, in __init__
+    self._build_ui()
+  File "D:\ShillongV3\ui\LibroMensualView.py", line 173, in _build_ui
+    btn_preview.clicked.connect(self.vista_previa)
+AttributeError: 'LibroMensualView' object has no attribute 'vista_previa'
+18:48:58 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 47, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 90, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 128, in _cargar_vistas
+    from ui.CierresHub import CierresHub
+  File "D:\ShillongV3\ui\CierresHub.py", line 10, in <module>
+    from ui.CierreMensualView import CierreMensualView
+  File "D:\ShillongV3\ui\CierreMensualView.py", line 404
+    c_int = int(cuenta.split(\" \")[0])
+                              ^
+SyntaxError: unexpected character after line continuation character
+18:49:42 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 47, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 90, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 128, in _cargar_vistas
+    from ui.CierresHub import CierresHub
+  File "D:\ShillongV3\ui\CierresHub.py", line 10, in <module>
+    from ui.CierreMensualView import CierreMensualView
+  File "D:\ShillongV3\ui\CierreMensualView.py", line 404
+    c_int = int(cuenta.split(\" \")[0])
+                              ^
+SyntaxError: unexpected character after line continuation character
+18:50:49 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 47, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 90, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 128, in _cargar_vistas
+    from ui.CierresHub import CierresHub
+  File "D:\ShillongV3\ui\CierresHub.py", line 10, in <module>
+    from ui.CierreMensualView import CierreMensualView
+  File "D:\ShillongV3\ui\CierreMensualView.py", line 411
+    anomalies.append(\"Documentos duplicados detectados.\")
+                      ^
+SyntaxError: unexpected character after line continuation character
+18:51:40 - ERROR - \U0001f525 ERROR NO CONTROLADO (CRASH):
+Traceback (most recent call last):
+  File "D:\ShillongV3\main.py", line 161, in <module>
+    main()
+  File "D:\ShillongV3\main.py", line 153, in main
+    ventana = MainWindow(data)
+  File "D:\ShillongV3\ui\MainWindow.py", line 47, in __init__
+    self._init_ui()
+  File "D:\ShillongV3\ui\MainWindow.py", line 90, in _init_ui
+    self._cargar_vistas()
+  File "D:\ShillongV3\ui\MainWindow.py", line 128, in _cargar_vistas
+    from ui.CierresHub import CierresHub
+  File "D:\ShillongV3\ui\CierresHub.py", line 10, in <module>
+    from ui.CierreMensualView import CierreMensualView
+  File "D:\ShillongV3\ui\CierreMensualView.py", line 414
+    self.txt_anom.setText(\"\\n\".join(anomalies))
+                           ^
+SyntaxError: unexpected character after line continuation character

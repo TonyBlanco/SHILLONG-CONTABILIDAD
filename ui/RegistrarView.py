@@ -161,22 +161,30 @@ class RegistrarView(QWidget):
 
         # INGRESO (HABER contable)
         fila_ing = QHBoxLayout()
-        fila_ing.addWidget(QLabel("ENTRADA / INGRESO (+ dinero):"))
+        lbl_ing = QLabel("ENTRADA / INGRESO (HABER, + dinero):")
+        lbl_ing.setStyleSheet("color:#059669;font-weight:bold;")
+        fila_ing.addWidget(lbl_ing)
         self.ui_ingreso = QLineEdit("0,00")
+        self.ui_ingreso.setPlaceholderText("Ingreso (HABER)")
+        self.ui_ingreso.setStyleSheet("color:#059669;font-weight:bold;")
         self.ui_ingreso.textChanged.connect(self._calcular_importe)
         fila_ing.addWidget(self.ui_ingreso)
 
-        info_ing = QLabel("→ Todo lo que entra (donaciones, ventas).")
+        info_ing = QLabel("→ Todo lo que entra (donaciones, ventas, salarios recibidos).")
         info_ing.setStyleSheet("color:#059669;font-size:12px;")
 
         # GASTO (DEBE contable)
         fila_gas = QHBoxLayout()
-        fila_gas.addWidget(QLabel("SALIDA / GASTO (- dinero):"))
+        lbl_gas = QLabel("SALIDA / GASTO (DEBE, - dinero):")
+        lbl_gas.setStyleSheet("color:#dc2626;font-weight:bold;")
+        fila_gas.addWidget(lbl_gas)
         self.ui_gasto = QLineEdit("0,00")
+        self.ui_gasto.setPlaceholderText("Gasto (DEBE)")
+        self.ui_gasto.setStyleSheet("color:#dc2626;font-weight:bold;")
         self.ui_gasto.textChanged.connect(self._calcular_importe)
         fila_gas.addWidget(self.ui_gasto)
 
-        info_gas = QLabel("→ Todo lo que sale (compras, pagos).")
+        info_gas = QLabel("→ Todo lo que sale (compras, pagos, salarios pagados).")
         info_gas.setStyleSheet("color:#dc2626;font-size:12px;")
 
         box_dh.addLayout(fila_ing)
@@ -467,6 +475,71 @@ class RegistrarView(QWidget):
                 debe = haber
                 haber = 0.0
             else:
+                return
+
+        # -------------------------------------------------------
+        # Autocorrección inversa: ingreso colocado por error en gasto
+        # -------------------------------------------------------
+        ingreso_keywords = [
+            "ingreso","income","donation","donations","donación",
+            "donativo","salary","salaries","sueldo","payroll"
+        ]
+
+        if debe > 0 and any(k in concepto.lower() for k in ingreso_keywords):
+            msg = QMessageBox(self)
+            msg.setWindowTitle("⚠️ ERROR CONTABLE DETECTADO")
+            msg.setText(
+                "Se detectó un INGRESO pero el importe está como GASTO.\n"
+                "¿Desea moverlo al HABER?"
+            )
+            msg.setIcon(QMessageBox.Warning)
+            btn_si = msg.addButton("Sí, mover a HABER", QMessageBox.YesRole)
+            btn_no = msg.addButton("Cancelar", QMessageBox.NoRole)
+            msg.exec()
+
+            if msg.clickedButton() == btn_si:
+                haber = debe
+                debe = 0.0
+            else:
+                return
+
+        # -------------------------------------------------------
+        # Confirmación explícita antes de guardar
+        # -------------------------------------------------------
+        if debe > 0:
+            msg_confirm = QMessageBox(self)
+            msg_confirm.setWindowTitle("Confirmar Movimiento")
+            msg_confirm.setText(
+                f"Vas a guardar este movimiento como <b>GASTO (DEBE)</b>.\n\n"
+                f"<b>Concepto:</b> {concepto}\n"
+                f"<b>Importe:</b> {self._fmt(debe)}\n\n"
+                f"¿Es correcto?"
+            )
+            msg_confirm.setIcon(QMessageBox.Question)
+            msg_confirm.setTextFormat(Qt.RichText)
+            btn_si_confirm = msg_confirm.addButton("Sí, guardar", QMessageBox.YesRole)
+            btn_no_confirm = msg_confirm.addButton("No, cancelar", QMessageBox.NoRole)
+            msg_confirm.exec()
+
+            if msg_confirm.clickedButton() != btn_si_confirm:
+                return
+
+        elif haber > 0:
+            msg_confirm = QMessageBox(self)
+            msg_confirm.setWindowTitle("Confirmar Movimiento")
+            msg_confirm.setText(
+                f"Vas a guardar este movimiento como <b>INGRESO (HABER)</b>.\n\n"
+                f"<b>Concepto:</b> {concepto}\n"
+                f"<b>Importe:</b> {self._fmt(haber)}\n\n"
+                f"¿Es correcto?"
+            )
+            msg_confirm.setIcon(QMessageBox.Question)
+            msg_confirm.setTextFormat(Qt.RichText)
+            btn_si_confirm = msg_confirm.addButton("Sí, guardar", QMessageBox.YesRole)
+            btn_no_confirm = msg_confirm.addButton("No, cancelar", QMessageBox.NoRole)
+            msg_confirm.exec()
+
+            if msg_confirm.clickedButton() != btn_si_confirm:
                 return
 
         # -------------------------------------------------------

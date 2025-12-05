@@ -71,6 +71,22 @@ class DashboardView(QWidget):
             print(f"[DashboardView] Error cargando reglas: {e}")
         return {}
 
+    def _cargar_saldos_iniciales(self, año, mes):
+        """Carga saldos iniciales por banco desde saldos_mensuales.json para el mes/año indicado."""
+        ruta = Path("data/saldos_mensuales.json")
+        if not ruta.exists():
+            return {}
+        try:
+            data = json.loads(ruta.read_text(encoding="utf-8"))
+            clave = f"{año}-{mes:02d}"
+            return {
+                banco: valores.get("inicial", 0.0)
+                for banco, valores in data.get("saldos", {}).get(clave, {}).items()
+            }
+        except (json.JSONDecodeError, OSError, AttributeError) as e:
+            print(f"[DashboardView] Error cargando saldos iniciales: {e}")
+            return {}
+
     def _categoria_de_cuenta(self, cuenta):
         cuenta_str = str(cuenta).split(" ")[0].strip()
         if cuenta_str in self.reglas_cache:
@@ -366,7 +382,26 @@ class DashboardView(QWidget):
         pendientes_proyeccion = 0
         alertas = []
         
-        saldos = {b: 0.0 for b in self._obtener_bancos()}
+        # Tomar como referencia el mes más reciente del año seleccionado (según los movimientos)
+        meses_del_año = []
+        for m in self.data.movimientos:
+            f_raw = str(m.get("fecha", ""))
+            try:
+                if "/" in f_raw:
+                    _, mm, a = map(int, f_raw.split("/"))
+                elif "-" in f_raw:
+                    p = f_raw.split("-")
+                    a, mm, _ = (int(p[0]), int(p[1]), int(p[2])) if len(p[0]) == 4 else (int(p[2]), int(p[1]), int(p[0]))
+                else:
+                    continue
+                if a == año:
+                    meses_del_año.append(mm)
+            except Exception:
+                continue
+        mes_referencia = max(meses_del_año) if meses_del_año else datetime.date.today().month
+
+        saldos_iniciales = self._cargar_saldos_iniciales(año, mes_referencia)
+        saldos = {b: saldos_iniciales.get(b, 0.0) for b in self._obtener_bancos()}
 
         for m in self.data.movimientos:
             f_raw = str(m.get("fecha",""))
