@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MainWindow.py — SHILLONG CONTABILIDAD v3.7.8 PRO
+MainWindow.py — SHILLONG CONTABILIDAD v3.8.0 PRO
 Versión Restaurada: Sidebar Azul Original + SistemaView + Imports correctos.
 """
 
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
     def __init__(self, data):
         super().__init__()
         self.data = data
-        self.setWindowTitle("Shillong Contabilidad v3.7.8 PRO")
+        self.setWindowTitle("Shillong Contabilidad v3.8.0 PRO")
         self.resize(1280, 800)
         
         # Mapa para conectar los IDs de tu Sidebar con los Widgets reales

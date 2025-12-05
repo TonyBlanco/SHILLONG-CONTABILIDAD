@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SHILLONG CONTABILIDAD v3.7.8 PRO — Update Checker
+SHILLONG CONTABILIDAD v3.8.0 PRO — Update Checker
 --------------------------------------------------
 Checks for updates from GitHub releases and notifies users.
 """
@@ -17,7 +17,7 @@ except ImportError:
     parse_version = None
 
 # Current app version
-APP_VERSION = "3.7.8"
+APP_VERSION = "3.8.0"
 
 # GitHub API URL for releases
 GITHUB_API_URL = "https://api.github.com/repos/TonyBlanco/SHILLONG-CONTABILIDAD/releases/latest"

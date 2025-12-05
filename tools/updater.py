@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-SHILLONG v3.7.8 PRO - UPDATER COMPLETO
+SHILLONG v3.8.0 PRO - UPDATER COMPLETO
 Actualiza módulos de SHILLONG con:
 ✔ Detección automática de instalación
 ✔ Cierre automático del programa
@@ -15,7 +15,7 @@ import time
 import sys
 
 # VERSION INFO
-UPDATE_VERSION = "3.7.8"
+UPDATE_VERSION = "3.8.0"
 
 # NOMBRE DEL EJECUTABLE DE SHILLONG
 APP_EXE = "SHILLONG_v3_PRO.exe"

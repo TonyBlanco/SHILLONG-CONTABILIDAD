@@ -1,5 +1,5 @@
 ; ================================================================
-; SHILLONG CONTABILIDAD v3 — MINI UPDATER 3.7.8
+; SHILLONG CONTABILIDAD v3 — MINI UPDATER 3.8.0
 ; Actualiza RegistrarView.py de forma segura
 ; Compatible con:
 ;   - C:\Program Files\SHILLONGv3PRO\
@@ -10,7 +10,7 @@
 ; ================================================================
 
 #define AppName "SHILLONG CONTABILIDAD v3 PRO"
-#define AppVersion "3.7.8"
+#define AppVersion "3.8.0"
 #define AppExe "SHILLONG_v3_PRO.exe"
 
 [Setup]
@@ -54,7 +54,7 @@ procedure BackupFile(FilePath: string);
 var
   BackupDir: string;
 begin
-  BackupDir := ExpandConstant('{pf}\SHILLONG_BACKUPS\3.7.8');
+  BackupDir := ExpandConstant('{pf}\SHILLONG_BACKUPS\3.8.0');
   if not DirExists(BackupDir) then
     ForceDirectories(BackupDir);
 
@@ -65,7 +65,7 @@ end;
 procedure InitializeWizard();
 begin
   WizardForm.WelcomeLabel1.Caption := 
-    'Bienvenido al actualizador SHILLONG v3.7.8' + #13#10 +
+    'Bienvenido al actualizador SHILLONG v3.8.0' + #13#10 +
     'Este asistente actualizará los módulos sin borrar datos.';
 end;
 
