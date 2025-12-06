@@ -21,6 +21,7 @@ import os
 import shutil
 import random
 import json
+from collections import Counter
 
 # --- IMPORTACIONES ---
 try:
@@ -438,6 +439,8 @@ class ToolsView(QWidget):
         g.addWidget(mk_btn("Reconciliar/Depurar Datos", self._reconciliar_duplicados, "#059669"), 3, 0, 1, 2)
         # --- NUEVA HERRAMIENTA 2: Auditoría Debe/Haber (AÑADIDA) ---
         g.addWidget(mk_btn("Auditoría Balance (Corregir Debe/Haber)", self._abrir_verificador, "#3b82f6"), 4, 0, 1, 2) 
+        # --- NUEVA HERRAMIENTA 3: Auditoría rápida de datos ---
+        g.addWidget(mk_btn("Auditoría Rápida (datos)", self._auditoria_ligera, "#2563eb"), 5, 0, 1, 2)
         # -----------------------------------
         return f
 
@@ -505,6 +508,65 @@ class ToolsView(QWidget):
                 })
                 
         return errores
+
+    def _auditoria_ligera(self):
+        """Chequeo rápido de datos faltantes/duplicados con resumen de totales."""
+        movs = getattr(self.data, "movimientos", [])
+        if not movs:
+            QMessageBox.information(self, "Auditoría", "No hay movimientos cargados.")
+            return
+
+        total_debe = total_haber = 0.0
+        anomalies = []
+        docs = []
+
+        for idx, m in enumerate(movs, 1):
+            debe = float(m.get("debe", 0) or 0)
+            haber = float(m.get("haber", 0) or 0)
+            total_debe += debe
+            total_haber += haber
+
+            doc = str(m.get("documento", "")).strip()
+            cuenta = str(m.get("cuenta", "")).strip()
+            banco = str(m.get("banco", "")).strip()
+
+            if doc:
+                docs.append(doc)
+            else:
+                anomalies.append(f"Fila {idx}: sin documento")
+            if not cuenta:
+                anomalies.append(f"Fila {idx}: sin cuenta")
+            if not banco:
+                anomalies.append(f"Fila {idx}: sin banco")
+            if (debe > 0 and haber > 0) or (debe == 0 and haber == 0):
+                anomalies.append(f"Fila {idx}: Debe/Haber inválidos (debe={debe}, haber={haber})")
+
+        # Duplicados de documentos
+        c_docs = Counter(docs)
+        dupes = [d for d, c in c_docs.items() if c > 1]
+        if dupes:
+            anomalies.append(f"Documentos duplicados: {', '.join(dupes)}")
+
+        diff = total_haber - total_debe
+        resumen = (
+            f"Total Debe: {total_debe:,.2f}\n"
+            f"Total Haber: {total_haber:,.2f}\n"
+            f"Diferencia (H-D): {diff:,.2f}"
+        )
+
+        if anomalies:
+            detalle = "\n".join(anomalies[:30])  # limitar para no saturar
+            QMessageBox.warning(
+                self,
+                "Auditoría con observaciones",
+                f"{resumen}\n\nSe detectaron {len(anomalies)} observaciones:\n{detalle}"
+            )
+        else:
+            QMessageBox.information(
+                self,
+                "Auditoría OK",
+                f"{resumen}\n\nTodo correcto. No se detectaron anomalías de datos."
+            )
 
     def _abrir_verificador(self):
         """Ejecuta la auditoría y muestra la ventana de corrección si hay errores."""

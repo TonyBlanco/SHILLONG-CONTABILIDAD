@@ -326,7 +326,12 @@ class DiarioView(QWidget):
                 h = 0.0
             td+=d; th+=h
             
-            nom = self.data.obtener_nombre_cuenta(m.get("cuenta"))
+            # FIX: Obtener el nombre de la cuenta directamente del plan contable
+            # para evitar que desaparezca si no está en el movimiento.
+            cuenta_id = str(m.get("cuenta", ""))
+            nom = self.data.cuentas.get(cuenta_id, {}).get("nombre", "DESCONOCIDA")
+
+
             vals = [
                 m.get("fecha"), m.get("documento"), m.get("concepto"), 
                 m.get("cuenta"), nom, 

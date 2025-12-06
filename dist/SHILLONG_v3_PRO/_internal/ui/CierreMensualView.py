@@ -15,7 +15,7 @@ from collections import defaultdict
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QComboBox, QPushButton,
     QLabel, QTableWidget, QTableWidgetItem, QTextEdit, QMenu, QHeaderView,
-    QFrame, QFileDialog, QMessageBox
+    QFrame, QFileDialog, QMessageBox, QInputDialog, QLineEdit
 )
 from PySide6.QtCore import Qt, QMarginsF
 from PySide6.QtGui import QColor, QFont, QPainter, QTextDocument, QPageLayout
@@ -39,6 +39,8 @@ class CierreMensualView(QWidget):
         self.hoy = datetime.date.today()
         self.mes_actual = self.hoy.month
         self.año_actual = self.hoy.year
+        self._pwd = "menni1234"
+        self._auth_ok = False
 
         self.bancos = self._cargar_bancos()
         self.cuentas = self._cargar_cuentas()
@@ -73,6 +75,61 @@ class CierreMensualView(QWidget):
                 return json.load(f)
         except (IOError, json.JSONDecodeError):
             return {}
+
+    def _pedir_password(self):
+        pwd, ok = QInputDialog.getText(
+            self,
+            "Autorización requerida",
+            "Ingrese la contraseña:",
+            QLineEdit.Password
+        )
+        if not ok:
+            return False
+        if pwd.strip() == self._pwd:
+            self._auth_ok = True
+            return True
+        QMessageBox.warning(self, "Acceso denegado", "Contraseña incorrecta.")
+        return False
+
+    def _asegurar_password(self):
+        if self._auth_ok:
+            return True
+        return self._pedir_password()
+
+    def _cargar_saldos_iniciales(self, año, mes):
+        """Carga saldos iniciales desde saldos_mensuales.json para un mes/año."""
+        ruta = "data/saldos_mensuales.json"
+        try:
+            with open(ruta, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            clave = f"{año}-{mes:02d}"
+            return {
+                banco: vals.get("inicial", 0.0)
+                for banco, vals in data.get("saldos", {}).get(clave, {}).items()
+            }
+        except (IOError, json.JSONDecodeError, AttributeError):
+            return {}
+
+    def _pedir_password(self):
+        """Solicita la contraseña y devuelve True si es correcta."""
+        pwd, ok = QInputDialog.getText(
+            self,
+            "Autorización requerida",
+            "Ingrese la contraseña para continuar:",
+            QLineEdit.Password
+        )
+        if not ok:
+            return False
+        if pwd.strip() == self._pwd:
+            self._auth_ok = True
+            return True
+        QMessageBox.warning(self, "Acceso denegado", "Contraseña incorrecta.")
+        return False
+
+    def _asegurar_password(self):
+        if self._auth_ok:
+            return True
+        return self._pedir_password()
 
     # ---------------------------------------------------------
     # CATEGORÍAS
@@ -129,6 +186,13 @@ class CierreMensualView(QWidget):
         tit.setStyleSheet("font-size: 28px; font-weight: 900; color: #0f172a;")
         h.addWidget(tit)
         h.addStretch()
+
+        self.btn_auditar = QPushButton("🔎 Auditar mes")
+        self.btn_auditar.setStyleSheet(
+            "background-color: #0ea5e9; color: white; font-weight:bold; padding:8px 15px; border-radius:6px;"
+        )
+        self.btn_auditar.clicked.connect(self._auditar_mes)
+        h.addWidget(self.btn_auditar)
 
         # Botón exportación
         self.btn_exportar_menu = QPushButton("📤 Exportar ▼")
@@ -198,12 +262,12 @@ class CierreMensualView(QWidget):
         # ------------------------
         # TABLA — FORMATO OFICIAL
         # ------------------------
-        self.tabla = QTableWidget(0, 9)
+        self.tabla = QTableWidget(0, 10)
         self.tabla.setHorizontalHeaderLabels([
-            "Fecha","Cuenta","Categoría","Concepto",
-            "Debe","Haber","Saldo","Banco","Documento"
+            "Fecha", "Doc", "Concepto", "Cuenta", "Nombre", 
+            "Debe", "Haber", "Banco", "Estado", "Saldo"
         ])
-        self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.tabla.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         layout.addWidget(self.tabla)
 
         # ------------------------
@@ -284,18 +348,20 @@ class CierreMensualView(QWidget):
             h = float(m.get("haber", 0))
             saldo += h - d
 
-            cat = self._categoria_de_cuenta(m.get("cuenta"))
+            cuenta_id = str(m.get("cuenta", ""))
+            nombre_cuenta = self.data.cuentas.get(cuenta_id, {}).get("nombre", "DESCONOCIDA")
 
             row = [
                 m.get("fecha"),
-                m.get("cuenta"),
-                cat,
+                m.get("documento"),
                 m.get("concepto"),
+                m.get("cuenta"),
+                nombre_cuenta,
                 f"{d:,.2f}",
                 f"{h:,.2f}",
-                f"{saldo:,.2f}",
                 m.get("banco"),
-                m.get("documento")
+                m.get("estado"),
+                f"{saldo:,.2f}"
             ]
 
             r = self.tabla.rowCount()
@@ -303,25 +369,49 @@ class CierreMensualView(QWidget):
 
             for c, val in enumerate(row):
                 it = QTableWidgetItem(str(val))
-
-                if c in [4, 5, 6]:
+                
+                # Ajustar alineación para las nuevas columnas numéricas
+                if c in [5, 6, 9]:
                     it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-                if c == 2:  # Categoría coloreada
-                    it.setForeground(QColor("#0f766e"))
-                    it.setFont(QFont("Arial", 9, QFont.Bold))
-
+                    if c == 5 and d > 0: it.setForeground(QColor("#dc2626"))
+                    if c == 6 and h > 0: it.setForeground(QColor("#16a34a"))
+                
                 self.tabla.setItem(r, c, it)
 
         self._graficos(self.filtrados)
 
         # Anomalías
-        dups = [
-            m.get("documento") for m in self.filtrados
-            if m.get("documento") and "SIN-DOC" not in str(m.get("documento"))
-        ]
-        if len(dups) != len(set(dups)):
-            self.txt_anom.setText("⚠️ Documentos duplicados detectados.")
+        anomalies = []
+        docs = []
+        for idx, m in enumerate(self.filtrados, 1):
+            doc = str(m.get("documento", "")).strip()
+            cuenta = str(m.get("cuenta", "")).strip()
+            banco = str(m.get("banco", "")).strip()
+            debe = float(m.get("debe", 0) or 0)
+            haber = float(m.get("haber", 0) or 0)
+
+            if doc and "SIN-DOC" not in doc:
+                docs.append(doc)
+            if not doc:
+                anomalies.append(f"Fila {idx}: sin documento")
+            if not cuenta:
+                anomalies.append(f"Fila {idx}: sin cuenta")
+            if not banco:
+                anomalies.append(f"Fila {idx}: sin banco")
+            if (debe > 0 and haber > 0) or (debe == 0 and haber == 0):
+                anomalies.append(f"Fila {idx}: Debe/Haber inválidos (debe={debe}, haber={haber})")
+            try:
+                c_int = int(cuenta.split(" ")[0])
+                if (600000 <= c_int <= 699999 or 200000 <= c_int <= 299999) and haber > 0 and debe == 0:
+                    anomalies.append(f"Fila {idx}: posible gasto en Haber (cuenta {cuenta}, haber={haber})")
+            except ValueError:
+                pass
+
+        if len(docs) != len(set(docs)):
+            anomalies.append("Documentos duplicados detectados.")
+
+        if anomalies:
+            self.txt_anom.setText("\n".join(anomalies))
         else:
             self.txt_anom.setText("✅ Todo correcto.")
 
@@ -359,21 +449,31 @@ class CierreMensualView(QWidget):
     # PDF (sin cambios, separado del formato libro)
     # ---------------------------------------------------------
     def _exportar_pdf_estandar(self):
+        if not self._asegurar_password():
+            return
         self._render_pdf(azul=False)
 
     def _exportar_pdf_azul(self):
+        if not self._asegurar_password():
+            return
         self._render_pdf(azul=True)
 
     # ---------------------------------------------------------
     # EXPORTACIÓN EXCEL — FORMATO LIBRO TEST
     # ---------------------------------------------------------
     def _exportar_excel_general(self):
+        if not self._asegurar_password():
+            return
         self._exportar_excel_base("general")
 
     def _exportar_excel_categorias(self):
+        if not self._asegurar_password():
+            return
         self._exportar_excel_base("categoria")
 
     def _exportar_excel_cuentas(self):
+        if not self._asegurar_password():
+            return
         self._exportar_excel_base("cuenta")
 
     def _exportar_excel_base(self, modo):
@@ -401,6 +501,10 @@ class CierreMensualView(QWidget):
             d = float(m.get("debe", 0))
             h = float(m.get("haber", 0))
             saldo += h - d
+
+            # FIX: Obtener nombre de cuenta de forma robusta
+            cuenta_id = str(m.get("cuenta", ""))
+            nombre_cuenta = self.data.cuentas.get(cuenta_id, {}).get("nombre", "DESCONOCIDA")
 
             it = {
                 "fecha": m.get("fecha"),
@@ -443,3 +547,79 @@ class CierreMensualView(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
 
+    # ---------------------------------------------------------
+    # AUDITORÍA DEL MES
+    # ---------------------------------------------------------
+    def _auditar_mes(self):
+        if not self._asegurar_password():
+            return
+
+        if not hasattr(self, "filtrados") or not self.filtrados:
+            QMessageBox.information(self, "Auditoría", "No hay movimientos filtrados para auditar.")
+            return
+
+        mes = self.cbo_mes.currentIndex() + 1
+        año = int(self.cbo_año.currentText())
+        banco_filtro = self.cbo_banco.currentText()
+
+        saldos_init_map = self._cargar_saldos_iniciales(año, mes)
+        saldo_inicial = sum(saldos_init_map.values()) if banco_filtro == "Todos" else saldos_init_map.get(banco_filtro, 0.0)
+
+        total_debe = total_haber = 0.0
+        anomalies = []
+
+        for idx, m in enumerate(self.filtrados, 1):
+            cuenta = str(m.get("cuenta", "")).strip()
+            banco = m.get("banco", "").strip() or "SIN_BANCO"
+            doc = m.get("documento", "").strip()
+            try:
+                debe = float(m.get("debe", 0) or 0)
+                haber = float(m.get("haber", 0) or 0)
+            except (ValueError, TypeError):
+                debe = haber = 0.0
+
+            total_debe += debe
+            total_haber += haber
+
+            if not cuenta:
+                anomalies.append(f"Fila {idx}: sin cuenta")
+            if not banco:
+                anomalies.append(f"Fila {idx}: sin banco")
+            if not doc:
+                anomalies.append(f"Fila {idx}: sin documento")
+            if (debe > 0 and haber > 0) or (debe == 0 and haber == 0):
+                anomalies.append(f"Fila {idx}: Debe/Haber inválidos (debe={debe}, haber={haber})")
+
+            try:
+                c_int = int(cuenta.split(" ")[0])
+                if (600000 <= c_int <= 699999 or 200000 <= c_int <= 299999) and haber > 0 and debe == 0:
+                    anomalies.append(f"Fila {idx}: posible gasto en Haber (cuenta {cuenta}, haber={haber})")
+            except ValueError:
+                pass
+
+        saldo_final_estimado = saldo_inicial + total_haber - total_debe
+        resumen = [
+            f"Total Debe: {total_debe:,.2f}",
+            f"Total Haber: {total_haber:,.2f}",
+            f"Saldo inicial: {saldo_inicial:,.2f}",
+            f"Saldo final estimado: {saldo_final_estimado:,.2f}"
+        ]
+
+        if banco_filtro != "Todos" and banco_filtro not in saldos_init_map:
+            anomalies.append(f"No hay saldo inicial definido para {banco_filtro} en {mes:02d}/{año}.")
+
+        if anomalies:
+            detalle = "\n".join(anomalies[:15])
+            if len(anomalies) > 15:
+                detalle += f"\n... ({len(anomalies)-15} más)"
+            QMessageBox.warning(
+                self,
+                "Auditoría con observaciones",
+                "\n".join(resumen + ["", "Anomalías:", detalle])
+            )
+        else:
+            QMessageBox.information(
+                self,
+                "Auditoría completada",
+                "\n".join(resumen + ["", "Sin anomalías detectadas."])
+            )

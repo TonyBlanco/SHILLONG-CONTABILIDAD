@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QSpacerItem, QLabel, QSizePolicy
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtCore import QSize, Signal, Qt
 import os
 
@@ -58,15 +58,25 @@ class Sidebar(QWidget):
         self.btn_diario = self._crear_boton("Diario", "diario")
         self.btn_pendientes = self._crear_boton("Pendientes", "pendientes")
         self.btn_libro = self._crear_boton("Libro Mensual", "libro_mensual")
-        self.btn_cierre = self._crear_boton("Cierre Mensual", "cierre_mensual")
-        self.btn_anual = self._crear_boton("Cierre Anual", "cierre_anual")
-        self.btn_informes = self._crear_boton("Informes BI", "informes")
+        self.btn_cierres = self._crear_boton("Cierres & BI", "cierres")
         self.btn_ayuda = self._crear_boton("Ayuda / Soporte", "ayuda")
 
         # Separador para empujar “Herramientas” al fondo
         layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         self.btn_tools = self._crear_boton("Herramientas", "tools")
+
+        # Logo al fondo
+        logo_path = os.path.join(base, "assets", "logo", "shillong_logov3.png")
+        if os.path.exists(logo_path):
+            logo = QLabel()
+            pix = QPixmap(logo_path)
+            if not pix.isNull():
+                pix = pix.scaledToWidth(140, Qt.SmoothTransformation)
+                logo.setPixmap(pix)
+                logo.setAlignment(Qt.AlignCenter)
+                logo.setStyleSheet("padding-top: 12px; padding-bottom: 6px;")
+                layout.addWidget(logo)
 
     # ----------------------------------------------------------
     #   Crear botón del menú

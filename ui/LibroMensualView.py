@@ -157,15 +157,9 @@ class LibroMensualView(QWidget):
         Primero busca en el sistema de saldos.
         Si no existe, solicita al usuario.
         """
+        # Si no hay sistema de saldos, no interrumpir: devolvemos 0 para no bloquear la app.
         if not self.saldos_sistema:
-            saldo, ok = QInputDialog.getDouble(
-                self,
-                "Saldo inicial requerido",
-                f"Saldo inicial de {banco} para {mes:02d}/{año}:",
-                value=0.0,
-                decimals=2
-            )
-            return saldo if ok else None
+            return 0.0
 
         saldo_auto = self.saldos_sistema.obtener_saldo_inicial(mes, año, banco)
         if saldo_auto is not None:
@@ -179,41 +173,12 @@ class LibroMensualView(QWidget):
             mes_ant, año_ant = mes - 1, año
         saldo_prev = self.saldos_sistema.obtener_saldo_final(mes_ant, año_ant, banco)
         if saldo_prev is not None:
-            usar_prev = QMessageBox.question(
-                self,
-                "Usar saldo anterior",
-                f"No hay saldo inicial guardado.\n¿Usar el saldo FINAL de {mes_ant:02d}/{año_ant} ({saldo_prev:,.2f}) como inicial?",
-                QMessageBox.Yes | QMessageBox.No
-            )
-            if usar_prev == QMessageBox.Yes:
-                self.saldos_sistema.editar_saldo_inicial(mes, año, banco, saldo_prev)
-                return saldo_prev
+            # Sin preguntar: auto-arrastrar para no molestar al usuario en el arranque.
+            self.saldos_sistema.editar_saldo_inicial(mes, año, banco, saldo_prev)
+            return saldo_prev
 
-        fecha_prev = datetime.date(año, mes, 1) - datetime.timedelta(days=1)
-        prompt = f"Saldo inicial de {banco}\n(Arrastrado del {fecha_prev.strftime('%d/%m/%Y')}).\nPuede usar el gestor de saldos para editar."
-        
-        saldo, ok = QInputDialog.getDouble(
-            self,
-            "Saldo inicial requerido",
-            prompt,
-            value=0.0,
-            decimals=2
-        )
-
-        if ok:
-            self.saldos_sistema.editar_saldo_inicial(mes, año, banco, saldo)
-            return saldo
-
-        abrir_editor = QMessageBox.question(
-            self,
-            "Gestor de saldos",
-            "No se registró saldo inicial. ¿Desea abrir el gestor de saldos?",
-            QMessageBox.Yes | QMessageBox.No
-        )
-        if abrir_editor == QMessageBox.Yes:
-            self._abrir_editor_saldos(mes, año, banco)
-
-        return None
+        # Si no hay datos previos, no interrumpir: devolver 0 y que el usuario ajuste luego en el gestor.
+        return 0.0
 
     # ------------------------------------------------------------
     # Gestor de saldos manual (editar / eliminar / usar cierre previo)

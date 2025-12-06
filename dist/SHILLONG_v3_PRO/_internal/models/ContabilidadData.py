@@ -200,16 +200,33 @@ class ContabilidadData:
     # LIBRO MENSUAL
     # ============================================================
     def movimientos_por_mes(self, mes, año):
+        """
+        Obtiene movimientos para un mes y año específicos, manejando varios formatos de fecha.
+        Formatos soportados: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY.
+        """
         lista = []
         for m in self.movimientos:
             try:
-                f = m.get("fecha", "")
-                if "/" in f:
-                    d, mm, aa = f.split("/")
-                    if int(mm) == mes and int(aa) == año:
-                        lista.append(m)
-            except (ValueError, AttributeError):
-                pass
+                f_str = m.get("fecha", "")
+                fecha_obj = None
+
+                if "/" in f_str:
+                    # Formato: DD/MM/YYYY
+                    fecha_obj = datetime.strptime(f_str, "%d/%m/%Y")
+                elif "-" in f_str:
+                    try:
+                        # Formato: YYYY-MM-DD
+                        fecha_obj = datetime.strptime(f_str, "%Y-%m-%d")
+                    except ValueError:
+                        # Formato: DD-MM-YYYY
+                        fecha_obj = datetime.strptime(f_str, "%d-%m-%Y")
+
+                if fecha_obj and fecha_obj.month == mes and fecha_obj.year == año:
+                    lista.append(m)
+
+            except (ValueError, AttributeError, IndexError):
+                # Ignora movimientos con formato de fecha inválido o ausente
+                continue
         return lista
 
     def totales_mes(self, mes, año):

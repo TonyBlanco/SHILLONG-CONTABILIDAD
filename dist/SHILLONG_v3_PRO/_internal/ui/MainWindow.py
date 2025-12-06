@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MainWindow.py — SHILLONG CONTABILIDAD v3.7.8 PRO
+MainWindow.py — SHILLONG CONTABILIDAD v3.8.0 PRO
 Versión Restaurada: Sidebar Azul Original + SistemaView + Imports correctos.
 """
 
@@ -28,20 +28,18 @@ from ui.DashboardView import DashboardView
 from ui.SistemaView import SistemaView
 from ui.RegistrarView import RegistrarView
 from ui.DiarioView import DiarioView
-from ui.CierreMensualView import CierreMensualView
-from ui.CierreView import CierreView
 from ui.LibroMensualView import LibroMensualView
-from ui.InformesView import InformesView
 from ui.PendientesView import PendientesView
 from ui.ToolsView import ToolsView
 from ui.HelpView import HelpView
+from ui.CierresHub import CierresHub
 # =======================================================
 
 class MainWindow(QMainWindow):
     def __init__(self, data):
         super().__init__()
         self.data = data
-        self.setWindowTitle("Shillong Contabilidad v3.7.8 PRO")
+        self.setWindowTitle("Shillong Contabilidad v3.8.0 PRO")
         self.resize(1280, 800)
         
         # Mapa para conectar los IDs de tu Sidebar con los Widgets reales
@@ -127,17 +125,10 @@ class MainWindow(QMainWindow):
         self.views["libro_mensual"] = LibroMensualView(self.data)
         self.stack.addWidget(self.views["libro_mensual"])
 
-        # Cierre Mensual
-        self.views["cierre_mensual"] = CierreMensualView(self.data)
-        self.stack.addWidget(self.views["cierre_mensual"])
-
-        # Cierre Anual (cierre_anual en sidebar)
-        self.views["cierre_anual"] = CierreView(self.data)
-        self.stack.addWidget(self.views["cierre_anual"])
-
-        # Informes
-        self.views["informes"] = InformesView(self.data)
-        self.stack.addWidget(self.views["informes"])
+        # Hub de cierres/BI
+        from ui.CierresHub import CierresHub
+        self.views["cierres"] = CierresHub(self.data)
+        self.stack.addWidget(self.views["cierres"])
 
         # Herramientas
         self.views["tools"] = ToolsView(self.data)
