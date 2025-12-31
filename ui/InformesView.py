@@ -32,6 +32,14 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
 
+# FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+# Soporte de ruta de recursos en EXE (PyInstaller)
+try:
+    from utils.rutas import ruta_recurso
+except Exception:  # pragma: no cover
+    def ruta_recurso(p):
+        return Path(p)
+
 
 class InformesView(QWidget):
 
@@ -585,7 +593,7 @@ class InformesView(QWidget):
         Retorna la ruta fija del layout oficial.
         Regla: nunca usar datos de una plantilla cargada por el usuario.
         """
-        return str(Path("ui") / "Modelo por cuentas.xlsx")
+        return str(ruta_recurso("ui/Modelo por cuentas.xlsx"))
 
     def _celda_es_formula(self, cell):
         v = cell.value
