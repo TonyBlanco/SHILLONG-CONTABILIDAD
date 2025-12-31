@@ -1,0 +1,31 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+
+# Local environments
+.venv/
+venv/
+ENV/
+
+# Logs
+logs/
+*.log
+
+# Build / packaging artifacts
+build/
+dist/
+Output/
+*.spec
+*.iss
+*.exe
+*.msi
+
+# Generated reports / exports
+*.xlsx
+!ui/Modelo por cuentas.xlsx
+
+# Local data generated at runtime (keep canonical seeds tracked)
+data/*.backup
+data/update_cache.json
