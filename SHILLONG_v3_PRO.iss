@@ -10,12 +10,13 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={localappdata}\{#MyAppName}
 DisableDirPage=no
 AllowRootDirectory=yes
 AllowNetworkDrive=yes
 AllowUNCPath=yes
 PrivilegesRequired=lowest
+ArchitecturesInstallIn64BitMode=yes
 OutputDir=Output
 OutputBaseFilename=Instalador_Shillong_v3.8.0_PRO
 SetupIconFile=assets\shillong_logov3.ico
@@ -54,10 +55,10 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilen
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [Dirs]
-Name: "{app}\backups"; Permissions: users-modify
-Name: "{app}\data"; Permissions: users-modify
-Name: "{app}\logs"; Permissions: users-modify
-Name: "{app}\reportes"; Permissions: users-modify
+Name: "{app}\backups"
+Name: "{app}\data"
+Name: "{app}\logs"
+Name: "{app}\reportes"
 
 ; [Registry]
 ; REMOVIDO: Ya no forzamos RUNASADMIN - la app no necesita privilegios de admin
@@ -88,17 +89,37 @@ begin
     DataPath := ExpandConstant('{app}\data');
     if not DirExists(DataPath) then
       CreateDir(DataPath);
-
-    if not FileExists(DataPath + '\bancos.json') then
+    // Backup any existing user JSONs to avoid overwriting user data
     begin
-      SaveStringToFile(DataPath + '\bancos.json',
-        '{ "banks": ['#13#10 +
-        '  { "id": 1, "nombre": "Federal Bank", "saldo": 0.0 },'#13#10 +
-        '  { "id": 2, "nombre": "SBI", "saldo": 0.0 },'#13#10 +
-        '  { "id": 3, "nombre": "Union Bank", "saldo": 0.0 },'#13#10 +
-        '  { "id": 4, "nombre": "Otro", "saldo": 0.0 },'#13#10 +
-        '  { "id": 5, "nombre": "Caja", "saldo": 0.0 }'#13#10 +
-        '] }', False);
+      if not DirExists(ExpandConstant('{app}\backups')) then
+        CreateDir(ExpandConstant('{app}\backups'));
+
+      // List of common user JSON files to protect
+      if FileExists(DataPath + '\shillong_2026.json') then
+      begin
+        SaveStringToFile(ExpandConstant('{app}\backups\shillong_2026.json.' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.bak'), LoadStringFromFile(DataPath + '\shillong_2026.json'), False);
+      end;
+
+      if FileExists(DataPath + '\bancos.json') then
+      begin
+        // if user already has bancos.json, keep a backup copy and do not overwrite
+        SaveStringToFile(ExpandConstant('{app}\backups\bancos.json.' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.bak'), LoadStringFromFile(DataPath + '\bancos.json'), False);
+      end else
+      begin
+        // Install a default bancos.json only if none exists
+        SaveStringToFile(DataPath + '\bancos.json',
+          '{ "banks": ['#13#10 +
+          '  { "id": 1, "nombre": "Federal Bank", "saldo": 0.0 },'#13#10 +
+          '  { "id": 2, "nombre": "SBI", "saldo": 0.0 },'#13#10 +
+          '  { "id": 3, "nombre": "Union Bank", "saldo": 0.0 },'#13#10 +
+          '  { "id": 4, "nombre": "Otro", "saldo": 0.0 },'#13#10 +
+          '  { "id": 5, "nombre": "Caja", "saldo": 0.0 }'#13#10 +
+          '] }', False);
+      end;
     end;
   end;
 end;
+
+[UninstallDelete]
+Type: files; Name: "{app}\assets\shillong_logov3.ico"
+Type: files; Name: "{app}\assets\shillong_logo_pequeno.bmp"
