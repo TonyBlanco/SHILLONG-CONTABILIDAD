@@ -709,40 +709,40 @@ class LibroMensualView(QWidget):
     # ============================================================
     # MÉTODOS DE EXPORTACIÓN (ORDEN ESTRICTO A-G)
     # ============================================================
-        def _ensure_reports_dir(self, target: Path) -> Path:
-            """
-            Asegura que `target` exista y sea escribible. Si la creación falla o
-            algún componente existe como archivo, usa fallback en ~/Documents/reportes.
-            Devuelve el directorio realmente usado.
-            """
-            # Si alguna parte del path existe y no es directorio, usar fallback
-            for p in (target, *target.parents):
-                if p.exists() and not p.is_dir():
-                    rel = Path(*target.parts[1:]) if len(target.parts) > 1 else Path(target.name)
-                    fallback = Path.home() / "Documents" / "reportes" / rel
-                    fallback.mkdir(parents=True, exist_ok=True)
-                    return fallback
+    def _ensure_reports_dir(self, target: Path) -> Path:
+        """
+        Asegura que `target` exista y sea escribible. Si la creación falla o
+        algún componente existe como archivo, usa fallback en ~/Documents/reportes.
+        Devuelve el directorio realmente usado.
+        """
+        # Si alguna parte del path existe y no es directorio, usar fallback
+        for p in (target, *target.parents):
+            if p.exists() and not p.is_dir():
+                rel = Path(*target.parts[1:]) if len(target.parts) > 1 else Path(target.name)
+                fallback = Path.home() / "Documents" / "reportes" / rel
+                fallback.mkdir(parents=True, exist_ok=True)
+                return fallback
 
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            # prueba rápida de escritura
+            test = target / ".write_test"
             try:
-                target.mkdir(parents=True, exist_ok=True)
-                # prueba rápida de escritura
-                test = target / ".write_test"
-                try:
-                    test.write_text("ok", encoding="utf-8")
-                    test.unlink()
-                    return target
-                except Exception:
-                    # fallo de escritura -> intentar fallback
-                    pass
+                test.write_text("ok", encoding="utf-8")
+                test.unlink()
+                return target
             except Exception:
-                # permiso denegado u otro error -> fallback
+                # fallo de escritura -> intentar fallback
                 pass
+        except Exception:
+            # permiso denegado u otro error -> fallback
+            pass
 
-            # Fallback final a Documents/reportes/<subpath>
-            rel = Path(*target.parts[1:]) if len(target.parts) > 1 else Path(target.name)
-            fallback = Path.home() / "Documents" / "reportes" / rel
-            fallback.mkdir(parents=True, exist_ok=True)
-            return fallback
+        # Fallback final a Documents/reportes/<subpath>
+        rel = Path(*target.parts[1:]) if len(target.parts) > 1 else Path(target.name)
+        fallback = Path.home() / "Documents" / "reportes" / rel
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
 
     def _exportar_excel_general(self):
         self._exportar_excel_base("general")
@@ -795,6 +795,7 @@ class LibroMensualView(QWidget):
             tmp = Path(os.getenv("TMP", str(Path.home()))) / "reportes_fallback" / mes_dir / categoria_dir
             tmp.mkdir(parents=True, exist_ok=True)
             base_dir = tmp
+
         ruta = str(base_dir / Path(ruta).name)
 
         # Recopilar datos filtrados
@@ -819,13 +820,13 @@ class LibroMensualView(QWidget):
 
         # Inicializar saldo con el saldo inicial
         saldo = saldo_inicial
-        
+
         for m in movs_raw:
             if banco_filtro != "Todos" and m.get("banco") != banco_filtro: continue
             
             # Valores internos (originales)
-            debe_interno = float(m.get("debe", 0))
-            haber_interno = float(m.get("haber", 0))
+            debe_interno = float(m.get("debe", 0) or 0)
+            haber_interno = float(m.get("haber", 0) or 0)
 
             if self.chk_export_invertido.isChecked():
                 # Columnas invertidas (ellos): ingresos en Debe, gastos en Haber
@@ -844,8 +845,8 @@ class LibroMensualView(QWidget):
             item_ordenado["cuenta"] = str(m.get("cuenta", ""))    # A: Cuenta
             item_ordenado["fecha"] = m.get("fecha", "")           # B: Fecha
             item_ordenado["concepto"] = m.get("concepto", "")     # C: Concepto
-            item_ordenado["debe"] = debe_export                   # D: Debe (invertido)
-            item_ordenado["haber"] = haber_export                 # E: Haber (invertido)
+            item_ordenado["debe"] = debe_export                       # D: Debe (invertido)
+            item_ordenado["haber"] = haber_export                     # E: Haber (invertido)
             item_ordenado["estado"] = m.get("estado", "")         # F: Estado
             item_ordenado["documento"] = m.get("documento", "")   # G: Documento
             
@@ -867,7 +868,7 @@ class LibroMensualView(QWidget):
                 # Agrupar por categoría
                 grupos = defaultdict(list)
                 for x in datos_prep: 
-                    cat = x["categoria"] if x["categoria"] else "SIN_CATEGORIA"
+                    cat = x["categoria"] if x.get("categoria") else "SIN_CATEGORIA"
                     grupos[cat].append(x)
                 # Ordenar por nombre de categoría
                 grupos_ord = dict(sorted(grupos.items()))
@@ -878,7 +879,7 @@ class LibroMensualView(QWidget):
                 grupos = defaultdict(list)
                 for x in datos_prep: 
                     # Usamos cuenta + nombre para la cabecera del grupo
-                    clave = f"{x['cuenta']} - {x['nombre_cuenta']}" if x['cuenta'] else "SALDO_INICIAL"
+                    clave = f"{x.get('cuenta','')} - {x.get('nombre_cuenta','')}" if x.get('cuenta') else "SALDO_INICIAL"
                     grupos[clave].append(x)
                 # Ordenar por número de cuenta
                 grupos_ord = dict(sorted(grupos.items()))
