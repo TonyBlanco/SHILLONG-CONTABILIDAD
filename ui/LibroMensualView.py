@@ -709,6 +709,41 @@ class LibroMensualView(QWidget):
     # ============================================================
     # MÉTODOS DE EXPORTACIÓN (ORDEN ESTRICTO A-G)
     # ============================================================
+        def _ensure_reports_dir(self, target: Path) -> Path:
+            """
+            Asegura que `target` exista y sea escribible. Si la creación falla o
+            algún componente existe como archivo, usa fallback en ~/Documents/reportes.
+            Devuelve el directorio realmente usado.
+            """
+            # Si alguna parte del path existe y no es directorio, usar fallback
+            for p in (target, *target.parents):
+                if p.exists() and not p.is_dir():
+                    rel = Path(*target.parts[1:]) if len(target.parts) > 1 else Path(target.name)
+                    fallback = Path.home() / "Documents" / "reportes" / rel
+                    fallback.mkdir(parents=True, exist_ok=True)
+                    return fallback
+
+            try:
+                target.mkdir(parents=True, exist_ok=True)
+                # prueba rápida de escritura
+                test = target / ".write_test"
+                try:
+                    test.write_text("ok", encoding="utf-8")
+                    test.unlink()
+                    return target
+                except Exception:
+                    # fallo de escritura -> intentar fallback
+                    pass
+            except Exception:
+                # permiso denegado u otro error -> fallback
+                pass
+
+            # Fallback final a Documents/reportes/<subpath>
+            rel = Path(*target.parts[1:]) if len(target.parts) > 1 else Path(target.name)
+            fallback = Path.home() / "Documents" / "reportes" / rel
+            fallback.mkdir(parents=True, exist_ok=True)
+            return fallback
+
     def _exportar_excel_general(self):
         self._exportar_excel_base("general")
 
@@ -753,7 +788,13 @@ class LibroMensualView(QWidget):
         mes_dir = f"{año}-{mes:02d}"
         categoria_dir = "categoria" if modo == "categoria" else ("cuenta" if modo == "cuenta" else "general")
         base_dir = Path("reportes") / mes_dir / categoria_dir
-        base_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            base_dir = self._ensure_reports_dir(base_dir)
+        except Exception:
+            # Último recurso: carpeta temporal garantizada
+            tmp = Path(os.getenv("TMP", str(Path.home()))) / "reportes_fallback" / mes_dir / categoria_dir
+            tmp.mkdir(parents=True, exist_ok=True)
+            base_dir = tmp
         ruta = str(base_dir / Path(ruta).name)
 
         # Recopilar datos filtrados
