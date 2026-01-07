@@ -57,6 +57,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 Name: "{app}\backups"; Permissions: users-modify
 Name: "{app}\data"; Permissions: users-modify
 Name: "{app}\logs"; Permissions: users-modify
+Name: "{app}\reportes"; Permissions: users-modify
 
 ; [Registry]
 ; REMOVIDO: Ya no forzamos RUNASADMIN - la app no necesita privilegios de admin
