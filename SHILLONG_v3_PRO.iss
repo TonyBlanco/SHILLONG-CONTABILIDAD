@@ -31,7 +31,7 @@ WizardSmallImageFile=assets\shillong_logo_pequeno.bmp
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"
 
 [Files]
 ; Archivos de la aplicación (EXE, DLLs, etc.) - Se actualizan siempre
@@ -45,11 +45,15 @@ Source: "data\presupuesto_2025.json"; DestDir: "{app}\data"; Flags: onlyifdoesnt
 Source: "data\kabbalah_72.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\manual_shillong.pdf"; DestDir: "{app}\data"; Flags: ignoreversion
 
+; Herramienta de reparación de bancos para el usuario - se actualiza siempre
+Source: "tools\reparar_bancos_usuario.bat"; DestDir: "{app}"; Flags: ignoreversion
+
 ; NUNCA incluir: shillong_*.json, *.backup, update_cache.json, cierres/*, archivos de test
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\shillong_logov3.ico"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\shillong_logov3.ico"; Tasks: desktopicon
+Name: "{autodesktop}\Reparar Bancos - SHILLONG"; Filename: "{app}\reparar_bancos_usuario.bat"; Comment: "Restaurar bancos si no aparecen tras instalar"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

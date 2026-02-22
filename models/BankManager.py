@@ -2,12 +2,12 @@
 
 import json
 from pathlib import Path
-from utils.rutas import ruta_recurso
+from utils.rutas import ruta_datos_usuario
 
 
 class BankManager:
     def __init__(self):
-        self.archivo = ruta_recurso("data/bancos.json")
+        self.archivo = ruta_datos_usuario("bancos.json")
         self.bancos = self._cargar()
 
     def _cargar(self):

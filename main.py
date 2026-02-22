@@ -13,6 +13,12 @@ if getattr(sys, 'frozen', False):
 else:
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Forzar CWD al directorio de la app para que rutas relativas (data/...) sean estables
+try:
+    os.chdir(ROOT_DIR)
+except Exception:
+    pass
+
 # Asegurar que Python encuentre los módulos base
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
@@ -29,6 +35,22 @@ if UI_DIR not in sys.path:
 
 if MODELS_DIR not in sys.path:
     sys.path.insert(0, MODELS_DIR)
+
+
+def _ensure_numpy_compat_aliases():
+    """Compatibilidad para builds donde faltan alias legacy en numpy."""
+    try:
+        import numpy as np
+    except Exception:
+        return
+
+    if not hasattr(np, "short") and hasattr(np, "int16"):
+        np.short = np.int16
+    if not hasattr(np, "ushort") and hasattr(np, "uint16"):
+        np.ushort = np.uint16
+
+
+_ensure_numpy_compat_aliases()
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import Qt
