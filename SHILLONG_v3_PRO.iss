@@ -56,6 +56,10 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilen
 Name: "{autodesktop}\Reparar Bancos - SHILLONG"; Filename: "{app}\reparar_bancos_usuario.bat"; Comment: "Restaurar bancos si no aparecen tras instalar"; Tasks: desktopicon
 
 [Run]
+; Restaurar bancos automáticamente (silencioso, no falla si no hay backup)
+Filename: "{cmd}"; Parameters: "/c ""{app}\reparar_bancos_usuario.bat"" ""{app}"""; Flags: runhidden waituntilterminated
+
+; Abrir la app al finalizar (opcional, el usuario puede desmarcar)
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [Dirs]

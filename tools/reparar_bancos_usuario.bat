@@ -4,6 +4,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 title Reparar bancos - SHILLONG
 
 set "SIMULAR=0"
+set "SILENCIOSO=0"
 set "APP_DIR="
 set "DATA_DIR="
 set "BACKUP_DIR="
@@ -14,6 +15,7 @@ for %%A in (%*) do (
     set "SIMULAR=1"
   ) else (
     set "USER_PATH=%%~fA"
+    set "SILENCIOSO=1"
   )
 )
 
@@ -69,14 +71,16 @@ echo Carpeta de backups:    %BACKUP_DIR%
 echo.
 
 if not exist "%BACKUP_DIR%" (
-  echo ERROR: No existe carpeta de backups en:
-  echo   %BACKUP_DIR%
-  echo.
-  echo Consejo: ejecuta este BAT pasando la ruta de instalacion:
-  echo   reparar_bancos_usuario.bat "C:\RUTA\DE\INSTALACION"
-  echo.
-  pause
-  exit /b 1
+  if "%SILENCIOSO%"=="0" (
+    echo ERROR: No existe carpeta de backups en:
+    echo   %BACKUP_DIR%
+    echo.
+    echo Consejo: ejecuta este BAT pasando la ruta de instalacion:
+    echo   reparar_bancos_usuario.bat "C:\RUTA\DE\INSTALACION"
+    echo.
+    pause
+  )
+  exit /b 0
 )
 
 set "LATEST="
@@ -87,10 +91,12 @@ for /f "delims=" %%F in ('dir /b /a-d /o-d "%BACKUP_DIR%\bancos*.bak" 2^>nul') d
 
 :found_backup
 if "%LATEST%"=="" (
-  echo ERROR: No se encontro ningun backup de bancos (bancos*.bak).
-  echo.
-  pause
-  exit /b 1
+  if "%SILENCIOSO%"=="0" (
+    echo ERROR: No se encontro ningun backup de bancos (bancos*.bak).
+    echo.
+    pause
+  )
+  exit /b 0
 )
 
 echo Backup detectado: %LATEST%
@@ -115,17 +121,21 @@ if exist "%DATA_DIR%\bancos.json" (
 
 copy /y "%BACKUP_DIR%\%LATEST%" "%DATA_DIR%\bancos.json" >nul
 if errorlevel 1 (
-  echo ERROR: No se pudo restaurar bancos.json
-  echo.
-  pause
+  if "%SILENCIOSO%"=="0" (
+    echo ERROR: No se pudo restaurar bancos.json
+    echo.
+    pause
+  )
   exit /b 1
 )
 
-echo OK: bancos restaurados correctamente.
-echo.
-echo Recomendacion: abre SHILLONG y pulsa "Actualizar lista" en la pantalla de registro.
-echo.
-pause
+if "%SILENCIOSO%"=="0" (
+  echo OK: bancos restaurados correctamente.
+  echo.
+  echo Recomendacion: abre SHILLONG y pulsa "Actualizar lista" en la pantalla de registro.
+  echo.
+  pause
+)
 exit /b 0
 
 :set_paths
