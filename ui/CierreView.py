@@ -12,7 +12,7 @@ Cierre Anual Blindado:
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, 
     QPushButton, QTableWidget, QTableWidgetItem, QFrame, 
-    QHeaderView, QMessageBox, QFileDialog, QMenu
+    QHeaderView, QMessageBox, QFileDialog, QMenu, QCheckBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont
@@ -152,6 +152,16 @@ class CierreView(QWidget):
         """)
         layout.addWidget(self.tabla)
 
+        # --- CHECKBOX ESTILO SHILLONG ---
+        self.chk_estilo_shillong = QCheckBox("Estilo SHILLONG (Invertir Columnas: Entra=Debe, Sale=Haber)")
+        self.chk_estilo_shillong.setChecked(False)
+        self.chk_estilo_shillong.stateChanged.connect(self.actualizar)
+        layout.addWidget(self.chk_estilo_shillong)
+
+        self.chk_export_invertido = QCheckBox("Exportar con columnas invertidas (ShillongStyle)")
+        self.chk_export_invertido.setChecked(False)
+        layout.addWidget(self.chk_export_invertido)
+
     def _crear_kpi(self, titulo, color):
         card = QFrame()
         card.setStyleSheet(f"""
@@ -177,6 +187,7 @@ class CierreView(QWidget):
             año = int(self.cbo_año.currentText())
         except (ValueError, TypeError):
             return
+        invertir = self._apply_estilo_shillong_formatting()
         
         total_ingresos = 0
         total_gastos = 0
@@ -191,9 +202,14 @@ class CierreView(QWidget):
             # Si quieres hacerlo robusto manual:
             movs = self._filtrar_movimientos_robust(num_mes, año)
             
-            ing = sum(float(m.get("haber", 0)) for m in movs)
-            gas = sum(float(m.get("debe", 0)) for m in movs)
-            sal = ing - gas
+            if invertir:
+                ing = sum(float(m.get("debe", 0)) for m in movs)
+                gas = sum(float(m.get("haber", 0)) for m in movs)
+                sal = ing - gas
+            else:
+                ing = sum(float(m.get("haber", 0)) for m in movs)
+                gas = sum(float(m.get("debe", 0)) for m in movs)
+                sal = ing - gas
             
             total_ingresos += ing
             total_gastos += gas
@@ -255,6 +271,7 @@ class CierreView(QWidget):
         año = int(self.cbo_año.currentText())
         datos_prep = []
         saldo = 0
+        invertir = self._usar_inversion_exportacion()
         
         # Recorremos todos los meses para asegurar orden cronológico o filtrar todo de golpe
         todos_movs = []
@@ -277,11 +294,20 @@ class CierreView(QWidget):
         # todos_movs.sort(...) 
 
         for m in todos_movs:
-            d = float(m.get("debe", 0))
-            h = float(m.get("haber", 0))
-            saldo += h - d
+            d_orig = float(m.get("debe", 0))
+            h_orig = float(m.get("haber", 0))
+            if invertir:
+                d = h_orig
+                h = d_orig
+                saldo += d - h
+            else:
+                d = d_orig
+                h = h_orig
+                saldo += h - d
             
             item = m.copy()
+            item["debe"] = d
+            item["haber"] = h
             item["saldo"] = saldo
             item["categoria"] = self._categoria_de_cuenta(m.get("cuenta"))
             item["nombre_cuenta"] = self.data.obtener_nombre_cuenta(m.get("cuenta"))
@@ -330,6 +356,7 @@ class CierreView(QWidget):
     def _exportar_evolutivo(self):
         """Exporta la matriz de evolución mensual (El original)."""
         año = int(self.cbo_año.currentText())
+        invertir = self._usar_inversion_exportacion()
         archivo, _ = QFileDialog.getSaveFileName(self, "Guardar Evolutivo", f"Evolutivo_{año}.xlsx", "Excel (*.xlsx)")
         
         if not archivo: return
@@ -345,10 +372,11 @@ class CierreView(QWidget):
         for m in range(1, 13):
             movs = self._filtrar_movimientos_robust(m, año)
             for x in movs:
-                if float(x.get("debe", 0)) > 0:
+                valor = float(x.get("haber", 0) if invertir else x.get("debe", 0))
+                if valor > 0:
                     cta = str(x.get("cuenta", "S/N"))
                     nombres[cta] = self.data.obtener_nombre_cuenta(cta)
-                    matriz[cta][m-1] += float(x["debe"])
+                    matriz[cta][m-1] += valor
         
         datos = {k: (nombres.get(k, ""), v, sum(v)) for k, v in matriz.items()}
         
@@ -362,3 +390,17 @@ class CierreView(QWidget):
                 QMessageBox.warning(self, "Aviso", "El motor no soporta exportación de matriz evolutiva.")
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+
+    def _apply_estilo_shillong_formatting(self):
+        activo = bool(getattr(self, "chk_estilo_shillong", None) and self.chk_estilo_shillong.isChecked())
+        if activo:
+            self.tabla.setHorizontalHeaderLabels(["Mes", "Entra", "Sale", "Saldo Mensual"])
+        else:
+            self.tabla.setHorizontalHeaderLabels(["Mes", "Ingresos", "Gastos", "Saldo Mensual"])
+        return activo
+
+    def _usar_inversion_exportacion(self):
+        return bool(
+            (getattr(self, "chk_export_invertido", None) and self.chk_export_invertido.isChecked())
+            or (getattr(self, "chk_estilo_shillong", None) and self.chk_estilo_shillong.isChecked())
+        )

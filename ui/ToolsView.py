@@ -27,7 +27,15 @@ from collections import Counter
 try:
     from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
 except ImportError:
+    from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
+except ImportError:
     ImportarExcelDialog = None
+
+# Necesario para la restauracion de la importacion Excel
+try:
+    from models.ExcelImporter import ExcelImporter
+except ImportError:
+    ExcelImporter = None
 
 try:
     from core.updater import check_for_updates, get_update_info, get_local_version
@@ -74,17 +82,82 @@ NOMBRES_72_FALLBACK = [
 
 RED_DAYS = {
     (2025, 12): (27, "-"), (2026, 1): (26, "-"), (2026, 2): (23, "+"),
-    (2026, 3): (24, "+"), (2026, 4): (23, "-"), (2026, 5): (22, "-"),
-    (2026, 6): (21, "~"), (2026, 7): (20, "-"), (2026, 8): (19, "-"),
-    (2026, 9): (18, "+"), (2026, 10): (17, "+"), (2026, 11): (16, "-"),
-    (2026, 12): (15, "+")
+    (2026, 3): (24, "+"), (2026, 4): (23, "-"), 
+    # Corregidos según capturas visuales (Ene-Sep):
+    (2026, 5): (14, "-"), (2026, 6): (13, "~"), (2026, 7): (12, "+"),
+    (2026, 8): (11, "+"), (2026, 9): (10, "-"), 
+    # Corregidos según capturas visuales (Oct-Ene 2027):
+    (2026, 10): (10, "-"), (2026, 11): (8, "+"), (2026, 12): (7, "+"),
+    (2027, 1): (6, "-")
 }
 
 EXACT_DATA = {
-    (2025, 12, 1): "-", (2025, 12, 7): "-", (2025, 12, 13): "-",
-    (2025, 12, 24): "-", (2025, 12, 28): "~", (2025, 12, 30): "-",
-    (2025, 12, 31): "-", (2026, 1, 29): "~",
+    # Datos Exactos 2026 (Transilterados de Referencia Visual)
+    # Enero 2026
+    (2026, 1, 3): "-", (2026, 1, 5): "-", (2026, 1, 8): "-", (2026, 1, 10): "-", 
+    (2026, 1, 11): "-", (2026, 1, 12): "-", (2026, 1, 13): "-", (2026, 1, 15): "-",
+    (2026, 1, 16): "-", (2026, 1, 17): "-", (2026, 1, 21): "-", (2026, 1, 24): "-",
+    (2026, 1, 26): "-", (2026, 1, 29): "~", (2026, 1, 31): "-",
+    
+    # Febrero 2026
+    (2026, 2, 1): "~", (2026, 2, 5): "-", (2026, 2, 6): "-", (2026, 2, 7): "-",
+    (2026, 2, 10): "-", (2026, 2, 11): "-", (2026, 2, 12): "-", (2026, 2, 13): "-",
+    (2026, 2, 14): "-", (2026, 2, 15): "-", (2026, 2, 21): "-", (2026, 2, 22): "~",
+    
+    # Marzo 2026
+    (2026, 3, 5): "-", (2026, 3, 7): "-", (2026, 3, 11): "-", (2026, 3, 14): "-", 
+    (2026, 3, 15): "-", (2026, 3, 17): "-", (2026, 3, 21): "-", (2026, 3, 28): "-",
+
+    # Abril 2026
+    (2026, 4, 4): "-", (2026, 4, 11): "-", (2026, 4, 18): "-", (2026, 4, 21): "-", 
+    (2026, 4, 22): "-", (2026, 4, 23): "-", (2026, 4, 24): "-", (2026, 4, 25): "-",
+    (2026, 4, 26): "-", (2026, 4, 29): "-", (2026, 4, 30): "-",
+
+    # Mayo 2026 
+    (2026, 5, 3): "-", (2026, 5, 10): "-", (2026, 5, 14): "-",
+
+    # Junio 2026
+    (2026, 6, 5): "-", (2026, 6, 7): "-", (2026, 6, 8): "-", (2026, 6, 9): "-",
+    (2026, 6, 18): "~", (2026, 6, 21): "~", (2026, 6, 22): "-", (2026, 6, 24): "-",
+    (2026, 6, 25): "~", (2026, 6, 28): "~",
+
+    # Julio 2026
+    (2026, 7, 2): "-", (2026, 7, 3): "-", (2026, 7, 9): "-", (2026, 7, 16): "-",
+    (2026, 7, 17): "-", (2026, 7, 20): "-", (2026, 7, 21): "-", (2026, 7, 22): "-",
+    (2026, 7, 23): "-", (2026, 7, 26): "~", (2026, 7, 30): "-", (2026, 7, 31): "-",
+
+    # Agosto 2026
+    (2026, 8, 2): "-", (2026, 8, 4): "-", (2026, 8, 6): "-", (2026, 8, 7): "-",
+    (2026, 8, 9): "-", (2026, 8, 16): "~", (2026, 8, 17): "-", (2026, 8, 19): "-",
+    (2026, 8, 24): "-", (2026, 8, 27): "~", (2026, 8, 30): "-",
+
+    # Septiembre 2026
+    (2026, 9, 1): "-", (2026, 9, 2): "-", (2026, 9, 4): "-", (2026, 9, 10): "-",
+
+    # Octubre 2026 (Captura 5) - Rosh Chodesh el 10 (-)
+    (2026, 10, 1): "-", (2026, 10, 2): "-", (2026, 10, 4): "-", (2026, 10, 17): "-",
+    (2026, 10, 18): "-", (2026, 10, 20): "-", (2026, 10, 21): "-", (2026, 10, 22): "-",
+    (2026, 10, 23): "-", (2026, 10, 24): "-", (2026, 10, 25): "-", (2026, 10, 27): "~",
+    (2026, 10, 30): "-",
+
+    # Noviembre 2026 (Captura 6) - Rosh Chodesh el 8 (+)
+    (2026, 11, 3): "-", (2026, 11, 5): "-", (2026, 11, 6): "-", (2026, 11, 16): "-",
+    (2026, 11, 19): "~", (2026, 11, 26): "-", (2026, 11, 27): "-", (2026, 11, 30): "-",
+
+    # Diciembre 2026 (Captura 7) - Rosh Chodesh el 7 (+)
+    (2026, 12, 1): "-", (2026, 12, 5): "-", (2026, 12, 14): "-", (2026, 12, 20): "-",
+    (2026, 12, 21): "-", (2026, 12, 24): "~", (2026, 12, 29): "-", (2026, 12, 30): "-",
+
+    # Enero 2027 (Captura 8) - Rosh Chodesh el 6 (-)
+    (2027, 1, 1): "-", (2027, 1, 3): "-", (2027, 1, 4): "-", (2027, 1, 11): "-",
+    (2027, 1, 14): "~", (2027, 1, 21): "~", (2027, 1, 26): "-", (2027, 1, 31): "-",
 }
+
+# Días con energía severa (Din) según numerología mensual
+DIAS_NEGATIVOS = [4, 9, 13, 15, 19, 23, 26, 29]
+
+# Días de equilibrio o restricción
+DIAS_NEUTROS = [2, 7, 12, 17, 21, 25, 30]
 
 # =====================================================================
 # DIALOGOS AUXILIARES
@@ -138,6 +211,15 @@ class CalendarDialog(QDialog):
                     while len(self.nombres_list) < 72:
                         self.nombres_list.append("???")
         except (IOError, json.JSONDecodeError, KeyError):
+            pass
+            
+        self.daily_insp = {}
+        try:
+            p_insp = "data/kabbalah_insp.json"
+            if os.path.exists(p_insp):
+                with open(p_insp, "r", encoding="utf-8") as f:
+                    self.daily_insp = json.load(f)
+        except Exception:
             pass
         
         layout = QVBoxLayout(self)
@@ -232,26 +314,82 @@ class CalendarDialog(QDialog):
         idx = (dt - date(2000, 1, 1)).days % 72
         name = self.nombres_list[idx]
         
-        signo, info = "+", "Positivo"
+        # 1. Determinar Signo y Energía base
+        signo = "+"
+        info = "Positivo"
+        bg_color = "#000000" # Fondo por defecto
+        
+        # Lógica de prioridades:
+        
+        # A. Shabbat (Sábado) -> Neutro absoluto
         if dt.weekday() == 5:
-            signo, info = "", "SHABBAT"
+            signo = "~"
+            info = "SHABBAT (Neutro)"
+            
+        # B. Rosh Chodesh (Luna Nueva) -> Positivo fuerte (Override a negativos)
         elif is_red:
             signo, info = RED_DAYS.get((dt.year, dt.month), ("", ""))[1], "ROSH CHODESH"
+            
+        # C. Fechas exactas manuales
         elif (dt.year, dt.month, dt.day) in EXACT_DATA:
-            signo, info = EXACT_DATA[(dt.year, dt.month, dt.day)], "Especial"
+            signo = EXACT_DATA[(dt.year, dt.month, dt.day)]
+            info = "Especial"
+            
+        # D. Numerología del día (Si no es especial)
+        elif day in DIAS_NEGATIVOS:
+            signo = "-"
+            info = "Negativo (Juicio)"
+        elif day in DIAS_NEUTROS:
+            signo = "~"
+            info = "Neutro (Equilibrio)"
 
-        btn = QPushButton(f"{day}\n{signo}" if signo else f"{day}")
+        # 2. Configuración Visual
+        btn = QPushButton(f"{day}\n{signo}")
         btn.setFixedSize(58, 62)
         btn.setCursor(Qt.PointingHandCursor)
         
-        st = "border:none; border-bottom:1px solid #eee;"
+        # Colores según signo para el texto
+        txt_color = "#4ade80" # Verde (Positivo)
+        if signo == "-": txt_color = "#f87171" # Rojo (Negativo)
+        elif signo == "~": txt_color = "#9ca3af" # Gris (Neutro)
+        
+        # Estilo Base
+        st = f"border:none; border-bottom:1px solid #1e293b; background-color:white; color:{txt_color}; font-weight:bold;"
+        
+        # Estilos Especiales (Overrides de fondo)
         if is_red:
-            st = "background-color:#ed1c24; color:white; font-weight:bold;"
+            st = "background-color:#ed1c24; color:white; font-weight:bold; border-radius:4px;"
         elif dt == self.dia_hoy:
-            st = "background-color:#fff0f0; border:2px solid #ed1c24; font-weight:900; border-radius:6px;"
+            st = "background-color:#fff1f2; border:2px solid #be123c; font-weight:900; border-radius:6px; color:#be123c;"
         
         btn.setStyleSheet(st)
-        btn.clicked.connect(lambda: QMessageBox.information(self, f"{dt}", f"Energía: {info}\nNombre: {name}"))
+        
+        def show_info():
+            # Buscar inspiración específica
+            k_day = dt.strftime("%m-%d")
+            insp_data = self.daily_insp.get(k_day, self.daily_insp.get("default", {}))
+            
+            d_let = insp_data.get("letters", name)
+            d_psalm = insp_data.get("psalm_ref", "")
+            d_kav = insp_data.get("kavana", "")
+            
+            txt = f"<h3 style='color:#be123c'>{dt.strftime('%d/%m/%Y')}</h3>"
+            txt += f"<p><b>Energía:</b> {info}</p>"
+            txt += f"<div style='background-color:#fffbeb; padding:10px; border-radius:5px; border:1px solid #fcd34d;'>"
+            txt += f"<h1 style='color:#1e293b; text-align:center;'>{d_let}</h1>"
+            if d_psalm:
+                txt += f"<p style='color:#b45309; font-style:italic;'>{d_psalm}</p>"
+            if d_kav:
+                txt += f"<p style='color:#1e293b; font-weight:bold;'>{d_kav}</p>"
+            txt += "</div>"
+            
+            msg = QMessageBox(self)
+            msg.setWindowTitle("Inspiración Diaria")
+            msg.setTextFormat(Qt.RichText)
+            msg.setText(txt)
+            msg.exec()
+
+        btn.clicked.connect(show_info)
         return btn
 
 # =====================================================================
@@ -347,18 +485,120 @@ class ToolsView(QWidget):
             self.lbl_h.setText("יהוה")
             self.lbl_m.setText("El Señor es mi pastor, nada me falta.")
 
-    def _estilo_btn(self, col):
-        return f"""
+    # ============================================================
+    # NUEVA UI: Grid de Tarjetas
+    # ============================================================
+    # ============================================================
+    # NUEVA UI: Grid de Tarjetas
+    # ============================================================
+    def _crear_tarjeta(self, titulo, subtitulo, icono, callback, color_base):
+        """Genera un botón grande tipo tarjeta con diseño moderno (Compacto)."""
+        btn = QPushButton()
+        btn.clicked.connect(callback)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setFixedHeight(55)  # Reducido de 80 a 55
+        
+        # Icono + Texto
+        btn.setText(f"{icono}  {titulo}\n{subtitulo}")
+        btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {col};
-                color: white;
-                font-weight: 600;
+                background-color: white;
+                border: 1px solid #e2e8f0;
+                border-left: 4px solid {color_base};
                 border-radius: 6px;
                 text-align: left;
-                padding-left: 15px;
+                padding: 5px 10px;
+                font-size: 13px;
+                color: #334155;
+                font-family: 'Segoe UI';
+                line-height: 1.2;
             }}
-            QPushButton:hover {{ opacity: 0.9; }}
-        """
+            QPushButton:hover {{
+                background-color: #f8fafc;
+                border: 1px solid {color_base};
+                border-left: 4px solid {color_base};
+            }}
+            QPushButton:pressed {{
+                background-color: #f1f5f9;
+            }}
+        """)
+        return btn
+
+    def _panel_datos(self):
+        f = QFrame()
+        f.setStyleSheet("background:transparent; border:none;")
+        main_layout = QVBoxLayout(f)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(8) # Reducido de 20 a 8
+
+        # SECCIÓN 1: GESTIÓN DE DATOS
+        lbl_datos = QLabel("Gestión de Datos")
+        lbl_datos.setStyleSheet("font-weight:bold; color:#64748b; font-size:11px; text-transform:uppercase; margin-top:5px;")
+        main_layout.addWidget(lbl_datos)
+
+        grid_datos = QGridLayout()
+        grid_datos.setSpacing(8) # Reducido de 15 a 8
+        
+        # Backup
+        btn_backup = self._crear_tarjeta("Crear Respaldo", "Guardar copia de seguridad", "💾", self._backup, "#16a34a")
+        grid_datos.addWidget(btn_backup, 0, 0)
+        
+        # Restore
+        btn_restore = self._crear_tarjeta("Restaurar Datos", "Recuperar desde copia", "♻️", self._restore, "#ea580c")
+        grid_datos.addWidget(btn_restore, 0, 1)
+        
+        # Carpetas
+        btn_folder = self._crear_tarjeta("Abrir Carpetas", "Explorar archivos del sistema", "📂", self._carpeta, "#3b82f6")
+        grid_datos.addWidget(btn_folder, 1, 0)
+        
+        # Importar Excel (Restaurado)
+        btn_import = self._crear_tarjeta("Importar Excel", "Cargar desde archivo .xlsx", "📥", self._importar_excel, "#ca8a04")
+        grid_datos.addWidget(btn_import, 1, 1)
+
+        main_layout.addLayout(grid_datos)
+
+        # SECCIÓN 2: INTELIGENCIA & MANTENIMIENTO
+        lbl_intel = QLabel("Inteligencia & Mantenimiento")
+        lbl_intel.setStyleSheet("font-weight:bold; color:#64748b; font-size:11px; text-transform:uppercase; margin-top:5px;")
+        main_layout.addWidget(lbl_intel)
+
+        grid_intel = QGridLayout()
+        grid_intel.setSpacing(8)
+        
+        # Auto-Aprender
+        btn_learn = self._crear_tarjeta("Auto-Aprender", "Entrenar categorizador IA", "🧠", self._aprender, "#8b5cf6")
+        grid_intel.addWidget(btn_learn, 0, 0)
+        
+        # Reparar DH
+        btn_fix = self._crear_tarjeta("Reparar D/H", "Corregir inconsistencias", "🔧", self._reparar, "#db2777")
+        grid_intel.addWidget(btn_fix, 0, 1)
+
+        main_layout.addLayout(grid_intel)
+
+        # SECCIÓN 3: AUDITORÍA & CALIDAD
+        lbl_audit = QLabel("Auditoría & Calidad")
+        lbl_audit.setStyleSheet("font-weight:bold; color:#64748b; font-size:11px; text-transform:uppercase; margin-top:5px;")
+        main_layout.addWidget(lbl_audit)
+
+        grid_audit = QGridLayout()
+        grid_audit.setSpacing(8)
+        
+        # Reconciliar
+        btn_rec = self._crear_tarjeta("Reconciliación", "Detectar duplicados", "⚖️", self._reconciliar_duplicados, "#059669")
+        grid_audit.addWidget(btn_rec, 0, 0)
+        
+        # Auditoría Balance
+        btn_bal = self._crear_tarjeta("Auditoría Balance", "Verificar cuadre contable", "📊", self._abrir_verificador, "#3b82f6")
+        grid_audit.addWidget(btn_bal, 0, 1)
+
+        # Auditoría Rápida
+        btn_fast = self._crear_tarjeta("Auditoría Rápida", "Revisión ligera", "⚡", self._auditoria_ligera, "#2563eb")
+        grid_audit.addWidget(btn_fast, 1, 0, 1, 2) # Ocupa todo el ancho si se desea
+
+        main_layout.addLayout(grid_audit)
+        
+        main_layout.addStretch()
+        return f
 
     def _reconciliar_duplicados(self):
         """Busca y reporta movimientos duplicados en la base de datos de contabilidad."""
@@ -413,58 +653,101 @@ class ToolsView(QWidget):
         else:
             QMessageBox.information(self, "Reconciliación", "✅ Base de datos limpia: No se encontraron movimientos duplicados.")
 
+    def _importar_excel(self):
+        """Restaura la funcionalidad de importar Excel usando ExcelImporter."""
+        if ExcelImporter is None:
+            QMessageBox.critical(self, "Error", "Módulo ExcelImporter no disponible.")
+            return
 
-    def _panel_datos(self):
-        f = QFrame()
-        f.setStyleSheet("background:white; border:1px solid #e2e8f0; border-radius:8px;")
-        g = QGridLayout(f)
-        g.setContentsMargins(15, 15, 15, 15)
-        g.setSpacing(10)
+        ruta, _ = QFileDialog.getOpenFileName(self, "Importar Excel", "", "Excel Files (*.xlsx *.xls)")
+        if not ruta:
+            return
 
-        def mk_btn(txt, func, col):
-            b = QPushButton(txt)
-            b.clicked.connect(func)
-            b.setStyleSheet(self._estilo_btn(col))
-            b.setFixedHeight(40)
-            b.setCursor(Qt.PointingHandCursor)
-            return b
+        try:
+            # Usamos ExcelImporter
+            importer = ExcelImporter()
+            nuevos, errores = importer.importar(ruta)
+            
+            if errores:
+                msg = "Se encontraron los siguientes errores/advertencias:\n" + "\n".join(errores[:10])
+                if len(errores) > 10: msg += f"\n... y {len(errores)-10} más."
+                QMessageBox.warning(self, "Advertencia Importación", msg)
 
-        g.addWidget(mk_btn("Backup", self._backup, "#16a34a"), 0, 0)
-        g.addWidget(mk_btn("Restaurar", self._restore, "#ea580c"), 0, 1)
-        g.addWidget(mk_btn("Importar Excel", self._excel, "#0d9488"), 1, 0)
-        g.addWidget(mk_btn("Abrir Carpeta", self._carpeta, "#3b82f6"), 1, 1)
-        g.addWidget(mk_btn("Auto-Aprender Conceptos", self._aprender, "#8b5cf6"), 2, 0)
-        g.addWidget(mk_btn("Reparar Debe/Haber", self._reparar, "#db2777"), 2, 1)
-        # --- NUEVA HERRAMIENTA 1: Reconciliación (EXISTENTE) ---
-        g.addWidget(mk_btn("Reconciliar/Depurar Datos", self._reconciliar_duplicados, "#059669"), 3, 0, 1, 2)
-        # --- NUEVA HERRAMIENTA 2: Auditoría Debe/Haber (AÑADIDA) ---
-        g.addWidget(mk_btn("Auditoría Balance (Corregir Debe/Haber)", self._abrir_verificador, "#3b82f6"), 4, 0, 1, 2) 
-        # --- NUEVA HERRAMIENTA 3: Auditoría rápida de datos ---
-        g.addWidget(mk_btn("Auditoría Rápida (datos)", self._auditoria_ligera, "#2563eb"), 5, 0, 1, 2)
-        # -----------------------------------
-        return f
+            if not nuevos:
+                QMessageBox.information(self, "Importar", "No se encontraron registros válidos para importar.")
+                return
+            
+            # Guardar en data
+            count = 0
+            for reg in nuevos:
+                # Validar campos mínimos (ExcelImporter ya valida fecha y concepto)
+                # ERROR FIX: agregar_movimiento espera argumentos posicionales/keyword, no un dict.
+                self.data.agregar_movimiento(
+                    fecha=reg.get("fecha"),
+                    documento=reg.get("documento"),
+                    concepto=reg.get("concepto"),
+                    cuenta=reg.get("cuenta"),
+                    debe=reg.get("debe", 0.0),
+                    haber=reg.get("haber", 0.0),
+                    moneda=reg.get("moneda", "INR"),
+                    banco=reg.get("banco", "Caja"),
+                    estado=reg.get("estado", "pagado")
+                )
+                count += 1
+            
+            if count > 0:
+                self.data.guardar()
+                QMessageBox.information(self, "Éxito", f"Se importaron {count} movimientos correctamente.")
+                
+                # Opcional: Aprender nuevos conceptos automáticamente
+                if hasattr(self, '_aprender'):
+                    resp = QMessageBox.question(self, "Aprendizaje", "¿Desea ejecutar 'Auto-Aprender Conceptos' ahora?", QMessageBox.Yes | QMessageBox.No)
+                    if resp == QMessageBox.Yes:
+                        self._aprender()
+            else:
+                QMessageBox.warning(self, "Aviso", "No se importaron movimientos.")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error Importación", f"Fallo al importar:\n{e}")
+
 
     # PANEL DE SISTEMA SIN RELOJ MUNDIAL
+    # PANEL DE SISTEMA
     def _panel_sistema(self):
         f = QFrame()
-        f.setStyleSheet("background:white; border:1px solid #e2e8f0; border-radius:8px;")
-        h = QHBoxLayout(f)
-        h.setContentsMargins(15, 15, 15, 15)
-        h.setSpacing(10)
+        f.setStyleSheet("background:transparent; border:none;")
+        main_layout = QVBoxLayout(f)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(8) # Compacto
+        
+        lbl_sys = QLabel("Sistema & Utilidades")
+        lbl_sys.setStyleSheet("font-weight:bold; color:#64748b; font-size:11px; text-transform:uppercase; margin-top:5px;")
+        main_layout.addWidget(lbl_sys)
 
-        def mk_btn(txt, func, col):
-            b = QPushButton(txt)
-            b.clicked.connect(func)
-            b.setStyleSheet(self._estilo_btn(col))
-            b.setFixedHeight(40)
-            b.setCursor(Qt.PointingHandCursor)
-            return b
+        grid = QGridLayout()
+        grid.setSpacing(8) # Compacto
 
-        h.addWidget(mk_btn("Tema", self._tema, "#475569"))
-        h.addWidget(mk_btn("Updates", self._update, "#7c3aed"))
-        h.addWidget(mk_btn("Verificar JSON", self._verificar_json, "#059669"))
-        h.addWidget(mk_btn("Importar JSON", self._importar_json, "#7c3aed"))
-        h.addWidget(mk_btn("Calculadora", self._abrir_calculadora, "#dc2626")) 
+        # Tema
+        btn_tema = self._crear_tarjeta("Cambiar Tema", "Alternar Claro/Oscuro", "🌓", self._tema, "#475569")
+        grid.addWidget(btn_tema, 0, 0)
+
+        # Updates
+        btn_upd = self._crear_tarjeta("Buscar Actualizaciones", "Verificar nueva versión", "🚀", self._update, "#7c3aed")
+        grid.addWidget(btn_upd, 0, 1)
+
+        # Verificar JSON
+        btn_json = self._crear_tarjeta("Estado Base de Datos", "Verificar integridad JSON", "🔍", self._verificar_json, "#059669")
+        grid.addWidget(btn_json, 1, 0)
+
+        # Importar JSON
+        btn_imp_j = self._crear_tarjeta("Cargar Base Externa", "Reemplazar DB actual", "📂", self._importar_json, "#f59e0b")
+        grid.addWidget(btn_imp_j, 1, 1)
+
+        # Calculadora
+        btn_calc = self._crear_tarjeta("Calculadora", "Abrir calc", "🧮", self._abrir_calculadora, "#dc2626")
+        grid.addWidget(btn_calc, 2, 0, 1, 2)
+
+        main_layout.addLayout(grid)
         return f
 
     # ================================================================

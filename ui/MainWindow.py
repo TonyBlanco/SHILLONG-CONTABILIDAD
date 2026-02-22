@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MainWindow.py — SHILLONG CONTABILIDAD v3.8.0 PRO
+MainWindow.py — SHILLONG CONTABILIDAD v3.8.1 PRO
 Versión Restaurada: Sidebar Azul Original + SistemaView + Imports correctos.
 """
 
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
     def __init__(self, data):
         super().__init__()
         self.data = data
-        self.setWindowTitle("Shillong Contabilidad v3.8.0 PRO")
+        self.setWindowTitle("Shillong Contabilidad v3.8.1 PRO")
         self.resize(1280, 800)
         
         # Mapa para conectar los IDs de tu Sidebar con los Widgets reales
@@ -121,11 +121,7 @@ class MainWindow(QMainWindow):
         self.views["pendientes"] = PendientesView(self.data)
         self.stack.addWidget(self.views["pendientes"])
 
-        # Libro Mensual
-        self.views["libro_mensual"] = LibroMensualView(self.data)
-        self.stack.addWidget(self.views["libro_mensual"])
-
-        # Hub de cierres/BI
+        # Hub de cierres/BI (Contiene LibroMensualView como pestaña)
         from ui.CierresHub import CierresHub
         self.views["cierres"] = CierresHub(self.data)
         self.stack.addWidget(self.views["cierres"])
@@ -137,6 +133,11 @@ class MainWindow(QMainWindow):
         # Sistema
         self.views["sistema"] = SistemaView(self.data)
         self.stack.addWidget(self.views["sistema"])
+
+        # Informes Personalizados
+        from ui.InformesPersonalizadosView import InformesPersonalizadosView
+        self.views["informes_custom"] = InformesPersonalizadosView(self.data)
+        self.stack.addWidget(self.views["informes_custom"])
 
         # Ayuda (ID 'ayuda' en tu sidebar)
         self.views["ayuda"] = HelpView(self.data)

@@ -53,18 +53,18 @@ class Sidebar(QWidget):
         # ----------------------------------------------------------
         #   BOTONES DEL MENÚ
         # ----------------------------------------------------------
-        self.btn_dashboard = self._crear_boton("Dashboard", "dashboard")
-        self.btn_registrar = self._crear_boton("Registrar", "registrar")
-        self.btn_diario = self._crear_boton("Diario", "diario")
-        self.btn_pendientes = self._crear_boton("Pendientes", "pendientes")
-        self.btn_libro = self._crear_boton("Libro Mensual", "libro_mensual")
-        self.btn_cierres = self._crear_boton("Cierres & BI", "cierres")
-        self.btn_ayuda = self._crear_boton("Ayuda / Soporte", "ayuda")
+        self.btn_dashboard = self._crear_boton("🏠 Dashboard", "dashboard")
+        self.btn_registrar = self._crear_boton("✍️ Registrar", "registrar")
+        self.btn_diario = self._crear_boton("📖 Diario", "diario")
+        self.btn_pendientes = self._crear_boton("⏳ Pendientes", "pendientes")
+        self.btn_cierres = self._crear_boton("📊 Cierres & BI", "cierres")
+        self.btn_informes_custom = self._crear_boton("🎯 Informes Custom", "informes_custom")
+        self.btn_ayuda = self._crear_boton("❓ Ayuda / Soporte", "ayuda")
 
         # Separador para empujar “Herramientas” al fondo
         layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        self.btn_tools = self._crear_boton("Herramientas", "tools")
+        self.btn_tools = self._crear_boton("🔧 Herramientas", "tools")
 
         # Logo al fondo
         logo_path = os.path.join(base, "assets", "logo", "shillong_logov3.png")

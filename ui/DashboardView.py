@@ -511,7 +511,7 @@ class DashboardView(QWidget):
             l.addWidget(lbl_s)
             self.grid_bancos.addWidget(f, r, c)
             c+=1
-            if c>1: c,r = 0,r+1
+            if c>2: c,r = 0,r+1
 
     def _update_alertas(self, alertas):
         self.lista_alertas.clear()

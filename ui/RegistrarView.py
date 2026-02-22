@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QDate, QLocale
 from datetime import datetime
 import random
+import json
 
 try:
     from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
@@ -56,6 +57,16 @@ class RegistrarView(QWidget):
         QPushButton#limpiar_dh { background:#64748b; }
         QPushButton#duplicar { background:#7c3aed; }
         QPushButton#refresh { background:#475569; }
+
+        /* FIX: Asegurar que los botones de diálogos emergentes sean visibles */
+        QDialog QPushButton, QMessageBox QPushButton {
+            color: #1e293b;
+            background-color: #cbd5e1;
+            border: 1px solid #94a3b8;
+        }
+        QDialog QPushButton:hover, QMessageBox QPushButton:hover {
+            background-color: #94a3b8;
+        }
         """
 
     def _estilo_oscuro(self):
@@ -201,7 +212,8 @@ class RegistrarView(QWidget):
 
         # Bancos
         banco_layout = QHBoxLayout()
-        self.banco_buttons = QButtonGroup(self)
+        # Use a combobox (pull-down) for bancos instead of many radio chips
+        self.banco_combo = QComboBox()
 
         estilo_chip = """
             QRadioButton {
@@ -214,14 +226,12 @@ class RegistrarView(QWidget):
             QRadioButton::indicator { width:0;height:0; }
         """
 
-        for b in ["Caja","Federal Bank","SBI","Union Bank","Otro"]:
-            rb = QRadioButton(b)
-            rb.setStyleSheet(estilo_chip)
-            banco_layout.addWidget(rb)
-            self.banco_buttons.addButton(rb)
-            if b == "Caja":
-                rb.setChecked(True)
-
+        self._bancos_disponibles = self._cargar_bancos()
+        self.banco_combo.addItems(self._bancos_disponibles)
+        # Seleccionar 'Caja' por defecto si existe
+        if "Caja" in self._bancos_disponibles:
+            self.banco_combo.setCurrentText("Caja")
+        banco_layout.addWidget(self.banco_combo)
         banco_estado.addLayout(banco_layout)
 
         # Estado (Pagado/Pendiente)
@@ -360,6 +370,18 @@ class RegistrarView(QWidget):
         except (ValueError, TypeError):
             return 0.0
 
+    def _cargar_bancos(self):
+        """Carga bancos desde data/bancos.json para mantener consistencia global."""
+        try:
+            with open("data/bancos.json", "r", encoding="utf-8") as f:
+                bancos = [b.get("nombre", "").strip() for b in json.load(f).get("banks", [])]
+                bancos = [b for b in bancos if b]
+                if bancos:
+                    return bancos
+        except (IOError, json.JSONDecodeError, AttributeError):
+            pass
+        return ["Caja"]
+
     def _fmt(self, v):
         try:
             return self.locale.toString(float(v), 'f', 2)
@@ -436,10 +458,7 @@ class RegistrarView(QWidget):
         codigo = cuenta_txt.split(" – ")[0]
 
         # Banco y estado
-        banco = next(
-            (b.text() for b in self.banco_buttons.buttons() if b.isChecked()), 
-            "Caja"
-        )
+        banco = self.banco_combo.currentText() if getattr(self, 'banco_combo', None) else "Caja"
 
         estado = (
             "pagado" if any(
@@ -645,10 +664,11 @@ class RegistrarView(QWidget):
         self.ui_ingreso.setText(self._fmt(m.get("haber", 0)))
         self.ui_gasto.setText(self._fmt(m.get("debe", 0)))
 
-        for rb in self.banco_buttons.buttons():
-            if rb.text() == m.get("banco","Caja"):
-                rb.setChecked(True)
-                break
+        # Seleccionar banco en combobox
+        try:
+            self.banco_combo.setCurrentText(m.get("banco","Caja"))
+        except Exception:
+            pass
 
         estado_txt = m.get("estado","pagado").capitalize()
         for rb in self.estado_buttons.buttons():
@@ -665,6 +685,12 @@ class RegistrarView(QWidget):
         self.cuenta_combo.setCurrentIndex(-1)
         self.lbl_nombre.setText("Seleccione una cuenta")
         self.concepto.setStyleSheet("")
+        # Poner valor por defecto en combobox
+        try:
+            self.banco_combo.setCurrentText("Caja")
+        except Exception:
+            if self.banco_combo.count() > 0:
+                self.banco_combo.setCurrentIndex(0)
 
     def _limpiar_dh(self):
         self.ui_ingreso.setText("0,00")

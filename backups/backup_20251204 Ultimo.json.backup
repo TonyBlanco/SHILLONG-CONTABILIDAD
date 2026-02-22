@@ -1,6 +1,6 @@
 {
     "version": "3.7.8 PRO",
-    "fecha_guardado": "18/01/2026 21:43:54",
+    "fecha_guardado": "05/12/2025 00:58:58",
     "movimientos": [
         {
             "fecha": "03/11/2025",
@@ -937,30 +937,6 @@
             "estado": "pagado",
             "banco": "Union Bank",
             "saldo": -20000.0
-        },
-        {
-            "fecha": "27/11/2025",
-            "documento": "",
-            "concepto": "Vegetables",
-            "cuenta": "603000",
-            "debe": 1696.0,
-            "haber": 0.0,
-            "moneda": "INR",
-            "estado": "pagado",
-            "banco": "Caja",
-            "saldo": -1696.0
-        },
-        {
-            "fecha": "28/11/2025",
-            "documento": "SIN-DOC-91289",
-            "concepto": "Post- office sr Sindhu",
-            "cuenta": "555000",
-            "debe": 0.0,
-            "haber": 20000.0,
-            "moneda": "INR",
-            "estado": "pagado",
-            "banco": "Union Bank",
-            "saldo": 20000.0
         }
     ]
 }

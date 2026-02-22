@@ -124,7 +124,7 @@ def main():
     # 1. ACTIVAR LOGS ANTES DE NADA
     setup_logging()
 
-    print("SHILLONG CONTABILIDAD v3.8.0 PRO -- Engine v4.3.2 Iniciado")
+    print("SHILLONG CONTABILIDAD v3.8.1 PRO -- Engine v4.3.2 Iniciado")
     print(f"ROOT_DIR detectado: {ROOT_DIR}")
     print(f"UI_DIR: {UI_DIR}")
     print(f"MODELS_DIR: {MODELS_DIR}")

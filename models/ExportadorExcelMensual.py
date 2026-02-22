@@ -10,40 +10,150 @@ Genera reportes Excel profesionales con:
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.drawing.image import Image
+from openpyxl.utils import get_column_letter
+import os
+from pathlib import Path
+import datetime
 
 
 class ExportadorExcelMensual:
     
     @staticmethod
-    def _estilar_cabecera(ws, columnas):
-        """Aplica estilo azul profesional a la cabecera."""
-        thin = Side(border_style="thin", color="000000")
-        border = Border(left=thin, right=thin, top=thin, bottom=thin)
-        fill = PatternFill(
-            start_color="1e3a8a",
-            end_color="1e3a8a",
-            fill_type="solid"
-        )  # Azul oscuro
-        font = Font(color="FFFFFF", bold=True)
-        
-        for col_num, nombre in enumerate(columnas, 1):
-            cell = ws.cell(row=1, column=col_num, value=nombre)
-            cell.fill = fill
-            cell.font = font
-            cell.alignment = Alignment(horizontal="center")
-            cell.border = border
+    def _aplicar_estilo_sisters(ws, titulo_reporte, subtitulo="", banco=""):
+        """
+        Aplica el diseño profesional de la imagen:
+        - Logo de Sisters Hospitallers
+        - Cabecera morada (#7030A0)
+        - CDAD SHILLONG
+        """
+        # 1. Logo (Esquinas superiores)
+        logo_path = Path("assets/logo/logo hospitaller.jpg")
+        if logo_path.exists():
+            try:
+                img = Image(str(logo_path))
+                img.width = 110
+                img.height = 45
+                ws.add_image(img, "A1")
+            except Exception as e:
+                print(f"[Excel] No se pudo cargar logo: {e}")
+
+        # Colores
+        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        morado_claro = PatternFill(start_color="8E44AD", end_color="8E44AD", fill_type="solid")
+        blanco = Font(color="FFFFFF", bold=True)
+        centro = Alignment(horizontal="center", vertical="center")
+        borde_fino = Side(style="thin", color="000000")
+        border = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
+
+        # 2. Encabezado Derecho (Merged B1:F2)
+        # Título principal morado
+        ws.merge_cells("D1:F2")
+        cell_titulo = ws["D1"]
+        cell_titulo.value = "CDAD SHILLONG"
+        cell_titulo.fill = morado
+        cell_titulo.font = Font(color="FFFFFF", bold=True, size=14)
+        cell_titulo.alignment = centro
+
+        # Fecha y reporte
+        ws["D3"].value = f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}"
+        ws["D3"].font = Font(bold=True, size=10)
+        ws["D3"].alignment = Alignment(horizontal="center")
+        ws.merge_cells("D3:F3")
+
+        # Tipo de Reporte (Libro Diario / Banco)
+        if titulo_reporte:
+            ws.merge_cells("A5:C6")
+            cell_rep = ws["A5"]
+            cell_rep.value = titulo_reporte.upper()
+            cell_rep.fill = morado
+            cell_rep.font = blanco
+            cell_rep.alignment = centro
             
-            # Anchos aproximados
-            ancho = 15
-            if "Concepto" in nombre:
-                ancho = 40
-            if "Cuenta" in nombre:
-                ancho = 20
-            if "Nombre" in nombre:
-                ancho = 30
-            ws.column_dimensions[
-                openpyxl.utils.get_column_letter(col_num)
-            ].width = ancho
+            ws.merge_cells("D5:F6")
+            cell_sub = ws["D5"]
+            cell_sub.value = subtitulo.upper() if subtitulo else "CDAD SHILLONG"
+            cell_sub.fill = morado
+            cell_sub.font = blanco
+            cell_sub.alignment = centro
+
+        return 8 # Fila donde empiezan los headers
+
+    @staticmethod
+    def _añadir_pie_sisters(ws, start_row, total_ingresos, total_gastos, saldo_inicial, banco=""):
+        """Tabla de resumen final y cuadros de firma."""
+        row = start_row + 2
+        
+        # Colores
+        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        cyan = PatternFill(start_color="B7E1CD", end_color="B7E1CD", fill_type="solid")
+        borde_fino = Side(style="thin", color="000000")
+        border = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
+        
+        # 1. RESUMEN (Derecha)
+        # Headers del resumen
+        ws.cell(row=row, column=4, value="RESUMEN").font = Font(bold=True)
+        ws.cell(row=row, column=5, value="CONCEPTOS").fill = morado
+        ws.cell(row=row, column=5).font = Font(color="FFFFFF", bold=True)
+        ws.cell(row=row, column=5).alignment = Alignment(horizontal="center")
+        row += 1
+        
+        # Filas
+        conceptos = [
+            ("Total Ingresos", total_ingresos),
+            ("Total Gastos", total_gastos),
+            ("SALDO ACTUAL", total_ingresos - total_gastos)
+        ]
+        
+        for text, val in conceptos:
+            ws.cell(row=row, column=5, value=text).border = border
+            ws.cell(row=row, column=6, value=val).border = border
+            ws.cell(row=row, column=6).number_format = "#,##0.00"
+            if "SALDO" in text:
+                ws.cell(row=row, column=5).font = Font(bold=True)
+                ws.cell(row=row, column=6).font = Font(bold=True)
+                ws.cell(row=row, column=5).fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+            row += 1
+            
+        # Check CORRECTO
+        ws.cell(row=row, column=5, value="Check").alignment = Alignment(horizontal="right")
+        cell_check = ws.cell(row=row, column=6, value="CORRECTO")
+        cell_check.font = Font(color="008000", bold=True)
+        cell_check.border = border
+        cell_check.alignment = Alignment(horizontal="center")
+        row += 2
+
+        # 2. FIRMAS (Izquierda y Derecha)
+        firma_row = row
+        # Preparado
+        ws.merge_cells(start_row=firma_row, start_column=1, end_row=firma_row, end_column=2)
+        cell_p = ws.cell(row=firma_row, column=1, value="Preparado")
+        cell_p.fill = morado; cell_p.font = Font(color="FFFFFF", bold=True); cell_p.alignment = Alignment(horizontal="center")
+        
+        ws.merge_cells(start_row=firma_row+1, start_column=1, end_row=firma_row+3, end_column=2)
+        for r in range(firma_row+1, firma_row+4):
+            for c in range(1, 3): 
+                ws.cell(row=r, column=c).border = border
+        
+        ws.cell(row=firma_row+4, column=1, value="Nombre:").font = Font(size=8)
+        ws.cell(row=firma_row+4, column=2).fill = cyan
+        ws.cell(row=firma_row+5, column=1, value="Cargo:").font = Font(size=8)
+        ws.cell(row=firma_row+5, column=2).fill = cyan
+
+        # Revisado/Autorizado
+        ws.merge_cells(start_row=firma_row, start_column=4, end_row=firma_row, end_column=5)
+        cell_r = ws.cell(row=firma_row, column=4, value="Revisado/Autorizado")
+        cell_r.fill = morado; cell_r.font = Font(color="FFFFFF", bold=True); cell_r.alignment = Alignment(horizontal="center")
+        
+        ws.merge_cells(start_row=firma_row+1, start_column=4, end_row=firma_row+3, end_column=5)
+        for r in range(firma_row+1, firma_row+4):
+            for c in range(4, 6): 
+                ws.cell(row=r, column=c).border = border
+        
+        ws.cell(row=firma_row+4, column=4, value="Nombre:").font = Font(size=8)
+        ws.cell(row=firma_row+4, column=5).fill = cyan
+        ws.cell(row=firma_row+5, column=4, value="Cargo:").font = Font(size=8)
+        ws.cell(row=firma_row+5, column=5).fill = cyan
 
     @staticmethod
     def _formato_moneda(ws, row, cols_indices):
@@ -57,75 +167,77 @@ class ExportadorExcelMensual:
     # ============================================================
     @staticmethod
     def exportar_general(ruta_archivo, datos, periodo_str):
-        """
-        Exporta el listado detallado en el formato oficial:
-        Fecha | Cuenta | Categoría | Concepto | Debe | Haber | Saldo | Banco | Documento
-        """
+        """Exportación modelo SISTERS HOSPITALERS."""
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Libro Mensual"
+        ws.title = "Libro Diario"
 
-        # Encabezado EXACTO como el Libro TEST
-        headers = [
-            "Fecha",
-            "Cuenta",
-            "Categoría",
-            "Concepto",
-            "Debe",
-            "Haber",
-            "Saldo",
-            "Banco",
-            "Documento",
-        ]
-        ExportadorExcelMensual._estilar_cabecera(ws, headers)
-
-        row_idx = 2
-        total_debe = 0.0
-        total_haber = 0.0
-
+        # 1. Aplicar Estilo Sisters
+        start_row = ExportadorExcelMensual._aplicar_estilo_sisters(ws, "Libro Diario", periodo_str)
+        
+        # 2. Saldos Iniciales (Fila destacada)
+        saldo_inicial = 0.0
         for m in datos:
-            debe = float(m.get("debe", 0) or 0)
-            haber = float(m.get("haber", 0) or 0)
-            saldo = float(m.get("saldo", 0) or 0)
+            if "inicial" in str(m.get("concepto", "")).lower():
+                saldo_inicial = float(m.get("saldo", 0) or 0)
+                break
+        
+        ws.cell(row=start_row, column=4, value="SALDO INICIAL").font = Font(bold=True)
+        cell_si = ws.cell(row=start_row, column=6, value=saldo_inicial)
+        cell_si.font = Font(bold=True)
+        cell_si.number_format = "#,##0.00"
+        cell_si.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid") # Amarillo
+        ws.cell(row=start_row, column=5).border = ws.cell(row=start_row, column=6).border = Border(top=Side(style="thin"), bottom=Side(style="thin"))
+        row_idx = start_row + 1
 
-            total_debe += debe
-            total_haber += haber
+        # 3. Headers Tabla
+        headers = ["FECHA", "CONCEPTO", "CUENTA", "INGRESOS", "GASTOS", "SALDO"]
+        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        borde_fino = Side(style="thin", color="000000")
+        border = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
+        
+        for c, h in enumerate(headers, 1):
+            cell = ws.cell(row=row_idx, column=c, value=h)
+            cell.fill = morado; cell.font = Font(color="FFFFFF", bold=True); cell.border = border; cell.alignment = Alignment(horizontal="center")
+            # Anchos
+            letra = get_column_letter(c)
+            if h == "CONCEPTO": ws.column_dimensions[letra].width = 45
+            elif h == "FECHA": ws.column_dimensions[letra].width = 12
+            else: ws.column_dimensions[letra].width = 15
+        row_idx += 1
 
+        total_ing = 0.0
+        total_gas = 0.0
+        
+        # 4. Datos
+        for m in datos:
+            if "inicial" in str(m.get("concepto", "")).lower(): continue
+            
+            # Priorizar keys explícitas, fallback a debe/haber estándar
+            ing = float(m.get("ingresos") if "ingresos" in m else m.get("haber", 0) or 0)
+            gas = float(m.get("gastos") if "gastos" in m else m.get("debe", 0) or 0)
+            total_ing += ing
+            total_gas += gas
+            
             row = [
-                m.get("fecha"),                    # 1 Fecha
-                str(m.get("cuenta")),              # 2 Cuenta
-                m.get("categoria", ""),            # 3 Categoría
-                m.get("concepto"),                 # 4 Concepto
-                debe,                              # 5 Debe
-                haber,                             # 6 Haber
-                saldo,                             # 7 Saldo
-                m.get("banco"),                    # 8 Banco
-                m.get("documento"),                # 9 Documento
+                m.get("fecha"),
+                m.get("concepto"),
+                str(m.get("cuenta", "")),
+                ing,
+                gas,
+                m.get("saldo")
             ]
-
-            for col_idx, val in enumerate(row, 1):
-                ws.cell(row=row_idx, column=col_idx, value=val)
-
-            # Debe, Haber, Saldo → columnas 5,6,7
-            ExportadorExcelMensual._formato_moneda(ws, row_idx, [5, 6, 7])
+            
+            for c, val in enumerate(row, 1):
+                cell = ws.cell(row=row_idx, column=c, value=val)
+                cell.border = border
+                if c >= 4:
+                    cell.number_format = "#,##0.00"
+                    cell.alignment = Alignment(horizontal="right")
             row_idx += 1
 
-        # Fila de TOTALES
-        ws.cell(row=row_idx, column=1, value="TOTALES DEL PERIODO").font = Font(
-            bold=True
-        )
-        ws.cell(row=row_idx, column=5, value=total_debe).font = Font(bold=True)
-        ws.cell(row=row_idx, column=6, value=total_haber).font = Font(bold=True)
-        ws.cell(
-            row=row_idx,
-            column=7,
-            value=total_haber - total_debe,
-        ).font = Font(
-            bold=True,
-            color="FF0000" if (total_haber - total_debe) < 0 else "000000",
-        )
-
-        ExportadorExcelMensual._formato_moneda(ws, row_idx, [5, 6, 7])
+        # Resumen Final y Firmas
+        ExportadorExcelMensual._añadir_pie_sisters(ws, row_idx, total_ing, total_gas, saldo_inicial)
 
         try:
             wb.save(ruta_archivo)
@@ -138,116 +250,135 @@ class ExportadorExcelMensual:
     # ============================================================
     @staticmethod
     def exportar_agrupado(ruta_archivo, grupos_data, periodo_str, titulo_agrupacion):
-        """
-        Exporta agrupando por Categoría o Cuenta.
-        grupos_data: Diccionario { "NombreGrupo": [lista_movimientos] }
-        """
+        """Exportación agrupada (Banco / Cuenta) con diseño SISTERS."""
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Resumen Agrupado"
+        ws.title = "Reporte Agrupado"
 
-        headers = [
-            titulo_agrupacion,
-            "Fecha",
-            "Documento",
-            "Concepto",
-            "Cuenta",
-            "Debe",
-            "Haber",
-            "Saldo",
-        ]
-        ExportadorExcelMensual._estilar_cabecera(ws, headers)
-
-        row_idx = 2
-
-        gran_total_debe = 0.0
-        gran_total_haber = 0.0
-
-        # Iterar grupos
-        from openpyxl.styles import PatternFill
+        # 1. Cabecera Sisters
+        report_title = "Libro Diario Banco" if "Banco" in titulo_agrupacion else f"Reporte por {titulo_agrupacion}"
+        row_idx = ExportadorExcelMensual._aplicar_estilo_sisters(ws, report_title, periodo_str)
+        
+        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        morado_claro = PatternFill(start_color="E2E8F0", end_color="E2E8F0", fill_type="solid")
+        borde_fino = Side(style="thin", color="000000")
+        border = Border(left=borde_fino, right=borde_fino, top=borde_fino, bottom=borde_fino)
+        
+        total_gral_ing = 0.0
+        total_gral_gas = 0.0
 
         for nombre_grupo, movimientos in grupos_data.items():
-            # Cabecera de grupo
-            cell_group = ws.cell(row=row_idx, column=1, value=f"{nombre_grupo.upper()}")
-            cell_group.font = Font(bold=True, size=12, color="1e3a8a")
-            ws.merge_cells(
-                start_row=row_idx,
-                start_column=1,
-                end_row=row_idx,
-                end_column=8,
-            )
-            ws.cell(row=row_idx, column=1).fill = PatternFill(
-                start_color="e2e8f0", end_color="e2e8f0", fill_type="solid"
-            )
+            # --------------------------------------------------------
+            # ESTILO BLOQUE POR BANCO (Según Imagen)
+            # --------------------------------------------------------
+            
+            # HEADER BANCO: [SALDO INICIAL {N}] ... [BANCO (Cyan)]
+            # Fila: MORADO COMPLETO
+            # A: "SALDO INICIAL {N}" (Amarillo/Blanco)
+            # B-C: "CONCEPTOS - {BANCO}" (Morado/Cyan)
+            
+            # 1. Título "SALDO INICIAL" (Col A)
+            cell_si_lbl = ws.cell(row=row_idx, column=1, value=f"SALDO INICIAL")
+            cell_si_lbl.font = Font(color="FFFFFF", bold=True, size=9)
+            cell_si_lbl.fill = morado
+            cell_si_lbl.alignment = Alignment(horizontal="center", vertical="center")
+            cell_si_lbl.border = border
+
+            # 2. Header "FECHA" (Col B)
+            cell_fecha = ws.cell(row=row_idx, column=2, value="FECHA")
+            cell_fecha.font = Font(color="FFFFFF", bold=True)
+            cell_fecha.fill = morado
+            cell_fecha.alignment = Alignment(horizontal="center", vertical="center")
+            cell_fecha.border = border
+
+            # 3. Header "CONCEPTO - {BANCO}" (Col C)
+            # Solo columna C, sin merge con B.
+            cell_banco = ws.cell(row=row_idx, column=3, value=f"CONCEPTO - {str(nombre_grupo).upper()}")
+            cell_banco.font = Font(color="00FFFF", bold=True) # Cyan
+            cell_banco.fill = morado
+            cell_banco.alignment = Alignment(horizontal="center", vertical="center")
+            cell_banco.border = border
+            
+            # 4. Headers Columnas (D, E, F) -> INGRESOS, GASTOS, SALDO
+            headers_right = ["INGRESOS", "GASTOS", "SALDO"]
+            for i, h in enumerate(headers_right):
+                cell = ws.cell(row=row_idx, column=4+i, value=h)
+                cell.fill = morado
+                cell.font = Font(color="FFFFFF", bold=True)
+                cell.alignment = Alignment(horizontal="center")
+                cell.border = border
+
             row_idx += 1
 
-            subtotal_debe = 0.0
-            subtotal_haber = 0.0
-            saldo_acumulado_grupo = 0.0
-
+            # --------------------------------------------------------
+            # FILA DE SALDO INICIAL (Amarillo)
+            # --------------------------------------------------------
+            saldo_ini_grupo = 0.0
             for m in movimientos:
-                d = float(m.get("debe", 0) or 0)
-                h = float(m.get("haber", 0) or 0)
-                subtotal_debe += d
-                subtotal_haber += h
-                saldo_acumulado_grupo += (h - d)
+                if "inicial" in str(m.get("concepto", "")).lower():
+                    saldo_ini_grupo = float(m.get("saldo", 0) or 0)
+                    break
+            
+            # Col A: Fondo Amarillo vacío o con valor
+            ws.cell(row=row_idx, column=1).fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+            ws.cell(row=row_idx, column=1).border = border
+            
+            # Col F (Saldo): Valor Saldo Inicial
+            ws.merge_cells(start_row=row_idx, start_column=2, end_row=row_idx, end_column=5) # Espacio vacio
+            for c in range(2, 6): ws.cell(row=row_idx, column=c).border = border
 
-                ws.cell(row=row_idx, column=2, value=m.get("fecha"))
-                ws.cell(row=row_idx, column=3, value=m.get("documento"))
-                ws.cell(row=row_idx, column=4, value=m.get("concepto"))
-                ws.cell(row=row_idx, column=5, value=str(m.get("cuenta")))
-                ws.cell(row=row_idx, column=6, value=d)
-                ws.cell(row=row_idx, column=7, value=h)
-                ws.cell(row=row_idx, column=8, value=saldo_acumulado_grupo)
+            cell_saldo_ini = ws.cell(row=row_idx, column=6, value=saldo_ini_grupo)
+            cell_saldo_ini.number_format = "#,##0.00"
+            cell_saldo_ini.font = Font(bold=True)
+            cell_saldo_ini.border = border
+            
+            row_idx += 1
 
-                ExportadorExcelMensual._formato_moneda(ws, row_idx, [6, 7, 8])
+            # --------------------------------------------------------
+            # TABLA DE MOVIMIENTOS
+            # --------------------------------------------------------
+            # Headers Tabla (Fecha, Concepto...)
+            # Según imagen: NO HAY HEADERS REPETIDOS AQUÍ, SOLO DATOS
+            # Headers globales ya están arriba? NO, la imagen tiene headers en la fila del banco.
+            # REVISION IMAGEN:
+            # Fila 1 (Morada): [SALDO INICIAL 1] [FECHA] [CONCEPTO - BANCO] [INGRESOS] [GASTOS] [SALDO]
+            # Fila 2 (Datos): [Amarillo] [Fecha] [Concepto] ...
+            
+            # CORRECCION DISEÑO SEGUN IMAGEN (Re-interpretación):
+            # La imagen muestra bloques repetitivos.
+            # Row 1 (Morada): Col1="SALDO INICIAL 1", Col2="FECHA", Col3="CONCEPTO - BANCO", Col4="INGRESOS", Col5="GASTOS", Col6="SALDO"
+            # Row 2 (Amarillo inicia): Col1 (Amarillo), Col2..Col6 (Datos Saldo Inicial)
+            
+
+            sub_ing = 0.0
+            sub_gas = 0.0
+            
+            for m in movimientos:
+                if "inicial" in str(m.get("concepto", "")).lower(): continue
+                
+                ing = float(m.get("ingresos") if "ingresos" in m else m.get("haber", 0) or 0)
+                gas = float(m.get("gastos") if "gastos" in m else m.get("debe", 0) or 0)
+                sub_ing += ing; sub_gas += gas
+                
+                # Columnas: A(Vacío), B(Fecha), C(Concepto), D(Ing), E(Gas), F(Saldo)
+                ws.cell(row=row_idx, column=1).border = border # Col A vacia borde
+                ws.cell(row=row_idx, column=2, value=m.get("fecha")).border = border
+                ws.cell(row=row_idx, column=3, value=m.get("concepto")).border = border
+                ws.cell(row=row_idx, column=4, value=ing).border = border
+                ws.cell(row=row_idx, column=5, value=gas).border = border
+                ws.cell(row=row_idx, column=6, value=m.get("saldo")).border = border
+                
+                ExportadorExcelMensual._formato_moneda(ws, row_idx, [4, 5, 6])
                 row_idx += 1
 
-            # Pie de grupo (Subtotales)
-            ws.cell(
-                row=row_idx, column=1, value=f"TOTAL {nombre_grupo}"
-            ).font = Font(bold=True)
-            ws.cell(row=row_idx, column=6, value=subtotal_debe).font = Font(bold=True)
-            ws.cell(row=row_idx, column=7, value=subtotal_haber).font = Font(bold=True)
+            # Separador visual entre bancos
+            row_idx += 2
+            
+            total_gral_ing += sub_ing
+            total_gral_gas += sub_gas
 
-            # Saldo neto del grupo
-            neto_grupo = subtotal_haber - subtotal_debe
-            cell_saldo = ws.cell(row=row_idx, column=8, value=neto_grupo)
-            cell_saldo.font = Font(
-                bold=True, color="FF0000" if neto_grupo < 0 else "008000"
-            )
-
-            ExportadorExcelMensual._formato_moneda(ws, row_idx, [6, 7, 8])
-
-            # Línea de separación visual
-            for c in range(1, 9):
-                ws.cell(row=row_idx, column=c).border = Border(
-                    bottom=Side(style="thick")
-                )
-
-            row_idx += 2  # Espacio
-
-            gran_total_debe += subtotal_debe
-            gran_total_haber += subtotal_haber
-
-        # GRAN TOTAL FINAL
-        ws.cell(row=row_idx, column=1, value="TOTAL REPORTE").font = Font(
-            bold=True, size=14
-        )
-        ws.cell(row=row_idx, column=6, value=gran_total_debe).font = Font(
-            bold=True, size=12
-        )
-        ws.cell(row=row_idx, column=7, value=gran_total_haber).font = Font(
-            bold=True, size=12
-        )
-
-        gran_neto = gran_total_haber - gran_total_debe
-        cell_gran_saldo = ws.cell(row=row_idx, column=8, value=gran_neto)
-        cell_gran_saldo.font = Font(
-            bold=True, size=12, color="FF0000" if gran_neto < 0 else "008000"
-        )
-
-        ExportadorExcelMensual._formato_moneda(ws, row_idx, [6, 7, 8])
+        # Pie final de reporte
+        ExportadorExcelMensual._añadir_pie_sisters(ws, row_idx, total_gral_ing, total_gral_gas, 0)
 
         try:
             wb.save(ruta_archivo)

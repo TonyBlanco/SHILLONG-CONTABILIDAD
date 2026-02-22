@@ -19,15 +19,26 @@ COLORES SHILLONG:
 
 from PySide6.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox,
-    QTableWidget, QTableWidgetItem, QFileDialog, QDateEdit, QScrollArea
+    QTableWidget, QTableWidgetItem, QFileDialog, QDateEdit, QScrollArea,
+    QCheckBox, QMessageBox
 )
 from PySide6.QtCore import Qt, QDate
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QAction, QTextDocument
 
 import datetime
 from collections import defaultdict
+from pathlib import Path
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.utils import get_column_letter
+
+# FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+# Soporte de ruta de recursos en EXE (PyInstaller)
+try:
+    from utils.rutas import ruta_recurso
+except Exception:  # pragma: no cover
+    def ruta_recurso(p):
+        return Path(p)
 
 
 class InformesView(QWidget):
@@ -64,6 +75,10 @@ class InformesView(QWidget):
             "⚖️ Balance de Sumas y Saldos",
             "🧮 Resumen Mensual por Cuentas"
         ])
+        # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+        self.cbo_tipo.addItem("➕ Reporte por Cuentas (Formato Excel)")
+        # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+        self.cbo_tipo.addItem("Reporte por Cuentas (Modelo Sisters)")
         self.cbo_tipo.currentIndexChanged.connect(self._cambiar_tipo)
         h_sel.addWidget(self.cbo_tipo)
         h_sel.addStretch()
@@ -102,11 +117,15 @@ class InformesView(QWidget):
         )
         self.btn_export_balance.clicked.connect(self._exportar_balance)
 
+        self.chk_shillong = QCheckBox("Estilo SHILLONG (Invertir Columnas: Entra=Debe, Sale=Haber)")
+        self.chk_shillong.setStyleSheet("color: #1e40af; font-weight: bold; margin-left: 10px;")
+        
         h_btns = QHBoxLayout()
         h_btns.addWidget(self.btn_generar)
         h_btns.addWidget(self.btn_export_vista)
         h_btns.addWidget(self.btn_export_mayor)
         h_btns.addWidget(self.btn_export_balance)
+        h_btns.addWidget(self.chk_shillong)
         h_btns.addStretch()
         layout.addLayout(h_btns)
 
@@ -115,6 +134,16 @@ class InformesView(QWidget):
         # ------------------------------------------------------------
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
+
+        # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+        # Impresión/preview accesible sin añadir botones nuevos (menú contextual).
+        self.scroll_area.setContextMenuPolicy(Qt.ActionsContextMenu)
+        act_preview = QAction("Previsualizar impresión", self)
+        act_preview.triggered.connect(self._previsualizar_impresion)
+        self.scroll_area.addAction(act_preview)
+        act_print = QAction("Imprimir…", self)
+        act_print.triggered.connect(self._imprimir)
+        self.scroll_area.addAction(act_print)
 
         self.contenedor = QWidget()
         self.contenedor_layout = QVBoxLayout(self.contenedor)
@@ -179,6 +208,22 @@ class InformesView(QWidget):
             self.filtros.addWidget(QLabel("Año:"))
             self.filtros.addWidget(self.cbo_anio)
 
+        # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+        elif tipo == 4:
+            self.filtros.addWidget(QLabel("Fecha inicio:"))
+            self.filtros.addWidget(self.fecha_ini)
+            self.filtros.addWidget(QLabel("Fecha fin:"))
+            self.filtros.addWidget(self.fecha_fin)
+            self.filtros.addWidget(QLabel("Cuenta:"))
+            self.filtros.addWidget(self.cbo_cuenta)
+
+        # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+        elif tipo == 5:
+            self.filtros.addWidget(QLabel("Fecha inicio:"))
+            self.filtros.addWidget(self.fecha_ini)
+            self.filtros.addWidget(QLabel("Fecha fin:"))
+            self.filtros.addWidget(self.fecha_fin)
+
         # visibilidad de botones
         self.btn_export_mayor.setVisible(tipo == 1)
         self.btn_export_balance.setVisible(tipo == 2)
@@ -204,6 +249,12 @@ class InformesView(QWidget):
             self._mostrar_sumas_saldos()
         elif tipo == 3:
             self._mostrar_resumen_mensual()
+        # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+        elif tipo == 4:
+            self._mostrar_reporte_por_cuentas()
+        # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+        elif tipo == 5:
+            self._mostrar_reporte_modelo_sisters()
 
     def _limpiar_vista(self):
         for i in reversed(range(self.contenedor_layout.count())):
@@ -217,32 +268,68 @@ class InformesView(QWidget):
     def _mostrar_diario(self):
         ini = self.fecha_ini.date().toPython()
         fin = self.fecha_fin.date().toPython()
+        invertir = self.chk_shillong.isChecked()
+        
         datos = self.data.get_movimientos_rango(ini, fin)
-        tabla = QTableWidget(0, 8)
-        tabla.setHorizontalHeaderLabels(
-            ["Fecha","Documento","Concepto","Cuenta","Debe","Haber","Saldo","Banco"]
-        )
-
+        
+        # Agrupar por banco
+        por_banco = defaultdict(list)
         for m in datos:
+            b = m.get("banco", "Caja")
+            por_banco[b].append(m)
+            
+        header_labels = ["Fecha","Documento","Concepto","Cuenta","Entra (Debe)" if invertir else "Debe","Sale (Haber)" if invertir else "Haber","Saldo","Banco"]
+        
+        for banco in sorted(por_banco.keys()):
+            self.contenedor_layout.addWidget(QLabel(f"🏦 BANCO: {banco}"))
+            tabla = QTableWidget(0, 8)
+            tabla.setHorizontalHeaderLabels(header_labels)
+            
+            saldo_acum = 0.0
+            for m in por_banco[banco]:
+                r = tabla.rowCount()
+                tabla.insertRow(r)
+                
+                d = float(m.get("debe", 0) or 0)
+                h = float(m.get("haber", 0) or 0)
+                
+                if invertir:
+                    val_debe = h
+                    val_haber = d
+                    saldo_acum += (val_debe - val_haber)
+                else:
+                    val_debe = d
+                    val_haber = h
+                    saldo_acum += (val_haber - val_debe)
+                
+                fila = [
+                    m.get("fecha",""),
+                    m.get("documento",""),
+                    m.get("concepto",""),
+                    m.get("cuenta",""),
+                    val_debe,
+                    val_haber,
+                    round(saldo_acum, 2),
+                    banco
+                ]
+                for c, val in enumerate(fila):
+                    it = QTableWidgetItem(str(val))
+                    if c >= 4:
+                        it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    tabla.setItem(r,c,it)
+            
+            # Fila Total Banco
             r = tabla.rowCount()
             tabla.insertRow(r)
-            fila = [
-                m.get("fecha",""),
-                m.get("documento",""),
-                m.get("concepto",""),
-                m.get("cuenta",""),
-                m.get("debe",0),
-                m.get("haber",0),
-                m.get("saldo",0),
-                m.get("banco","")
-            ]
-            for c, val in enumerate(fila):
-                it = QTableWidgetItem(str(val))
-                if c >= 4:
-                    it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                tabla.setItem(r,c,it)
-
-        self.contenedor_layout.addWidget(tabla)
+            it_tot = QTableWidgetItem(f"TOTAL {banco}")
+            it_tot.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            tabla.setItem(r, 2, it_tot)
+            tabla.setItem(r, 6, QTableWidgetItem(str(round(saldo_acum, 2))))
+            tabla.item(r, 6).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            tabla.item(r, 6).setFont(QFont("Segoe UI", 9, QFont.Bold))
+            
+            self.contenedor_layout.addWidget(tabla)
+            self.contenedor_layout.addSpacing(20)
 
     # ================================================================
     # LIBRO MAYOR AGRUPADO
@@ -406,6 +493,408 @@ class InformesView(QWidget):
         self.contenedor_layout.addWidget(tabla)
 
     # ================================================================
+    # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+    # ================================================================
+    def _parsear_fecha_movimiento(self, fecha_str):
+        """
+        Retorna datetime.date o None.
+        Formatos soportados: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY.
+        """
+        if not fecha_str:
+            return None
+        s = str(fecha_str).strip()
+        try:
+            if "/" in s:
+                return datetime.datetime.strptime(s, "%d/%m/%Y").date()
+            if "-" in s:
+                try:
+                    return datetime.datetime.strptime(s, "%Y-%m-%d").date()
+                except ValueError:
+                    return datetime.datetime.strptime(s, "%d-%m-%Y").date()
+        except ValueError:
+            return None
+        return None
+
+    def _obtener_datos_reporte_por_cuentas(self):
+        """
+        Agrupa movimientos por cuenta contable usando:
+        - self.data.movimientos
+        - self.data.obtener_nombre_cuenta(cuenta)
+        Respeta rango de fechas seleccionado y cuenta (Todas o específica).
+        """
+        ini = self.fecha_ini.date().toPython()
+        fin = self.fecha_fin.date().toPython()
+
+        texto_cuenta = self.cbo_cuenta.currentText()
+        cuenta_filtro = None if texto_cuenta == "Todas" else texto_cuenta.split(" - ")[0]
+
+        agrupado = defaultdict(list)  # {cuenta: [(fecha_obj, mov_dict), ...]}
+        for m in getattr(self.data, "movimientos", []):
+            cuenta = str(m.get("cuenta", "")).strip()
+            if not cuenta:
+                continue
+            if cuenta_filtro and cuenta != str(cuenta_filtro):
+                continue
+
+            fecha_obj = self._parsear_fecha_movimiento(m.get("fecha", ""))
+            if fecha_obj is None:
+                continue
+            if not (ini <= fecha_obj <= fin):
+                continue
+
+            agrupado[cuenta].append((fecha_obj, m))
+
+        salida = []
+        for cuenta in sorted(agrupado.keys()):
+            movs = agrupado[cuenta]
+            movs.sort(key=lambda t: (t[0], str(t[1].get("documento", ""))))
+
+            if hasattr(self.data, "obtener_nombre_cuenta"):
+                nombre = self.data.obtener_nombre_cuenta(cuenta)
+            else:
+                nombre = self.data.cuentas.get(cuenta, {}).get("nombre", "")
+
+            salida.append((cuenta, nombre, movs))
+        return salida
+
+    def _mostrar_reporte_por_cuentas(self):
+        """
+        Columnas:
+        Cuenta | Fecha | Concepto | Debe | Haber | Estado | Documento
+        """
+        headers = ["Cuenta", "Fecha", "Concepto", "Debe", "Haber", "Estado", "Documento"]
+
+        datos = self._obtener_datos_reporte_por_cuentas()
+        if not datos:
+            lab = QLabel("No hay movimientos para el rango/cuenta seleccionado.")
+            lab.setStyleSheet("color:#475569; font-style:italic;")
+            self.contenedor_layout.addWidget(lab)
+            return
+
+        for cuenta, nombre, movs in datos:
+            header = QLabel(f"{cuenta} - {nombre}")
+            header.setStyleSheet(
+                "background:#7030A0; color:white; font-size:16px;"
+                "padding:6px; font-weight:bold;"
+            )
+            self.contenedor_layout.addWidget(header)
+
+            tabla = QTableWidget(0, len(headers))
+            tabla.setHorizontalHeaderLabels(headers)
+            tabla.horizontalHeader().setSectionsMovable(True)  # reordenar solo visual
+
+            total_debe = 0.0
+            total_haber = 0.0
+
+            for fecha_obj, m in movs:
+                debe = float(m.get("debe", 0) or 0)
+                haber = float(m.get("haber", 0) or 0)
+                total_debe += debe
+                total_haber += haber
+
+                r = tabla.rowCount()
+                tabla.insertRow(r)
+                fila = [
+                    cuenta,
+                    m.get("fecha", fecha_obj.strftime("%d/%m/%Y")),
+                    m.get("concepto", ""),
+                    debe,
+                    haber,
+                    m.get("estado", ""),
+                    m.get("documento", ""),
+                ]
+
+                for c, val in enumerate(fila):
+                    it = QTableWidgetItem(str(val))
+                    if headers[c] in ("Debe", "Haber"):
+                        it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    tabla.setItem(r, c, it)
+
+            # Total por cuenta
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            tabla.setItem(r, 2, QTableWidgetItem("TOTAL"))
+            tabla.setItem(r, 3, QTableWidgetItem(str(total_debe)))
+            tabla.setItem(r, 4, QTableWidgetItem(str(total_haber)))
+            if tabla.item(r, 3):
+                tabla.item(r, 3).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            if tabla.item(r, 4):
+                tabla.item(r, 4).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+            self.contenedor_layout.addWidget(tabla)
+
+    # ================================================================
+    # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+    # ================================================================
+    def _ruta_modelo_sisters_layout(self):
+        """
+        Retorna la ruta fija del layout oficial.
+        Regla: nunca usar datos de una plantilla cargada por el usuario.
+        """
+        return str(ruta_recurso("ui/Modelo por cuentas.xlsx"))
+
+    def _celda_es_formula(self, cell):
+        v = cell.value
+        if v is None:
+            return False
+        if isinstance(v, str) and v.startswith("="):
+            return True
+        return getattr(cell, "data_type", None) == "f"
+
+    def _es_caja(self, banco):
+        s = str(banco or "").strip().lower()
+        return ("caja" in s) or (s == "cash")
+
+    def _modo_invertido_bi(self):
+        return bool(getattr(self, "chk_export_invertido_bi", None) and self.chk_export_invertido_bi.isChecked())
+
+    def _totales_sisters_por_cuenta(self, invertido):
+        """
+        Retorna dict:
+        {cuenta: {"cur_banco":x, "cur_caja":y, "prev_total":z}}
+        """
+        ini = self.fecha_ini.date().toPython()
+        fin = self.fecha_fin.date().toPython()
+
+        year_start = datetime.date(ini.year, 1, 1)
+        prev_end = ini - datetime.timedelta(days=1)
+
+        tot = defaultdict(lambda: {"cur_banco": 0.0, "cur_caja": 0.0, "prev_total": 0.0})
+
+        for m in getattr(self.data, "movimientos", []):
+            cuenta = str(m.get("cuenta", "")).strip()
+            if not cuenta or not cuenta[0].isdigit():
+                continue
+            if cuenta[0] not in ("6", "7", "2"):
+                continue
+
+            fecha_obj = self._parsear_fecha_movimiento(m.get("fecha", ""))
+            if fecha_obj is None:
+                continue
+
+            debe = float(m.get("debe", 0) or 0)
+            haber = float(m.get("haber", 0) or 0)
+
+            if cuenta[0] == "7":
+                # Ingresos: interna = haber; invertido = debe
+                importe = debe if invertido else haber
+            else:
+                # Gastos + Inversiones: interna = debe; invertido = haber
+                importe = haber if invertido else debe
+
+            if not importe:
+                continue
+
+            if ini <= fecha_obj <= fin:
+                if self._es_caja(m.get("banco", "")):
+                    tot[cuenta]["cur_caja"] += importe
+                else:
+                    tot[cuenta]["cur_banco"] += importe
+            elif year_start <= fecha_obj <= prev_end:
+                tot[cuenta]["prev_total"] += importe
+
+        return tot
+
+    def _rollup_sisters(self, cuenta_codigo, totales_exactos):
+        """
+        Suma subcuentas si el código termina en 00/000 (padre), manteniendo largo fijo.
+        """
+        codigo = str(cuenta_codigo).strip()
+        if not codigo:
+            return {"cur_banco": 0.0, "cur_caja": 0.0, "prev_total": 0.0}
+
+        if codigo.endswith("000") and len(codigo) > 3:
+            pref = codigo[:-3]
+        elif codigo.endswith("00") and len(codigo) > 2:
+            pref = codigo[:-2]
+        else:
+            pref = codigo
+
+        cur_banco = 0.0
+        cur_caja = 0.0
+        prev_total = 0.0
+        for cta, vals in totales_exactos.items():
+            cta_s = str(cta)
+            if len(cta_s) != len(codigo):
+                continue
+            if not cta_s.startswith(pref):
+                continue
+            cur_banco += float(vals.get("cur_banco", 0) or 0)
+            cur_caja += float(vals.get("cur_caja", 0) or 0)
+            prev_total += float(vals.get("prev_total", 0) or 0)
+
+        return {"cur_banco": cur_banco, "cur_caja": cur_caja, "prev_total": prev_total}
+
+    def _headers_modelo_sisters(self, seccion, anio):
+        if seccion == "6":
+            return [
+                "CUENTA",
+                "NOMBRE",
+                "GASTOS",
+                "BANCO",
+                "CAJA",
+                "GASTO MESES ANTERIORES",
+                "SUMA DE GASTO ACUMULADO",
+                f"PRESUPUESTO {anio}",
+                "DIFERENCIA",
+            ]
+        if seccion == "7":
+            return [
+                "CUENTA",
+                "NOMBRE",
+                "INGRESOS",
+                "BANCO",
+                "CAJA",
+                "INGRESOS MESES ANTERIORES",
+                "SUMA DE INGRESO ACUMULADO",
+                f"PRESUPUESTO {anio}",
+                "DIFERENCIA",
+            ]
+        return [
+            "CUENTA",
+            "NOMBRE",
+            "INVERSIONES",
+            "BANCO",
+            "CAJA",
+            "INVERSIONES MESES ANTER.",
+            "SUMA DE GASTO ACUMULADO",
+            f"PRESUPUESTO {anio}",
+            "DIFERENCIA",
+        ]
+
+    def _mostrar_reporte_modelo_sisters(self):
+        # Regla: este informe SIEMPRE usa datos de `self.data.movimientos` (shillong_2026),
+        # nunca valores numéricos embebidos en una plantilla.
+        invertido = self._modo_invertido_bi()
+        totales_exactos = self._totales_sisters_por_cuenta(invertido=invertido)
+        anio = self.fecha_ini.date().toPython().year
+
+        def cuentas_seccion(prefijo):
+            # Prioridad: respetar el orden del layout oficial (sin leer datos numéricos).
+            cuentas_layout = []
+            try:
+                wb = openpyxl.load_workbook(self._ruta_modelo_sisters_layout(), data_only=False)
+                ws = wb[wb.sheetnames[0]]
+                for r in range(1, ws.max_row + 1):
+                    v = ws.cell(r, 3).value  # C = código cuenta
+                    if v is None:
+                        continue
+                    if isinstance(v, (int, float)):
+                        cta_s = str(int(v))
+                    else:
+                        cta_s = str(v).strip()
+                    if cta_s.isdigit() and cta_s.startswith(prefijo):
+                        cuentas_layout.append(cta_s)
+            except Exception:
+                cuentas_layout = []
+
+            cuentas_plan = []
+            for cta in getattr(self.data, "cuentas", {}).keys():
+                cta_s = str(cta).strip()
+                if cta_s.startswith(prefijo):
+                    cuentas_plan.append(cta_s)
+
+            cuentas_mov = []
+            for cta in totales_exactos.keys():
+                cta_s = str(cta).strip()
+                if cta_s.startswith(prefijo):
+                    cuentas_mov.append(cta_s)
+
+            # Orden final: primero el layout, luego cualquier cuenta extra.
+            ordenadas = []
+            vistos = set()
+            for c in cuentas_layout:
+                if c not in vistos:
+                    ordenadas.append(c)
+                    vistos.add(c)
+            for c in sorted(set(cuentas_plan + cuentas_mov)):
+                if c not in vistos:
+                    ordenadas.append(c)
+                    vistos.add(c)
+            return ordenadas
+
+        def render_seccion(seccion, titulo_total):
+            header = QLabel(titulo_total.replace("SUMA TOTAL ", ""))
+            header.setStyleSheet(
+                "background:#7030A0; color:white; font-size:16px;"
+                "padding:6px; font-weight:bold;"
+            )
+            self.contenedor_layout.addWidget(header)
+
+            headers = self._headers_modelo_sisters(seccion, anio)
+            tabla = QTableWidget(0, len(headers))
+            tabla.setHorizontalHeaderLabels(headers)
+
+            total_cur = 0.0
+            total_banco = 0.0
+            total_caja = 0.0
+            total_prev = 0.0
+
+            for cuenta in cuentas_seccion(seccion):
+                nombre = ""
+                if hasattr(self.data, "obtener_nombre_cuenta"):
+                    nombre = self.data.obtener_nombre_cuenta(cuenta)
+                vals = self._rollup_sisters(cuenta, totales_exactos)
+                cur_banco = float(vals["cur_banco"])
+                cur_caja = float(vals["cur_caja"])
+                cur_total = cur_banco + cur_caja
+                prev_total = float(vals["prev_total"])
+                acum = cur_total + prev_total
+
+                presupuesto_num = 0.0
+                diferencia_num = presupuesto_num - acum
+
+                r = tabla.rowCount()
+                tabla.insertRow(r)
+                fila = [
+                    cuenta,
+                    nombre,
+                    cur_total,
+                    cur_banco,
+                    cur_caja,
+                    prev_total,
+                    acum,
+                    presupuesto_num,
+                    diferencia_num,
+                ]
+
+                for c, val in enumerate(fila):
+                    it = QTableWidgetItem(str(val))
+                    if c >= 2:
+                        it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    tabla.setItem(r, c, it)
+
+            # Evitar doble conteo: sumar solo base (código exacto)
+            for cta, vals in totales_exactos.items():
+                cta_s = str(cta)
+                if cta_s.startswith(seccion):
+                    b = float(vals.get("cur_banco", 0) or 0)
+                    ca = float(vals.get("cur_caja", 0) or 0)
+                    pr = float(vals.get("prev_total", 0) or 0)
+                    total_banco += b
+                    total_caja += ca
+                    total_cur += (b + ca)
+                    total_prev += pr
+
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            tabla.setItem(r, 1, QTableWidgetItem(titulo_total))
+            tabla.setItem(r, 2, QTableWidgetItem(str(total_cur)))
+            tabla.setItem(r, 3, QTableWidgetItem(str(total_banco)))
+            tabla.setItem(r, 4, QTableWidgetItem(str(total_caja)))
+            tabla.setItem(r, 5, QTableWidgetItem(str(total_prev)))
+            tabla.setItem(r, 6, QTableWidgetItem(str(total_cur + total_prev)))
+            for c in range(2, 7):
+                if tabla.item(r, c):
+                    tabla.item(r, c).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+            self.contenedor_layout.addWidget(tabla)
+
+        render_seccion("6", "SUMA TOTAL GASTOS")
+        render_seccion("7", "SUMA TOTAL INGRESOS")
+        render_seccion("2", "INVERSIONES")
+
+    # ================================================================
     # EXPORTAR VISTA ACTUAL
     # ================================================================
     def _exportar_excel_vista(self):
@@ -414,6 +903,16 @@ class InformesView(QWidget):
             self, "Exportar Vista", "Vista.xlsx", "Excel (*.xlsx)"
         )
         if not ruta:
+            return
+
+        # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+        if self.cbo_tipo.currentIndex() == 4:
+            self._exportar_excel_reporte_por_cuentas(ruta)
+            return
+
+        # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+        if self.cbo_tipo.currentIndex() == 5:
+            self._exportar_excel_modelo_sisters(ruta)
             return
 
         wb=openpyxl.Workbook()
@@ -451,10 +950,264 @@ class InformesView(QWidget):
         wb.save(ruta)
 
     # ================================================================
+    # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+    # EXPORTACIÓN EXCEL con formato contable
+    # ================================================================
+    def _exportar_excel_reporte_por_cuentas(self, ruta):
+        datos = self._obtener_datos_reporte_por_cuentas()
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Reporte por Cuentas"
+
+        headers = ["Cuenta", "Fecha", "Concepto", "Debe", "Haber", "Estado", "Documento"]
+        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        verde = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        borde = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000")
+        )
+
+        row = 1
+        ini = self.fecha_ini.date().toString("dd/MM/yyyy")
+        fin = self.fecha_fin.date().toString("dd/MM/yyyy")
+        texto_cuenta = self.cbo_cuenta.currentText()
+        titulo = f"Reporte por Cuentas — {ini} a {fin} — {texto_cuenta}"
+
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=len(headers))
+        cell = ws.cell(row=row, column=1, value=titulo)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = morado
+        cell.alignment = Alignment(horizontal="center")
+        row += 2
+
+        if not datos:
+            ws.cell(row=row, column=1, value="Sin datos para el rango/cuenta seleccionado.")
+            wb.save(ruta)
+            return
+
+        col_widths = [len(h) for h in headers]
+
+        for cuenta, nombre, movs in datos:
+            ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=len(headers))
+            cell = ws.cell(row=row, column=1, value=f"{cuenta} - {nombre}")
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = morado
+            row += 2
+
+            for c, h in enumerate(headers, start=1):
+                cell = ws.cell(row=row, column=c, value=h)
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = morado
+                cell.border = borde
+            row += 1
+
+            total_debe = 0.0
+            total_haber = 0.0
+            invertir = self.chk_shillong.isChecked()
+
+            for _, m in movs:
+                d_orig = float(m.get("debe", 0) or 0)
+                h_orig = float(m.get("haber", 0) or 0)
+                
+                if invertir:
+                    debe = h_orig
+                    haber = d_orig
+                else:
+                    debe = d_orig
+                    haber = h_orig
+                    
+                total_debe += debe
+                total_haber += haber
+
+                fila = [
+                    cuenta,
+                    m.get("fecha", ""),
+                    m.get("concepto", ""),
+                    debe,
+                    haber,
+                    m.get("estado", ""),
+                    m.get("documento", ""),
+                ]
+
+                for c, val in enumerate(fila, start=1):
+                    cell = ws.cell(row=row, column=c, value=val)
+                    cell.border = borde
+                    if c in (4, 5):
+                        cell.alignment = Alignment(horizontal="right")
+                        cell.number_format = "#,##0.00"
+                    col_widths[c - 1] = max(col_widths[c - 1], len(str(val or "")))
+                row += 1
+
+            # Total por cuenta
+            for c in range(1, len(headers) + 1):
+                cell = ws.cell(row=row, column=c)
+                cell.border = borde
+                cell.fill = verde
+            ws.cell(row=row, column=3, value="TOTAL").font = Font(bold=True)
+            ws.cell(row=row, column=4, value=total_debe).number_format = "#,##0.00"
+            ws.cell(row=row, column=5, value=total_haber).number_format = "#,##0.00"
+            row += 3
+
+        for idx, w in enumerate(col_widths, start=1):
+            ws.column_dimensions[get_column_letter(idx)].width = min(max(w + 2, 12), 60)
+
+        wb.save(ruta)
+
+    # ================================================================
+    # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
+    # EXPORTACIÓN XLSX basada en plantilla
+    # ================================================================
+    def _exportar_excel_modelo_sisters(self, ruta):
+        # Regla: usar SOLO el layout oficial embebido, nunca una plantilla con datos.
+        plantilla = self._ruta_modelo_sisters_layout()
+        try:
+            wb = openpyxl.load_workbook(plantilla, data_only=False)
+            ws = wb[wb.sheetnames[0]]
+        except Exception as e:
+            QMessageBox.critical(self, "Exportación", f"No se pudo cargar la plantilla:\n{plantilla}\n\n{e}")
+            return
+
+        invertido = self.chk_shillong.isChecked()
+        totales_exactos = self._totales_sisters_por_cuenta(invertido=invertido)
+
+        # Sanitizar fórmulas con enlaces externos o #REF! (evita errores contables).
+        for row in ws.iter_rows():
+            for cell in row:
+                v = cell.value
+                if isinstance(v, str) and v.startswith("=") and ("[" in v or "#REF" in v):
+                    cell.value = 0
+                    cell.number_format = "#,##0.00"
+
+        # Título (C1 en el layout original puede venir de enlace externo)
+        fin_dt = self.fecha_fin.date().toPython()
+        try:
+            ws.cell(1, 3).value = f"CUENTAS DE {fin_dt.year}"
+        except Exception:
+            pass
+
+        # Fecha del reporte (G1 dentro del merge G1:H2)
+        try:
+            ws.cell(1, 7).value = datetime.datetime(fin_dt.year, fin_dt.month, fin_dt.day)
+            ws.cell(1, 7).number_format = "dd/mm/yyyy"
+        except Exception:
+            pass
+
+        # Rellenar SOLO valores dinámicos (sin romper layout/formulas)
+        for r in range(1, ws.max_row + 1):
+            v = ws.cell(r, 3).value  # C = código cuenta
+            if v is None:
+                continue
+
+            if isinstance(v, (int, float)):
+                cuenta = str(int(v))
+            else:
+                cuenta = str(v).strip()
+
+            if not cuenta.isdigit() or cuenta[0] not in ("6", "7", "2"):
+                continue
+
+            # Evitar tocar filas subtotal/total: tienen fórmulas en BANCO/CAJA
+            if self._celda_es_formula(ws.cell(r, 6)) or self._celda_es_formula(ws.cell(r, 7)):
+                continue
+
+            vals = totales_exactos.get(cuenta, {"cur_banco": 0.0, "cur_caja": 0.0, "prev_total": 0.0})
+            cur_banco = float(vals.get("cur_banco", 0) or 0)
+            cur_caja = float(vals.get("cur_caja", 0) or 0)
+            cur_total = cur_banco + cur_caja
+            prev_total = float(vals.get("prev_total", 0) or 0)
+
+            # BANCO / CAJA
+            ws.cell(r, 6).value = round(cur_banco, 2)
+            ws.cell(r, 7).value = round(cur_caja, 2)
+            ws.cell(r, 6).number_format = "#,##0.00"
+            ws.cell(r, 7).number_format = "#,##0.00"
+
+            # MESES ANTERIORES (col H)
+            if not self._celda_es_formula(ws.cell(r, 8)):
+                ws.cell(r, 8).value = round(prev_total, 2)
+                ws.cell(r, 8).number_format = "#,##0.00"
+
+            # TOTAL (col E): solo si la plantilla no tiene fórmula en esa celda
+            if not self._celda_es_formula(ws.cell(r, 5)):
+                ws.cell(r, 5).value = round(cur_total, 2)
+                ws.cell(r, 5).number_format = "#,##0.00"
+
+            # PRESUPUESTO (col J): no usar enlaces/valores de plantilla
+            ws.cell(r, 10).value = 0.0
+            ws.cell(r, 10).number_format = "#,##0.00"
+
+        try:
+            wb.save(ruta)
+        except Exception as e:
+            QMessageBox.critical(self, "Exportación", f"No se pudo guardar el archivo:\n{ruta}\n\n{e}")
+
+    # ================================================================
+    # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
+    # IMPRESIÓN / PREVIEW (menú contextual)
+    # ================================================================
+    def _html_vista_actual(self):
+        html = """
+        <html><head><meta charset="utf-8">
+        <style>
+        body { font-family: Segoe UI, Arial, sans-serif; font-size: 10pt; }
+        .title { background:#7030A0; color:white; padding:8px; font-weight:bold; }
+        table { border-collapse: collapse; width: 100%; margin-top: 6px; }
+        th { background:#7030A0; color:white; padding:6px; border:1px solid #000; text-align:left; }
+        td { padding:5px; border:1px solid #000; }
+        td.num { text-align: right; }
+        </style></head><body>
+        """
+        for i in range(self.contenedor_layout.count()):
+            w = self.contenedor_layout.itemAt(i).widget()
+            if isinstance(w, QLabel):
+                html += f"<div class='title'>{w.text()}</div>"
+            if isinstance(w, QTableWidget):
+                tabla = w
+                html += "<table><thead><tr>"
+                for c in range(tabla.columnCount()):
+                    h = tabla.horizontalHeaderItem(c).text() if tabla.horizontalHeaderItem(c) else ""
+                    html += f"<th>{h}</th>"
+                html += "</tr></thead><tbody>"
+                for r in range(tabla.rowCount()):
+                    html += "<tr>"
+                    for c in range(tabla.columnCount()):
+                        it = tabla.item(r, c)
+                        v = it.text() if it else ""
+                        h = tabla.horizontalHeaderItem(c).text() if tabla.horizontalHeaderItem(c) else ""
+                        cls = "num" if h in ("Debe", "Haber", "Saldo") else ""
+                        html += f"<td class='{cls}'>{v}</td>"
+                    html += "</tr>"
+                html += "</tbody></table>"
+        html += "</body></html>"
+        return html
+
+    def _previsualizar_impresion(self):
+        from PySide6.QtPrintSupport import QPrinter, QPrintPreviewDialog
+        printer = QPrinter(QPrinter.HighResolution)
+        preview = QPrintPreviewDialog(printer, self)
+        html = self._html_vista_actual()
+        doc = QTextDocument()
+        doc.setHtml(html)
+        preview.paintRequested.connect(lambda p: doc.print_(p))
+        preview.exec()
+
+    def _imprimir(self):
+        from PySide6.QtPrintSupport import QPrinter, QPrintDialog
+        printer = QPrinter(QPrinter.HighResolution)
+        dialog = QPrintDialog(printer, self)
+        if dialog.exec():
+            html = self._html_vista_actual()
+            doc = QTextDocument()
+            doc.setHtml(html)
+            doc.print_(printer)
+
+    # ================================================================
     # EXPORTAR LIBRO MAYOR PROFESIONAL SHILLONG
     # ================================================================
     def _exportar_libro_mayor(self):
-
         ruta,_= QFileDialog.getSaveFileName(
             self,"Exportar Libro Mayor SHILLONG",
             "LibroMayor.xlsx","Excel (*.xlsx)"
@@ -462,6 +1215,7 @@ class InformesView(QWidget):
         if not ruta:
             return
 
+        invertir = self.chk_shillong.isChecked()
         wb=openpyxl.Workbook()
         ws=wb.active
 
@@ -475,7 +1229,6 @@ class InformesView(QWidget):
         )
 
         row=1
-
         cuentas=sorted(self.data.cuentas.keys())
 
         for cta in cuentas:
@@ -491,7 +1244,7 @@ class InformesView(QWidget):
             cell.fill=morado
             row+=2
 
-            headers=["Fecha","Documento","Desglose","Debe","Haber","Saldo"]
+            headers=["Fecha","Documento","Desglose","Entra" if invertir else "Debe","Sale" if invertir else "Haber","Saldo"]
             for c,h in enumerate(headers, start=1):
                 cell=ws.cell(row=row,column=c,value=h)
                 cell.font=Font(bold=True,color="FFFFFF")
@@ -500,8 +1253,8 @@ class InformesView(QWidget):
             row+=1
 
             saldo_acum=0
-            total_debe=0
-            total_haber=0
+            total_debe=0 # Realmente 'Entra' si invertido
+            total_haber=0 # Realmente 'Sale' si invertido
 
             for m in movs:
                 concepto=m.get("concepto","").strip()
@@ -510,10 +1263,18 @@ class InformesView(QWidget):
                 else:
                     des=m.get("nombre_cuenta","")
 
-                debe=float(m.get("debe",0))
-                haber=float(m.get("haber",0))
+                d_orig=float(m.get("debe",0))
+                h_orig=float(m.get("haber",0))
 
-                saldo_acum+=(haber-debe)
+                if invertir:
+                    debe = h_orig
+                    haber = d_orig
+                    saldo_acum += (debe - haber)
+                else:
+                    debe = d_orig
+                    haber = h_orig
+                    saldo_acum += (haber - debe)
+
                 total_debe+=debe
                 total_haber+=haber
 
@@ -531,6 +1292,7 @@ class InformesView(QWidget):
                     cell.border=borde
                     if c>=4:
                         cell.alignment=Alignment(horizontal="right")
+                        cell.number_format = "#,##0.00"
                 row+=1
 
             # TOTAL
@@ -540,9 +1302,9 @@ class InformesView(QWidget):
                 cell.fill=verde
 
             ws.cell(row=row,column=3,value="TOTAL").font=Font(bold=True)
-            ws.cell(row=row,column=4,value=total_debe)
-            ws.cell(row=row,column=5,value=total_haber)
-            ws.cell(row=row,column=6,value=(total_haber-total_debe))
+            ws.cell(row=row,column=4,value=total_debe).number_format = "#,##0.00"
+            ws.cell(row=row,column=5,value=total_haber).number_format = "#,##0.00"
+            ws.cell(row=row,column=6,value=saldo_acum).number_format = "#,##0.00"
 
             row+=3
 
@@ -552,7 +1314,6 @@ class InformesView(QWidget):
     # EXPORTAR BALANCE SHILLONG (SUMAS & SALDOS)
     # ================================================================
     def _exportar_balance(self):
-
         ruta,_= QFileDialog.getSaveFileName(
             self,"Exportar Balance SHILLONG",
             "Balance_Sumas_Saldos.xlsx","Excel (*.xlsx)"
@@ -560,6 +1321,7 @@ class InformesView(QWidget):
         if not ruta:
             return
 
+        invertir = self.chk_shillong.isChecked()
         wb=openpyxl.Workbook()
         ws=wb.active
 
@@ -572,7 +1334,7 @@ class InformesView(QWidget):
             bottom=Side(style="thin",color="000000")
         )
 
-        headers=["Cuenta","Nombre","Debe","Haber","Saldo"]
+        headers=["Cuenta","Nombre","Entra" if invertir else "Debe","Sale" if invertir else "Haber","Saldo"]
 
         row=1
         for c,h in enumerate(headers,start=1):
@@ -587,15 +1349,25 @@ class InformesView(QWidget):
         for m in self.data.movimientos:
             cta=str(m.get("cuenta",""))
             resumen[cta]["nombre"]=m.get("nombre_cuenta","")
-            resumen[cta]["debe"]+=float(m.get("debe",0))
-            resumen[cta]["haber"]+=float(m.get("haber",0))
+            d_orig = float(m.get("debe",0))
+            h_orig = float(m.get("haber",0))
+            
+            if invertir:
+                resumen[cta]["debe"] += h_orig
+                resumen[cta]["haber"] += d_orig
+            else:
+                resumen[cta]["debe"] += d_orig
+                resumen[cta]["haber"] += h_orig
 
         total_debe=0
         total_haber=0
 
         for cta in sorted(resumen.keys()):
             d=resumen[cta]
-            saldo=d["haber"]-d["debe"]
+            if invertir:
+                saldo = d["debe"] - d["haber"]
+            else:
+                saldo = d["haber"] - d["debe"]
 
             fila=[cta, d["nombre"], d["debe"], d["haber"], saldo]
 
@@ -604,6 +1376,7 @@ class InformesView(QWidget):
                 cell.border=borde
                 if c>=3:
                     cell.alignment=Alignment(horizontal="right")
+                    cell.number_format = "#,##0.00"
 
             total_debe+=d["debe"]
             total_haber+=d["haber"]
@@ -616,8 +1389,8 @@ class InformesView(QWidget):
             cell.fill=verde
 
         ws.cell(row=row,column=2,value="TOTAL GENERAL").font=Font(bold=True)
-        ws.cell(row=row,column=3,value=total_debe)
-        ws.cell(row=row,column=4,value=total_haber)
-        ws.cell(row=row,column=5,value=(total_haber-total_debe))
+        ws.cell(row=row,column=3,value=total_debe).number_format = "#,##0.00"
+        ws.cell(row=row,column=4,value=total_haber).number_format = "#,##0.00"
+        ws.cell(row=row,column=5,value=(total_debe-total_haber if invertir else total_haber-total_debe)).number_format = "#,##0.00"
 
         wb.save(ruta)

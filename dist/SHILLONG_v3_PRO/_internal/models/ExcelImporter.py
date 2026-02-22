@@ -15,12 +15,12 @@ class ExcelImporter:
 
     # Nombres de columnas esperados en el Excel (puedes añadir variaciones)
     COL_MAP = {
-        "FECHA": ["fecha", "date", "día", "dia"],
-        "DOCUMENTO": ["documento", "doc", "ref", "referencia"],
-        "CONCEPTO": ["concepto", "descripción", "descripcion", "detalle"],
-        "CUENTA": ["cuenta", "cta", "rubro", "código", "codigo"],
-        "DEBE": ["debe", "gasto", "débito", "cargo", "salida"],
-        "HABER": ["haber", "ingreso", "crédito", "abono", "entrada"],
+        "FECHA": ["fecha", "date", "día", "dia", "f. valor"],
+        "DOCUMENTO": ["documento", "doc", "ref", "referencia", "cheque", "n°", "número", "numero"],
+        "CONCEPTO": ["concepto", "descripción", "descripcion", "detalle", "transacción", "leyenda", "narration"],
+        "CUENTA": ["cuenta", "cta", "rubro", "código", "codigo", "partida"],
+        "DEBE": ["debe", "gasto", "débito", "cargo", "salida", "debit", "dr"],
+        "HABER": ["haber", "ingreso", "crédito", "abono", "entrada", "credit", "cr"],
         "BANCO": ["banco", "caja", "tesorería", "origen"],
         "ESTADO": ["estado", "status", "situación"]
     }
@@ -40,31 +40,69 @@ class ExcelImporter:
         headers = {}
         movimientos = []
         errores = []
-
-        # 1. Detectar cabeceras en la primera fila
-        for cell in ws[1]:
-            if cell.value:
-                val = str(cell.value).lower().strip()
+        
+        # 1. Detectar cabeceras buscando en las primeras 15 filas
+        header_row_idx = -1
+        
+        # Iteramos filas para encontrar la que tiene "Fecha" y "Concepto"
+        for i, row in enumerate(ws.iter_rows(min_row=1, max_row=15, values_only=True), start=1):
+            temp_headers = {}
+            row_values = [str(r).lower().strip() if r is not None else "" for r in row]
+            
+            # Revisar cada celda de esta fila
+            for col_idx, val in enumerate(row_values):
+                if not val: continue
+                
                 # Mapear nombre de columna a nuestra clave interna
                 for key, variations in self.COL_MAP.items():
                     if val in variations:
-                        headers[key] = cell.column - 1 # Guardamos índice (0-based)
+                        temp_headers[key] = col_idx # Guardamos índice (0-based)
+            
+            # Criterio de aceptación: Debe tener al menos FECHA y CONCEPTO
+            if "FECHA" in temp_headers and "CONCEPTO" in temp_headers:
+                headers = temp_headers
+                header_row_idx = i
+                break
+        
+        if header_row_idx == -1:
+            return [], ["No se encontraron las columnas 'Fecha' y 'Concepto' en las primeras 15 filas.\nAsegúrese de que el Excel tenga cabeceras claras."]
 
-        # Validar que existan columnas mínimas
-        if "FECHA" not in headers or "CONCEPTO" not in headers:
-            return [], ["El Excel no tiene columnas 'Fecha' o 'Concepto' en la fila 1."]
+        # 2. Contexto de Cuenta (para reportes agrupados por cuenta)
+        # Si encontramos una celda que diga "Cuenta: X", la usaremos para los siguientes registros si no tienen cuenta.
+        context_account = None
 
-        # 2. Iterar filas de datos (empezando en fila 2)
-        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        # 3. Iterar filas de datos (empezando justo después de la fila de headers)
+        start_data_row = header_row_idx + 1
+        for i, row in enumerate(ws.iter_rows(min_row=start_data_row, values_only=True), start=start_data_row):
             try:
+                # --- DETECCIÓN DE CONTEXTO ---
+                # Verificar si es una fila de cabecera de grupo (ej: "Cuenta: 60001")
+                # Unimos toda la fila en texto para buscar patrones
+                row_str = " ".join([str(c).strip() for c in row if c]).lower()
+                
+                if "cuenta:" in row_str or "rubro:" in row_str or "código:" in row_str:
+                    # Intentar extraer el código o nombre, limpiando un poco
+                    # Asumimos que lo que sigue es la cuenta
+                    clean_acc = row_str.replace("cuenta:", "").replace("rubro:", "").replace("código:", "").strip().upper()
+                    if len(clean_acc) > 3: # Validación mínima
+                        context_account = clean_acc
+                        continue # Es una fila de título, no de datos
+
                 # --- FECHA ---
                 raw_fecha = row[headers["FECHA"]]
+                
                 if not raw_fecha:
                     continue # Saltar filas vacías
                 
+                # REGLA ANTI-FOOTER
+                str_val = str(raw_fecha).lower()
+                keywords_fin = ["preparado", "nombre:", "cargo:", "aprobado", "firma", "total", "saldo final"]
+                if any(k in str_val for k in keywords_fin):
+                    continue 
+
                 fecha_str = self._procesar_fecha(raw_fecha)
                 if not fecha_str:
-                    errores.append(f"Fila {i}: Fecha inválida ({raw_fecha})")
+                    # Si falla la fecha, podría ser basura o título intermedio no capturado
                     continue
 
                 # --- CONCEPTO ---
@@ -81,15 +119,19 @@ class ExcelImporter:
                 haber = float(row[idx_haber]) if idx_haber is not None and isinstance(row[idx_haber], (int, float)) else 0.0
 
                 if debe == 0 and haber == 0:
-                    # Si no hay importes, saltamos o avisamos (opcional)
                     pass
 
                 # --- CUENTA ---
                 idx_cta = headers.get("CUENTA")
-                cuenta = str(row[idx_cta]).strip() if (idx_cta is not None and row[idx_cta] is not None) else "PENDIENTE"
-                # Limpiar ".0" si el excel lo leyó como float
-                if cuenta.endswith(".0"): 
-                    cuenta = cuenta[:-2]
+                cuenta = None
+                
+                if idx_cta is not None and row[idx_cta] is not None:
+                    cuenta = str(row[idx_cta]).strip()
+                    if cuenta.endswith(".0"): cuenta = cuenta[:-2]
+                
+                # Si no hay cuenta en la fila, usar la del contexto
+                if not cuenta or cuenta == "":
+                    cuenta = context_account if context_account else "PENDIENTE"
 
                 # --- BANCO ---
                 idx_banco = headers.get("BANCO")
@@ -110,13 +152,13 @@ class ExcelImporter:
                     "fecha": fecha_str,
                     "documento": doc,
                     "concepto": concepto,
-                    "cuenta": cuenta,
+                    "cuenta": str(cuenta).upper(), # Normalizar a mayúsculas
                     "debe": debe,
                     "haber": haber,
-                    "moneda": "INR", # Por defecto
+                    "moneda": "INR",
                     "banco": banco,
                     "estado": estado,
-                    "saldo": 0.0 # Se recalculará al insertar
+                    "saldo": 0.0,
                 }
                 movimientos.append(mov)
 

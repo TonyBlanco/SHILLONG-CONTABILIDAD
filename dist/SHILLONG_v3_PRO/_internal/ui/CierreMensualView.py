@@ -91,10 +91,6 @@ class CierreMensualView(QWidget):
         QMessageBox.warning(self, "Acceso denegado", "Contraseña incorrecta.")
         return False
 
-    def _asegurar_password(self):
-        if self._auth_ok:
-            return True
-        return self._pedir_password()
 
     def _cargar_saldos_iniciales(self, año, mes):
         """Carga saldos iniciales desde saldos_mensuales.json para un mes/año."""
@@ -127,9 +123,8 @@ class CierreMensualView(QWidget):
         return False
 
     def _asegurar_password(self):
-        if self._auth_ok:
-            return True
-        return self._pedir_password()
+        # Proteccion desactivada por solicitud del usuario
+        return True
 
     # ---------------------------------------------------------
     # CATEGORÍAS

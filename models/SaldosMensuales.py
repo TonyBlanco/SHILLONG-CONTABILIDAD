@@ -73,25 +73,43 @@ class SaldosMensuales:
                     "ingresos": 0.0,
                     "gastos": 102708.0
                 },
-                "Union Bank": {
+                "SBI- Sr sindhu": {
+                    "inicial": 0.0,
+                    "final": 0.0,
+                    "ingresos": 0.0,
+                    "gastos": 0.0
+                },
+                "Federal Bank sr Sindhu": {
+                    "inicial": 0.0,
+                    "final": 0.0,
+                    "ingresos": 0.0,
+                    "gastos": 0.0
+                },
+                "Federal Bank- sr Juliana": {
+                    "inicial": 0.0,
+                    "final": 0.0,
+                    "ingresos": 0.0,
+                    "gastos": 0.0
+                },
+                "Federal Bank sr Shairilin": {
+                    "inicial": 0.0,
+                    "final": 0.0,
+                    "ingresos": 0.0,
+                    "gastos": 0.0
+                },
+                "Union Bank, sr Elisa": {
                     "inicial": 0.0,
                     "final": -9237.9,
                     "ingresos": 20000.0,
                     "gastos": 29237.9
                 },
-                "Federal Bank": {
+                "Post- office sr Sindhu": {
                     "inicial": 0.0,
                     "final": 0.0,
                     "ingresos": 0.0,
                     "gastos": 0.0
                 },
-                "SBI": {
-                    "inicial": 0.0,
-                    "final": 0.0,
-                    "ingresos": 0.0,
-                    "gastos": 0.0
-                },
-                "Otro": {
+                "Post-office sr Shairilin": {
                     "inicial": 0.0,
                     "final": 0.0,
                     "ingresos": 0.0,

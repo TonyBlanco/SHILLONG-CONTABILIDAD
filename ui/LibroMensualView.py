@@ -106,9 +106,8 @@ class LibroMensualView(QWidget):
         return False
 
     def _asegurar_password(self):
-        if self._auth_ok:
-            return True
-        return self._pedir_password()
+        # Proteccion desactivada por solicitud del usuario
+        return True
 
     # --- LÓGICA DE CATEGORÍAS (ROBUSTA) ---
     def _categoria_de_cuenta(self, cuenta):
@@ -343,6 +342,7 @@ class LibroMensualView(QWidget):
         self.menu_exportar = QMenu(self)
         self.menu_exportar.addAction("📊 Excel Detallado (General)", self._exportar_excel_general)
         self.menu_exportar.addSeparator()
+        self.menu_exportar.addAction("🏦 Excel por Bancos (Separado)", self._exportar_excel_bancos)
         self.menu_exportar.addAction("📂 Excel por Categorías", self._exportar_excel_categorias)
         self.menu_exportar.addAction("🔢 Excel por Cuentas", self._exportar_excel_cuentas)
         
@@ -433,6 +433,12 @@ class LibroMensualView(QWidget):
         self.chk_export_invertido = QCheckBox("Exportar con columnas invertidas (ShillongStyle)")
         layout.addWidget(self.chk_export_invertido)
 
+        # Add a checkbox for 'Estilo Shillong' in the UI
+        self.chk_estilo_shillong = QCheckBox("Estilo SHILLONG (Invertir Columnas: Entra=Debe, Sale=Haber)")
+        self.chk_estilo_shillong.setChecked(False)
+        self.chk_estilo_shillong.stateChanged.connect(self._on_estilo_shillong_changed)
+        layout.addWidget(self.chk_estilo_shillong)
+
         # CARDS
         cards = QHBoxLayout()
         self.card_gasto = self._crear_card("Total Gastos", "#ef4444")
@@ -470,6 +476,18 @@ class LibroMensualView(QWidget):
     def _update_card(self, card, valor):
         lbl = card.findChild(QLabel, "val")
         if lbl: lbl.setText(f"{valor:,.2f}")
+
+    def _on_estilo_shillong_changed(self, _state):
+        activo = self.chk_estilo_shillong.isChecked()
+        if self.chk_flujo.isChecked() != activo:
+            self.chk_flujo.blockSignals(True)
+            self.chk_flujo.setChecked(activo)
+            self.chk_flujo.blockSignals(False)
+        if self.chk_export_invertido.isChecked() != activo:
+            self.chk_export_invertido.blockSignals(True)
+            self.chk_export_invertido.setChecked(activo)
+            self.chk_export_invertido.blockSignals(False)
+        self.actualizar()
 
     def actualizar(self):
         mes = self.cbo_mes.currentIndex() + 1
@@ -753,6 +771,9 @@ class LibroMensualView(QWidget):
     def _exportar_excel_cuentas(self):
         self._exportar_excel_base("cuenta")
 
+    def _exportar_excel_bancos(self):
+        self._exportar_excel_base("banco")
+
     def _exportar_excel_base(self, modo):
         """Método centralizado con ORDEN EXACTO SOLICITADO + Saldo inicial + inversión Debe/Haber."""
         if ExportadorExcelMensual is None:
@@ -778,25 +799,15 @@ class LibroMensualView(QWidget):
         nombres = {
             "general": f"Libro_{self.cbo_mes.currentText()}.xlsx",
             "categoria": f"Resumen_Categorias_{self.cbo_mes.currentText()}.xlsx",
-            "cuenta": f"Resumen_Cuentas_{self.cbo_mes.currentText()}.xlsx"
+            "cuenta": f"Resumen_Cuentas_{self.cbo_mes.currentText()}.xlsx",
+            "banco": f"Libro_Banco_{self.cbo_mes.currentText()}.xlsx"
         }
         
         ruta, _ = QFileDialog.getSaveFileName(self, "Exportar Excel", nombres[modo], "Excel (*.xlsx)")
         if not ruta: return
 
-        # Organizar en reportes/<YYYY-MM>/<categoria|otros>
-        mes_dir = f"{año}-{mes:02d}"
-        categoria_dir = "categoria" if modo == "categoria" else ("cuenta" if modo == "cuenta" else "general")
-        base_dir = Path("reportes") / mes_dir / categoria_dir
-        try:
-            base_dir = self._ensure_reports_dir(base_dir)
-        except Exception:
-            # Último recurso: carpeta temporal garantizada
-            tmp = Path(os.getenv("TMP", str(Path.home()))) / "reportes_fallback" / mes_dir / categoria_dir
-            tmp.mkdir(parents=True, exist_ok=True)
-            base_dir = tmp
-
-        ruta = str(base_dir / Path(ruta).name)
+        # Se elimina la lógica que forzaba el guardado en la carpeta 'reportes' interna.
+        # El archivo se guardará exactamente donde el usuario seleccionó.
 
         # Recopilar datos filtrados
         movs_raw = self.data.movimientos_por_mes(mes, año)
@@ -845,8 +856,19 @@ class LibroMensualView(QWidget):
             item_ordenado["cuenta"] = str(m.get("cuenta", ""))    # A: Cuenta
             item_ordenado["fecha"] = m.get("fecha", "")           # B: Fecha
             item_ordenado["concepto"] = m.get("concepto", "")     # C: Concepto
-            item_ordenado["debe"] = debe_export                       # D: Debe (invertido)
-            item_ordenado["haber"] = haber_export                     # E: Haber (invertido)
+            
+            # Determinamos ingresos/gastos reales según si exportamos invertido o no
+            if self.chk_export_invertido.isChecked():
+                # En modo Shillong/Invertido: debe_export=haber_interno(ing), haber_export=debe_interno(gas)
+                item_ordenado["ingresos"] = debe_export
+                item_ordenado["gastos"] = haber_export
+            else:
+                # En modo estándar: debe_export=debe_interno(gas), haber_export=haber_interno(ing)
+                item_ordenado["ingresos"] = haber_export
+                item_ordenado["gastos"] = debe_export
+                
+            item_ordenado["debe"] = debe_export
+            item_ordenado["haber"] = haber_export
             item_ordenado["estado"] = m.get("estado", "")         # F: Estado
             item_ordenado["documento"] = m.get("documento", "")   # G: Documento
             
@@ -884,6 +906,82 @@ class LibroMensualView(QWidget):
                 # Ordenar por número de cuenta
                 grupos_ord = dict(sorted(grupos.items()))
                 ExportadorExcelMensual.exportar_agrupado(ruta, grupos_ord, periodo, "Cuenta")
+
+            elif modo == "banco":
+                # Agrupar por Banco (Separado)
+                # OJO: datos_prep tiene un flujo lineal con un saldo acumulado global (o filtrado).
+                # Para "Separado por Bancos", necesitamos RE-CALCULAR saldos por cada banco,
+                # ya que el saldo inicial de datos_prep era solo para el filtro actual.
+                
+                # 1. Obtener todos los bancos con movimientos o saldo inicial
+                todos_bancos = set(m.get("banco") for m in movs_raw if m.get("banco"))
+                
+                # Cargar saldos iniciales de todos los bancos para este mes
+                saldos_iniciales_map = self.saldos_sistema.obtener_resumen_mes(mes, año) # {banco: {inicial: X, ...}}
+                
+                # Asegurar que incluimos bancos que tienen saldo inicial aunque no tengan movimientos
+                for b, data in saldos_iniciales_map.items():
+                    if float(data.get("inicial", 0)) != 0:
+                        todos_bancos.add(b)
+                
+                # Si estamos filtrando, respetamos el filtro si no es "Todos"
+                if banco_filtro != "Todos":
+                    todos_bancos = {banco_filtro}
+                elif "Todos" in todos_bancos: 
+                    todos_bancos.remove("Todos") # Limpieza
+                
+                grupos_banco = {}
+                
+                for banco in sorted(list(todos_bancos)):
+                    # Saldo inicial específico
+                    s_ini = float(saldos_iniciales_map.get(banco, {}).get("inicial", 0.0))
+                    
+                    # Filtrar movimientos de este banco
+                    movs_banco = [m for m in movs_raw if m.get("banco") == banco]
+                    
+                    # Construir lista para este banco
+                    lista_banco = []
+                    
+                    # Fila dummy saldo inicial
+                    lista_banco.append({
+                        "fecha": f"01/{mes:02d}/{año}",
+                        "concepto": "Saldo inicial",
+                        "saldo": s_ini,
+                        "ingresos": 0.0, "gastos": 0.0,
+                        "debe": 0.0, "haber": 0.0
+                    })
+                    
+                    saldo_acum = s_ini
+                    
+                    # Procesar movimientos
+                    for m in movs_banco:
+                        d = float(m.get("debe", 0) or 0)
+                        h = float(m.get("haber", 0) or 0)
+                        
+                        if self.chk_export_invertido.isChecked():
+                            ing = h; gas = d
+                            saldo_acum += (ing - gas)
+                        else:
+                            # Estándar: Debe=Gas, Haber=Ing
+                            ing = h; gas = d
+                            saldo_acum += (ing - gas)
+                        
+                        item = {
+                            "fecha": m.get("fecha", ""),
+                            "concepto": m.get("concepto", ""),
+                            "ingresos": ing,
+                            "gastos": gas,
+                            "saldo": saldo_acum,
+                            "cuenta": str(m.get("cuenta", "")),
+                            "banco": banco # Para referencia
+                        }
+                        lista_banco.append(item)
+                    
+                    if lista_banco: # Solo agregar si hay algo relevante (saldo inicial o movs)
+                        grupos_banco[banco] = lista_banco
+                
+                # Exportar
+                ExportadorExcelMensual.exportar_agrupado(ruta, grupos_banco, periodo, "Banco")
 
             QMessageBox.information(self, "Éxito", f"Reporte '{modo}' generado correctamente.")
             abrir = QMessageBox.question(

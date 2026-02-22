@@ -15,7 +15,7 @@ from collections import defaultdict
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QComboBox, QPushButton,
     QLabel, QTableWidget, QTableWidgetItem, QTextEdit, QMenu, QHeaderView,
-    QFrame, QFileDialog, QMessageBox, QInputDialog, QLineEdit
+    QFrame, QFileDialog, QMessageBox, QInputDialog, QLineEdit, QCheckBox
 )
 from PySide6.QtCore import Qt, QMarginsF
 from PySide6.QtGui import QColor, QFont, QPainter, QTextDocument, QPageLayout
@@ -91,10 +91,6 @@ class CierreMensualView(QWidget):
         QMessageBox.warning(self, "Acceso denegado", "Contraseña incorrecta.")
         return False
 
-    def _asegurar_password(self):
-        if self._auth_ok:
-            return True
-        return self._pedir_password()
 
     def _cargar_saldos_iniciales(self, año, mes):
         """Carga saldos iniciales desde saldos_mensuales.json para un mes/año."""
@@ -127,9 +123,8 @@ class CierreMensualView(QWidget):
         return False
 
     def _asegurar_password(self):
-        if self._auth_ok:
-            return True
-        return self._pedir_password()
+        # Proteccion desactivada por solicitud del usuario
+        return True
 
     # ---------------------------------------------------------
     # CATEGORÍAS
@@ -289,6 +284,27 @@ class CierreMensualView(QWidget):
 
         layout.addLayout(bot)
 
+        # ------------------------
+        # ESTILO SHILLONG
+        # ------------------------
+        self.chk_estilo_shillong = QCheckBox("Estilo SHILLONG (Invertir Columnas: Entra=Debe, Sale=Haber)")
+        self.chk_estilo_shillong.setChecked(False)
+        self.chk_estilo_shillong.stateChanged.connect(self.actualizar)
+        layout.addWidget(self.chk_estilo_shillong)
+
+        self.chk_export_invertido = QCheckBox("Exportar con columnas invertidas (ShillongStyle)")
+        self.chk_export_invertido.setChecked(False)
+        layout.addWidget(self.chk_export_invertido)
+
+    def _estilo_shillong_activo(self):
+        return bool(getattr(self, "chk_estilo_shillong", None) and self.chk_estilo_shillong.isChecked())
+
+    def _invertir_exportacion(self):
+        return bool(
+            (getattr(self, "chk_export_invertido", None) and self.chk_export_invertido.isChecked())
+            or self._estilo_shillong_activo()
+        )
+
     # ---------------------------------------------------------
     # KPI CARD
     # ---------------------------------------------------------
@@ -317,6 +333,18 @@ class CierreMensualView(QWidget):
         mes = self.cbo_mes.currentIndex() + 1
         año = int(self.cbo_año.currentText())
         banco = self.cbo_banco.currentText()
+        invertir = self._estilo_shillong_activo()
+
+        if invertir:
+            self.tabla.setHorizontalHeaderLabels([
+                "Fecha", "Doc", "Concepto", "Cuenta", "Nombre",
+                "Entra", "Sale", "Banco", "Estado", "Saldo"
+            ])
+        else:
+            self.tabla.setHorizontalHeaderLabels([
+                "Fecha", "Doc", "Concepto", "Cuenta", "Nombre",
+                "Debe", "Haber", "Banco", "Estado", "Saldo"
+            ])
 
         cta_filt = None
         if " – " in self.cbo_cuenta.currentText():
@@ -332,8 +360,12 @@ class CierreMensualView(QWidget):
                 continue
             self.filtrados.append(m)
 
-        gas = sum(float(m.get("debe", 0)) for m in self.filtrados)
-        ing = sum(float(m.get("haber", 0)) for m in self.filtrados)
+        if invertir:
+            gas = sum(float(m.get("haber", 0)) for m in self.filtrados)
+            ing = sum(float(m.get("debe", 0)) for m in self.filtrados)
+        else:
+            gas = sum(float(m.get("debe", 0)) for m in self.filtrados)
+            ing = sum(float(m.get("haber", 0)) for m in self.filtrados)
 
         self.card_gasto.val.setText(f"{gas:,.2f}")
         self.card_ingreso.val.setText(f"{ing:,.2f}")
@@ -344,9 +376,16 @@ class CierreMensualView(QWidget):
         saldo = 0
 
         for m in self.filtrados:
-            d = float(m.get("debe", 0))
-            h = float(m.get("haber", 0))
-            saldo += h - d
+            d_orig = float(m.get("debe", 0))
+            h_orig = float(m.get("haber", 0))
+            if invertir:
+                d = h_orig
+                h = d_orig
+                saldo += d - h
+            else:
+                d = d_orig
+                h = h_orig
+                saldo += h - d
 
             cuenta_id = str(m.get("cuenta", ""))
             nombre_cuenta = self.data.cuentas.get(cuenta_id, {}).get("nombre", "DESCONOCIDA")
@@ -495,12 +534,20 @@ class CierreMensualView(QWidget):
 
         prep = []
         saldo = 0
+        invertir = self._invertir_exportacion()
 
         # ORDEN OFICIAL
         for m in self.filtrados:
-            d = float(m.get("debe", 0))
-            h = float(m.get("haber", 0))
-            saldo += h - d
+            d_orig = float(m.get("debe", 0))
+            h_orig = float(m.get("haber", 0))
+            if invertir:
+                d = h_orig
+                h = d_orig
+                saldo += d - h
+            else:
+                d = d_orig
+                h = h_orig
+                saldo += h - d
 
             # FIX: Obtener nombre de cuenta de forma robusta
             cuenta_id = str(m.get("cuenta", ""))

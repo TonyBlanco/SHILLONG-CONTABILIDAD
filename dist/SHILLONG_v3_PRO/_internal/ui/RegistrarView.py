@@ -56,6 +56,16 @@ class RegistrarView(QWidget):
         QPushButton#limpiar_dh { background:#64748b; }
         QPushButton#duplicar { background:#7c3aed; }
         QPushButton#refresh { background:#475569; }
+
+        /* FIX: Asegurar que los botones de diálogos emergentes sean visibles */
+        QDialog QPushButton, QMessageBox QPushButton {
+            color: #1e293b;
+            background-color: #cbd5e1;
+            border: 1px solid #94a3b8;
+        }
+        QDialog QPushButton:hover, QMessageBox QPushButton:hover {
+            background-color: #94a3b8;
+        }
         """
 
     def _estilo_oscuro(self):

@@ -1,29 +1,12 @@
 {
   "banks": [
-    {
-      "id": 1,
-      "nombre": "Federal Bank",
-      "saldo": 0.0
-    },
-    {
-      "id": 2,
-      "nombre": "SBI",
-      "saldo": 0.0
-    },
-    {
-      "id": 3,
-      "nombre": "Union Bank",
-      "saldo": 50000.0
-    },
-    {
-      "id": 4,
-      "nombre": "Otro",
-      "saldo": 0.0
-    },
-    {
-      "id": 5,
-      "nombre": "Caja",
-      "saldo": -20000.0
-    }
+    { "id": 1, "nombre": "Caja", "saldo": 0.0 },
+    { "id": 2, "nombre": "SBI- Sr sindhu", "saldo": 0.0 },
+    { "id": 3, "nombre": "Federal Bank sr Sindhu", "saldo": 0.0 },
+    { "id": 4, "nombre": "Federal Bank- sr Juliana", "saldo": 0.0 },
+    { "id": 5, "nombre": "Federal Bank sr Shairilin", "saldo": 0.0 },
+    { "id": 6, "nombre": "Union Bank", "saldo": 0.0 },
+    { "id": 7, "nombre": "Post- office sr Sindhu", "saldo": 0.0 },
+    { "id": 8, "nombre": "Post-office sr Shairilin", "saldo": 0.0 }
   ]
 }

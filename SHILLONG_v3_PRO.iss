@@ -1,5 +1,5 @@
 #define MyAppName "SHILLONG CONTABILIDAD v3 PRO"
-#define MyAppVersion "3.8.0"
+#define MyAppVersion "3.8.1"
 #define MyAppPublisher "Shillong Soft"
 #define MyAppURL "https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD"
 #define MyAppExeName "SHILLONG_v3_PRO.exe"
@@ -16,9 +16,9 @@ AllowRootDirectory=yes
 AllowNetworkDrive=yes
 AllowUNCPath=yes
 PrivilegesRequired=lowest
-ArchitecturesInstallIn64BitMode=yes
+ArchitecturesInstallIn64BitMode=x64
 OutputDir=Output
-OutputBaseFilename=Instalador_Shillong_v3.8.0_PRO
+OutputBaseFilename=Instalador_Shillong_v3.8.1_PRO
 SetupIconFile=assets\shillong_logov3.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -83,39 +83,35 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   DataPath: string;
+  BackupPath: string;
 begin
   if CurStep = ssPostInstall then
   begin
     DataPath := ExpandConstant('{app}\data');
+    BackupPath := ExpandConstant('{app}\backups');
+    
     if not DirExists(DataPath) then
       CreateDir(DataPath);
-    // Backup any existing user JSONs to avoid overwriting user data
+    if not DirExists(BackupPath) then
+      CreateDir(BackupPath);
+
+    // Backup existing user JSONs using FileCopy
+    if FileExists(DataPath + '\shillong_2026.json') then
+      FileCopy(DataPath + '\shillong_2026.json', BackupPath + '\shillong_2026.json.bak', False);
+
+    if FileExists(DataPath + '\bancos.json') then
+      FileCopy(DataPath + '\bancos.json', BackupPath + '\bancos.json.bak', False)
+    else
     begin
-      if not DirExists(ExpandConstant('{app}\backups')) then
-        CreateDir(ExpandConstant('{app}\backups'));
-
-      // List of common user JSON files to protect
-      if FileExists(DataPath + '\shillong_2026.json') then
-      begin
-        SaveStringToFile(ExpandConstant('{app}\backups\shillong_2026.json.' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.bak'), LoadStringFromFile(DataPath + '\shillong_2026.json'), False);
-      end;
-
-      if FileExists(DataPath + '\bancos.json') then
-      begin
-        // if user already has bancos.json, keep a backup copy and do not overwrite
-        SaveStringToFile(ExpandConstant('{app}\backups\bancos.json.' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.bak'), LoadStringFromFile(DataPath + '\bancos.json'), False);
-      end else
-      begin
-        // Install a default bancos.json only if none exists
-        SaveStringToFile(DataPath + '\bancos.json',
-          '{ "banks": ['#13#10 +
-          '  { "id": 1, "nombre": "Federal Bank", "saldo": 0.0 },'#13#10 +
-          '  { "id": 2, "nombre": "SBI", "saldo": 0.0 },'#13#10 +
-          '  { "id": 3, "nombre": "Union Bank", "saldo": 0.0 },'#13#10 +
-          '  { "id": 4, "nombre": "Otro", "saldo": 0.0 },'#13#10 +
-          '  { "id": 5, "nombre": "Caja", "saldo": 0.0 }'#13#10 +
-          '] }', False);
-      end;
+      // Install a default bancos.json only if none exists
+      SaveStringToFile(DataPath + '\bancos.json',
+        '{ "banks": ['#13#10 +
+        '  { "id": 1, "nombre": "Federal Bank", "saldo": 0.0 },'#13#10 +
+        '  { "id": 2, "nombre": "SBI", "saldo": 0.0 },'#13#10 +
+        '  { "id": 3, "nombre": "Union Bank", "saldo": 0.0 },'#13#10 +
+        '  { "id": 4, "nombre": "Otro", "saldo": 0.0 },'#13#10 +
+        '  { "id": 5, "nombre": "Caja", "saldo": 0.0 }'#13#10 +
+        '] }', False);
     end;
   end;
 end;

@@ -271,3 +271,86 @@ class ContabilidadData:
             salida.append((cuenta, nombre, total))
 
         return salida
+
+    def consulta_personalizada(self, filtros):
+        """
+        Consulta flexible con múltiples filtros opcionales.
+        
+        filtros = {
+            'fecha_inicio': date,
+            'fecha_fin': date,
+            'banco': str,
+            'cuenta': str,
+            'estado': str,
+            'tipo': 'ingresos'|'gastos'|None,
+            'monto_min': float,
+            'monto_max': float,
+            'buscar': str
+        }
+        """
+        resultado = []
+        
+        for m in self.movimientos:
+            # Filtro de fecha
+            if 'fecha_inicio' in filtros or 'fecha_fin' in filtros:
+                fecha_str = m.get("fecha", "")
+                try:
+                    if "/" in fecha_str:
+                        d, mm, a = fecha_str.split("/")
+                        fecha_mov = datetime(int(a), int(mm), int(d)).date()
+                    elif "-" in fecha_str:
+                        parts = fecha_str.split("-")
+                        if int(parts[0]) > 1000:
+                            fecha_mov = datetime(int(parts[0]), int(parts[1]), int(parts[2])).date()
+                        else:
+                            fecha_mov = datetime(int(parts[2]), int(parts[1]), int(parts[0])).date()
+                    else:
+                        continue
+                    
+                    if 'fecha_inicio' in filtros and fecha_mov < filtros['fecha_inicio']:
+                        continue
+                    if 'fecha_fin' in filtros and fecha_mov > filtros['fecha_fin']:
+                        continue
+                except (ValueError, IndexError):
+                    continue
+            
+            # Filtro de banco
+            if 'banco' in filtros and m.get("banco") != filtros['banco']:
+                continue
+            
+            # Filtro de cuenta
+            if 'cuenta' in filtros and str(m.get("cuenta")) != filtros['cuenta']:
+                continue
+            
+            # Filtro de estado
+            if 'estado' in filtros and m.get("estado", "").lower() != filtros['estado']:
+                continue
+            
+            # Filtro de tipo (ingresos/gastos)
+            debe = float(m.get("debe", 0) or 0)
+            haber = float(m.get("haber", 0) or 0)
+            
+            if 'tipo' in filtros:
+                if filtros['tipo'] == 'ingresos' and haber == 0:
+                    continue
+                if filtros['tipo'] == 'gastos' and debe == 0:
+                    continue
+            
+            # Filtro de monto
+            monto = debe if debe > 0 else haber
+            if 'monto_min' in filtros and monto < filtros['monto_min']:
+                continue
+            if 'monto_max' in filtros and monto > filtros['monto_max']:
+                continue
+            
+            # Filtro de búsqueda por texto
+            if 'buscar' in filtros:
+                buscar = filtros['buscar'].lower()
+                concepto = str(m.get("concepto", "")).lower()
+                documento = str(m.get("documento", "")).lower()
+                if buscar not in concepto and buscar not in documento:
+                    continue
+            
+            resultado.append(m)
+        
+        return resultado
