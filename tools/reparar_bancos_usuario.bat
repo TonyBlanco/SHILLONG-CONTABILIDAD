@@ -6,53 +6,61 @@ title Reparar bancos - SHILLONG
 set "SIMULAR=0"
 set "SILENCIOSO=0"
 set "APP_DIR="
-set "DATA_DIR="
-set "BACKUP_DIR="
-set "USER_PATH="
 
+rem ── ARGUMENTO PASADO (desde Inno Setup o manual con ruta) ─────────────────
 for %%A in (%*) do (
   if /I "%%~A"=="--simular" (
     set "SIMULAR=1"
-  ) else (
-    set "USER_PATH=%%~fA"
+  ) else if not "%%~fA"=="" (
+    set "APP_DIR=%%~fA"
     set "SILENCIOSO=1"
   )
 )
+if defined APP_DIR goto :after_detect
 
-if not "%USER_PATH%"=="" (
-  set "APP_DIR=%USER_PATH%"
+rem ── METODO 1: Registro de Windows (Inno guarda la ruta aqui siempre) ──────
+set "REG_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3F1A19F-2235-44C1-8C3B-AEE0F98EF003}_is1"
+for /f "tokens=2*" %%A in ('reg query "%REG_KEY%" /v "InstallLocation" 2^>nul') do set "APP_DIR=%%~B"
+if defined APP_DIR (
+  rem Quitar barra final si la tiene
+  if "!APP_DIR:~-1!"=="\" set "APP_DIR=!APP_DIR:~0,-1!"
   goto :after_detect
 )
 
-rem 1) Ruta por defecto del instalador
-set "APP_DIR=%LOCALAPPDATA%\SHILLONG CONTABILIDAD v3 PRO"
-call :set_paths
-if exist "%BACKUP_DIR%" goto :after_detect
+rem ── METODO 2: Mismo registro en HKLM (instalacion para todos los usuarios) ─
+set "REG_KEY=HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3F1A19F-2235-44C1-8C3B-AEE0F98EF003}_is1"
+for /f "tokens=2*" %%A in ('reg query "%REG_KEY%" /v "InstallLocation" 2^>nul') do set "APP_DIR=%%~B"
+if defined APP_DIR (
+  if "!APP_DIR:~-1!"=="\" set "APP_DIR=!APP_DIR:~0,-1!"
+  goto :after_detect
+)
 
-rem 2) Carpeta donde está este BAT (por si lo copian junto al EXE)
-for %%I in ("%~dp0") do set "APP_DIR=%%~fI"
-call :set_paths
-if exist "%BACKUP_DIR%" goto :after_detect
+rem ── METODO 3: Carpeta donde esta este BAT (cuando esta junto al .exe) ──────
+set "APP_DIR=%~dp0"
+if "!APP_DIR:~-1!"=="\" set "APP_DIR=!APP_DIR:~0,-1!"
+if exist "!APP_DIR!\backups" goto :after_detect
 
-rem 3) Carpeta padre del BAT (por si está dentro de tools\)
+rem ── METODO 4: Carpeta padre del BAT (cuando esta en tools\) ─────────────────
 for %%I in ("%~dp0..") do set "APP_DIR=%%~fI"
-call :set_paths
-if exist "%BACKUP_DIR%" goto :after_detect
+if exist "!APP_DIR!\backups" goto :after_detect
 
-rem 4) Buscar instalación bajo %LOCALAPPDATA%\SHILLONG*
-for /d %%D in ("%LOCALAPPDATA%\SHILLONG*") do (
-  if exist "%%~fD\backups" (
-    set "APP_DIR=%%~fD"
-    goto :after_detect
+rem ── METODO 5: Buscar en TODOS los discos disponibles ────────────────────────
+for %%D in (C D E F G H Q R S T U V W X Y Z) do (
+  for /d %%P in ("%%D:\*SHILLONG*") do (
+    if exist "%%~fP\backups" (
+      set "APP_DIR=%%~fP"
+      goto :after_detect
+    )
   )
 )
 
+rem ── METODO 6: Preguntar al usuario ──────────────────────────────────────────
 echo.
-echo No se detecto automaticamente la carpeta de instalacion.
-set /p APP_DIR=Escribe la carpeta de instalacion de SHILLONG (ej. C:\Apps\Shillong): 
-if "%APP_DIR%"=="" (
+echo No se encontro la instalacion automaticamente.
+echo.
+set /p APP_DIR=Escribe la carpeta donde instalaste SHILLONG (ej. D:\MisApps\Shillong): 
+if not defined APP_DIR (
   echo ERROR: No se proporciono ninguna ruta.
-  echo.
   pause
   exit /b 1
 )
