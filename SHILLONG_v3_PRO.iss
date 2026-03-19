@@ -1,5 +1,5 @@
 #define MyAppName "SHILLONG CONTABILIDAD v3 PRO"
-#define MyAppVersion "3.8.1"
+#define MyAppVersion "3.8.2"
 #define MyAppPublisher "Shillong Soft"
 #define MyAppURL "https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD"
 #define MyAppExeName "SHILLONG_v3_PRO.exe"
@@ -18,7 +18,7 @@ AllowUNCPath=yes
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64
 OutputDir=Output
-OutputBaseFilename=Instalador_Shillong_v3.8.1_PRO
+OutputBaseFilename=Instalador_Shillong_v3.8.2_PRO
 SetupIconFile=assets\shillong_logov3.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -43,22 +43,16 @@ Source: "data\bancos.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\reglas_conceptos.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\presupuesto_2025.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\kabbalah_72.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
+Source: "data\saldos_mensuales.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\manual_shillong.pdf"; DestDir: "{app}\data"; Flags: ignoreversion
-
-; Herramienta de reparación de bancos para el usuario - se actualiza siempre
-Source: "tools\reparar_bancos_usuario.bat"; DestDir: "{app}"; Flags: ignoreversion
 
 ; NUNCA incluir: shillong_*.json, *.backup, update_cache.json, cierres/*, archivos de test
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\shillong_logov3.ico"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\shillong_logov3.ico"; Tasks: desktopicon
-Name: "{autodesktop}\Reparar Bancos - SHILLONG"; Filename: "{app}\reparar_bancos_usuario.bat"; Comment: "Restaurar bancos si no aparecen tras instalar"; Tasks: desktopicon
 
 [Run]
-; Restaurar bancos automáticamente (silencioso, no falla si no hay backup)
-Filename: "{cmd}"; Parameters: "/c ""{app}\reparar_bancos_usuario.bat"" ""{app}"""; Flags: runhidden waituntilterminated
-
 ; Abrir la app al finalizar (opcional, el usuario puede desmarcar)
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 

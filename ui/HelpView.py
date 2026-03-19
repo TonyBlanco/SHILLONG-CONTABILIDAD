@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 
 import os
+import json
 from datetime import datetime
 
 
@@ -79,9 +80,18 @@ class HelpView(QWidget):
         titulo.setStyleSheet("font-size:18px; font-weight:bold; color:#1e293b;")
         l.addWidget(titulo)
 
+        # Leer versión del json (compatible con PyInstaller)
+        try:
+            _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            _vpath = os.path.join(_base, 'core', 'version.json')
+            _vdata = json.load(open(_vpath, encoding='utf-8'))
+            _ver = _vdata.get('version', '3.8.2')
+        except Exception:
+            _ver = '3.8.2'
+
         texto = QLabel(
             f"""
-SHILLONG CONTABILIDAD v3.7.7 PRO  
+SHILLONG CONTABILIDAD v{_ver} PRO  
 Engine Interno v4.3.2  
 Base de datos actual: {self.data.archivo_json}
 

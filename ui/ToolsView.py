@@ -28,6 +28,11 @@ try:
     from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
 except ImportError:
     from ui.Dialogs.ImportarExcelDialog import ImportarExcelDialog
+
+try:
+    from ui.Dialogs.SaldosInicialesDialog import SaldosInicialesDialog
+except ImportError:
+    SaldosInicialesDialog = None
 except ImportError:
     ImportarExcelDialog = None
 
@@ -555,6 +560,10 @@ class ToolsView(QWidget):
         btn_import = self._crear_tarjeta("Importar Excel", "Cargar desde archivo .xlsx", "📥", self._importar_excel, "#ca8a04")
         grid_datos.addWidget(btn_import, 1, 1)
 
+        # Saldos Iniciales del Año
+        btn_saldos = self._crear_tarjeta("Saldos Iniciales", "Asignar saldos de inicio de año", "💰", self._abrir_saldos_iniciales, "#0ea5e9")
+        grid_datos.addWidget(btn_saldos, 2, 0, 1, 2)
+
         main_layout.addLayout(grid_datos)
 
         # SECCIÓN 2: INTELIGENCIA & MANTENIMIENTO
@@ -710,6 +719,13 @@ class ToolsView(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error Importación", f"Fallo al importar:\n{e}")
 
+    def _abrir_saldos_iniciales(self):
+        """Abre el diálogo de saldos iniciales por banco."""
+        if SaldosInicialesDialog is None:
+            QMessageBox.critical(self, "Error", "Módulo SaldosInicialesDialog no disponible.")
+            return
+        dlg = SaldosInicialesDialog(self)
+        dlg.exec()
 
     # PANEL DE SISTEMA SIN RELOJ MUNDIAL
     # PANEL DE SISTEMA

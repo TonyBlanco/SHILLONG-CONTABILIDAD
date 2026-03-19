@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
     def __init__(self, data):
         super().__init__()
         self.data = data
-        self.setWindowTitle("Shillong Contabilidad v3.8.1 PRO")
+        self.setWindowTitle("Shillong Contabilidad v3.8.2 PRO")
         self.resize(1280, 800)
         
         # Mapa para conectar los IDs de tu Sidebar con los Widgets reales

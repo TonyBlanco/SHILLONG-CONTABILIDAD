@@ -39,6 +39,11 @@ try:
 except ImportError:
     ExportadorExcelMensual = None
 
+try:
+    from ui.Dialogs.SaldosInicialesDialog import SaldosInicialesDialog
+except ImportError:
+    SaldosInicialesDialog = None
+
 class LibroMensualView(QWidget):
     def __init__(self, data):
         super().__init__()
@@ -302,6 +307,13 @@ class LibroMensualView(QWidget):
         cargar()
         dlg.exec()
 
+    def _abrir_saldos_iniciales_ano(self):
+        """Abre el diálogo bulk para introducir saldos iniciales de todos los bancos."""
+        if SaldosInicialesDialog is None:
+            QMessageBox.warning(self, "No disponible", "El módulo SaldosInicialesDialog no está disponible.")
+            return
+        dlg = SaldosInicialesDialog(self)
+        dlg.exec()
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -326,6 +338,12 @@ class LibroMensualView(QWidget):
         self.btn_saldos = QPushButton("💰 Saldos")
         self.btn_saldos.setStyleSheet("background-color:#0ea5e9; color:white; font-weight:bold; padding:6px 12px; border-radius:6px;")
         self.btn_saldos.clicked.connect(self._abrir_editor_saldos)
+
+        # Saldos iniciales del año (bulk)
+        self.btn_saldos_ini = QPushButton("💰 Saldos Iniciales Año")
+        self.btn_saldos_ini.setStyleSheet("background-color:#0369a1; color:white; font-weight:bold; padding:6px 12px; border-radius:6px;")
+        self.btn_saldos_ini.clicked.connect(self._abrir_saldos_iniciales_ano)
+        self.btn_saldos_ini.setToolTip("Introducir saldo inicial de todos los bancos para un año contable")
 
         # --- BOTÓN RESTAURADO: MENÚ DESPLEGABLE ---
         self.btn_exportar_menu = QPushButton("📤 Exportar como… ▼")
@@ -377,7 +395,7 @@ class LibroMensualView(QWidget):
         self.btn_borrar.setStyleSheet("background-color:#ef4444; color:white; font-weight:bold; padding:6px 12px; border-radius:6px;")
         self.btn_borrar.clicked.connect(self._borrar_seleccion)
 
-        for b in [btn_preview, btn_print, self.btn_saldos, self.btn_exportar_menu, self.btn_cerrar_mes, self.btn_auditar, self.btn_editar_json, self.btn_editar, self.btn_borrar]:
+        for b in [btn_preview, btn_print, self.btn_saldos, self.btn_saldos_ini, self.btn_exportar_menu, self.btn_cerrar_mes, self.btn_auditar, self.btn_editar_json, self.btn_editar, self.btn_borrar]:
             b.setCursor(Qt.PointingHandCursor)
             b.setMinimumHeight(35)
             if not b.styleSheet():

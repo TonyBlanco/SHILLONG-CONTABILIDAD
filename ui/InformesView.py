@@ -219,6 +219,14 @@ class InformesView(QWidget):
         elif tipo == 1:
             self.filtros.addWidget(QLabel("Cuenta:"))
             self.filtros.addWidget(self.cbo_cuenta)
+            self.filtros.addWidget(QLabel("Ordenar por fecha:"))
+            self.cbo_orden_mayor = QComboBox()
+            self.cbo_orden_mayor.addItems([
+                "Fecha ↑ (más antiguo primero)",
+                "Fecha ↓ (más reciente primero)",
+                "Sin ordenar (orden de entrada)",
+            ])
+            self.filtros.addWidget(self.cbo_orden_mayor)
 
         elif tipo == 2:
             lab = QLabel("Balance profesional SHILLONG agrupado por cuentas.")
@@ -465,6 +473,17 @@ class InformesView(QWidget):
             movs = self.data.movimientos_por_cuenta(cta)
             if not movs:
                 continue
+
+            # Ordenar por fecha según selección del combo
+            orden = getattr(self, "cbo_orden_mayor", None)
+            orden_idx = orden.currentIndex() if orden else 0
+            if orden_idx in (0, 1):
+                def _parse_f(f):
+                    try:
+                        return datetime.date.fromisoformat(f)
+                    except Exception:
+                        return datetime.date.min
+                movs = sorted(movs, key=lambda m: _parse_f(m.get("fecha", "")), reverse=(orden_idx == 1))
 
             nombre = self.data.cuentas[cta].get("nombre","")
 
@@ -1458,6 +1477,17 @@ class InformesView(QWidget):
             movs=self.data.movimientos_por_cuenta(cta)
             if not movs:
                 continue
+
+            # Ordenar por fecha igual que en la vista (si el combo existe)
+            orden = getattr(self, "cbo_orden_mayor", None)
+            orden_idx = orden.currentIndex() if orden else 0
+            if orden_idx in (0, 1):
+                def _parse_f(f):
+                    try:
+                        return datetime.date.fromisoformat(f)
+                    except Exception:
+                        return datetime.date.min
+                movs = sorted(movs, key=lambda m: _parse_f(m.get("fecha", "")), reverse=(orden_idx == 1))
 
             nombre=self.data.cuentas[cta].get("nombre","")
 
