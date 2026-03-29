@@ -17,12 +17,19 @@ except ImportError:
     def ruta_recurso(p): return Path(p)
 
 
+def _archivo_datos_por_defecto():
+    """Retorna el nombre del archivo de datos según el año actual."""
+    return f"shillong_{datetime.now().year}.json"
+
+
 class ContabilidadData:
 
     # ============================================================
     # INIT
     # ============================================================
-    def __init__(self, archivo_json="shillong_2026.json"):
+    def __init__(self, archivo_json=None):
+        if archivo_json is None:
+            archivo_json = _archivo_datos_por_defecto()
 
         # Carpeta DATA garantizada
         self.carpeta_data = Path("data")

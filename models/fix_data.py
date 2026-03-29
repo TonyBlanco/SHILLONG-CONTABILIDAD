@@ -122,12 +122,14 @@ def repara_errores_debe_haber(archivo_entrada="data/shillong_2026.json"):
         print("\n👍 Todo parece correcto. No se encontraron errores de Debe/Haber.")
 
 if __name__ == "__main__":
+    from datetime import datetime
+    _archivo = f"data/shillong_{datetime.now().year}.json"
     print("--- INICIANDO REPARACIÓN DE IDs DE CUENTA ---")
-    repara_ids_de_cuenta("data/shillong_2026.json")
+    repara_ids_de_cuenta(_archivo)
     
     print("\n--- INICIANDO REPARACIÓN DE ERRORES DEBE/HABER ---")
     # Se ejecuta sobre el archivo recién corregido para encadenar los arreglos.
-    fixed_file = "data/shillong_2026.json.fixed"
+    fixed_file = _archivo + ".fixed"
     if Path(fixed_file).exists():
         repara_errores_debe_haber(fixed_file)
     else:

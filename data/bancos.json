@@ -1,12 +1,52 @@
 {
   "banks": [
-    { "id": 1, "nombre": "Caja", "saldo": 0.0 },
-    { "id": 2, "nombre": "SBI- Sr sindhu", "saldo": 0.0 },
-    { "id": 3, "nombre": "Federal Bank sr Sindhu", "saldo": 0.0 },
-    { "id": 4, "nombre": "Federal Bank- sr Juliana", "saldo": 0.0 },
-    { "id": 5, "nombre": "Federal Bank sr Shairilin", "saldo": 0.0 },
-    { "id": 6, "nombre": "Union Bank, sr Elisa", "saldo": 0.0 },
-    { "id": 7, "nombre": "Post- office sr Sindhu", "saldo": 0.0 },
-    { "id": 8, "nombre": "Post-office sr Shairilin", "saldo": 0.0 }
+    {
+      "id": 1,
+      "nombre": "Caja",
+      "saldo": 0.0,
+      "cuenta_contable": "570"
+    },
+    {
+      "id": 2,
+      "nombre": "SBI- Sr sindhu",
+      "saldo": 0.0,
+      "cuenta_contable": "5721"
+    },
+    {
+      "id": 3,
+      "nombre": "Federal Bank sr Sindhu",
+      "saldo": 0.0,
+      "cuenta_contable": "5722"
+    },
+    {
+      "id": 4,
+      "nombre": "Federal Bank- sr Juliana",
+      "saldo": 0.0,
+      "cuenta_contable": "5723"
+    },
+    {
+      "id": 5,
+      "nombre": "Federal Bank sr Shairilin",
+      "saldo": 0.0,
+      "cuenta_contable": "5724"
+    },
+    {
+      "id": 6,
+      "nombre": "Union Bank, sr Elisa",
+      "saldo": 0.0,
+      "cuenta_contable": "5725"
+    },
+    {
+      "id": 7,
+      "nombre": "Post- office sr Sindhu",
+      "saldo": 0.0,
+      "cuenta_contable": "5741"
+    },
+    {
+      "id": 8,
+      "nombre": "Post-office sr Shairilin",
+      "saldo": 0.0,
+      "cuenta_contable": ""
+    }
   ]
 }

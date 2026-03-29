@@ -36,6 +36,11 @@ except ImportError:
 except ImportError:
     ImportarExcelDialog = None
 
+try:
+    from ui.Dialogs.GestorBancosDialog import GestorBancosDialog
+except ImportError:
+    GestorBancosDialog = None
+
 # Necesario para la restauracion de la importacion Excel
 try:
     from models.ExcelImporter import ExcelImporter
@@ -562,7 +567,11 @@ class ToolsView(QWidget):
 
         # Saldos Iniciales del Año
         btn_saldos = self._crear_tarjeta("Saldos Iniciales", "Asignar saldos de inicio de año", "💰", self._abrir_saldos_iniciales, "#0ea5e9")
-        grid_datos.addWidget(btn_saldos, 2, 0, 1, 2)
+        grid_datos.addWidget(btn_saldos, 2, 0)
+
+        # Gestión de Bancos
+        btn_bancos = self._crear_tarjeta("Gestionar Bancos", "Agregar, editar o eliminar bancos", "🏦", self._abrir_gestor_bancos, "#7c3aed")
+        grid_datos.addWidget(btn_bancos, 2, 1)
 
         main_layout.addLayout(grid_datos)
 
@@ -725,6 +734,14 @@ class ToolsView(QWidget):
             QMessageBox.critical(self, "Error", "Módulo SaldosInicialesDialog no disponible.")
             return
         dlg = SaldosInicialesDialog(self)
+        dlg.exec()
+
+    def _abrir_gestor_bancos(self):
+        """Abre el diálogo de gestión de bancos (agregar/editar/eliminar)."""
+        if GestorBancosDialog is None:
+            QMessageBox.critical(self, "Error", "Módulo GestorBancosDialog no disponible.")
+            return
+        dlg = GestorBancosDialog(self)
         dlg.exec()
 
     # PANEL DE SISTEMA SIN RELOJ MUNDIAL

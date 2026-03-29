@@ -564,6 +564,14 @@ class RegistrarView(QWidget):
         # -------------------------------------------------------
         # Crear movimiento limpio
         # -------------------------------------------------------
+        # Resolver cuenta_banco desde bancos.json dinámicamente
+        try:
+            from models.BankManager import BankManager
+            _bm = BankManager()
+            cuenta_banco = _bm.get_cuenta_contable(banco)
+        except Exception:
+            cuenta_banco = ""
+
         movimiento = {
             "fecha": fecha_str,
             "documento": documento,
@@ -573,6 +581,7 @@ class RegistrarView(QWidget):
             "haber": f"{haber:.2f}",
             "moneda": "INR",
             "banco": banco,
+            "cuenta_banco": cuenta_banco,
             "estado": estado
         }
 

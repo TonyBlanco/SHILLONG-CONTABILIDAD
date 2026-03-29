@@ -1120,7 +1120,7 @@ class LibroMensualView(QWidget):
         ruta, _ = QFileDialog.getSaveFileName(
             self,
             "Guardar copia de datos",
-            "data/shillong_2026.json.backup",
+            f"data/shillong_{datetime.datetime.now().year}.json.backup",
             "JSON (*.json)"
         )
         if not ruta:

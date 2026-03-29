@@ -7,7 +7,10 @@ Lee el historial de movimientos y enriquece las reglas automáticamente.
 import json
 from pathlib import Path
 
-def ejecutar_aprendizaje(ruta_movimientos="data/shillong_2026.json", ruta_reglas="data/reglas_conceptos.json"):
+def ejecutar_aprendizaje(ruta_movimientos=None, ruta_reglas="data/reglas_conceptos.json"):
+    if ruta_movimientos is None:
+        from datetime import datetime
+        ruta_movimientos = f"data/shillong_{datetime.now().year}.json"
     path_mov = Path(ruta_movimientos)
     path_reg = Path(ruta_reglas)
 

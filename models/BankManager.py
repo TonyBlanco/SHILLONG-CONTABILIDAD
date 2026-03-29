@@ -69,3 +69,30 @@ class BankManager:
                 self._guardar()
                 return True
         return False
+
+    def get_cuenta_contable(self, nombre_banco):
+        """
+        Retorna el código contable 57xx del banco dado su nombre.
+        Lee directamente de bancos.json (campo 'cuenta_contable').
+        Si no está definido, retorna ''.
+        """
+        for b in self.bancos:
+            if b.get("nombre", "").strip() == nombre_banco.strip():
+                return b.get("cuenta_contable", "")
+        return ""
+
+    def agregar_banco(self, nombre, cuenta_contable=""):
+        """
+        Agrega un nuevo banco/caja a bancos.json.
+        cuenta_contable: código 57xx (ej: '5726'). Si se deja vacío
+        no se vincula al plan contable hasta que se asigne manualmente.
+        """
+        nuevo_id = max((b["id"] for b in self.bancos), default=0) + 1
+        self.bancos.append({
+            "id": nuevo_id,
+            "nombre": nombre.strip(),
+            "saldo": 0.0,
+            "cuenta_contable": cuenta_contable.strip()
+        })
+        self._guardar()
+        return nuevo_id

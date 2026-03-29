@@ -5,8 +5,11 @@ migrar_banco_57xx.py — SHILLONG CONTABILIDAD
 Añade el campo 'cuenta_banco' (código 57xx) a cada movimiento
 basándose en el nombre del banco usado.
 
+El mapa se construye DINÁMICAMENTE desde data/bancos.json (campo 'cuenta_contable').
+Para agregar un banco nuevo, solo hay que editarlo en bancos.json — sin tocar este script.
+
 Uso:
-    python tools/migrar_banco_57xx.py               # migra shillong_2026.json
+    python tools/migrar_banco_57xx.py               # migra shillong_{año}.json
     python tools/migrar_banco_57xx.py backup.json   # migra archivo especificado
 """
 
@@ -14,28 +17,28 @@ import json
 import sys
 import shutil
 from pathlib import Path
+from datetime import datetime
 
-# ── MAPA BANCO NOMBRE → CÓDIGO 57xx ─────────────────────────────────────────
-# Construido a partir de bancos.json + plan_contable_v3.json
-BANCO_A_CUENTA = {
-    "Caja":                        "570",
-    "SBI- Sr sindhu":              "5721",
-    "sbi- sr sindhu":              "5721",
-    "Federal Bank sr Sindhu":      "5722",
-    "federal bank sr sindhu":      "5722",
-    "Federal Bank- sr Juliana":    "5723",
-    "federal bank- sr juliana":    "5723",
-    "Federal Bank sr Shairilin":   "5724",
-    "federal bank sr shairilin":   "5724",
-    "Union Bank, sr Elisa":        "5725",
-    "union bank, sr elisa":        "5725",
-    "Union Bank":                  "5725",   # nombre abreviado en algunos registros
-    "union bank":                  "5725",
-    "Post- office sr Sindhu":      "5741",
-    "post- office sr sindhu":      "5741",
-    "Post-office sr Shairilin":    "5742",
-    "post-office sr shairilin":    "5742",
-}
+
+def _cargar_mapa_bancos(ruta_bancos="data/bancos.json"):
+    """
+    Lee bancos.json y construye el mapa nombre -> cuenta_contable.
+    Incluye variantes en minúscula para comparación robusta.
+    """
+    path = Path(ruta_bancos)
+    if not path.exists():
+        print(f"⚠️  No se encontró {path}, usando mapa vacío.")
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    mapa = {}
+    for b in data.get("banks", []):
+        nombre = b.get("nombre", "").strip()
+        codigo = b.get("cuenta_contable", "").strip()
+        if nombre and codigo:
+            mapa[nombre] = codigo
+            mapa[nombre.lower()] = codigo
+    return mapa
 
 
 def migrar(ruta_archivo: str):
@@ -43,6 +46,10 @@ def migrar(ruta_archivo: str):
     if not path.exists():
         print(f"ERROR: No existe el archivo '{path}'")
         sys.exit(1)
+
+    # Mapa dinámico desde bancos.json
+    BANCO_A_CUENTA = _cargar_mapa_bancos()
+    print(f"   Bancos cargados de bancos.json: {len(BANCO_A_CUENTA) // 2}")
 
     # Backup de seguridad
     backup = path.with_suffix(path.suffix + ".pre_57xx.bak")
@@ -87,9 +94,9 @@ def migrar(ruta_archivo: str):
 
 
 if __name__ == "__main__":
+    año = datetime.now().year
     archivos = sys.argv[1:] if len(sys.argv) > 1 else [
-        "backups/backup_2026-03-18.json",
-        "data/shillong_2026.json",
+        f"data/shillong_{año}.json",
     ]
     for archivo in archivos:
         migrar(archivo)

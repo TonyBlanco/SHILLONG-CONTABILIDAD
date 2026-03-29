@@ -330,7 +330,8 @@ class DashboardView(QWidget):
 
     def _ejecutar_depuracion(self):
         """Lógica de depuración (basada en fix_data.py)."""
-        archivo = Path("data/shillong_2026.json")
+        from datetime import datetime
+        archivo = Path(f"data/shillong_{datetime.now().year}.json")
         
         if not archivo.exists():
             raise FileNotFoundError(f"No se encuentra el archivo: {archivo}")
