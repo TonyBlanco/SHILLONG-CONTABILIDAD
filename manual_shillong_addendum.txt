@@ -1,27 +1,27 @@
-SHILLONG CONTABILIDAD v3.8.0 – Anexo rápido para actualizar el manual
+SHILLONG CONTABILIDAD v3.8.3 - Anexo rapido para actualizar el manual
 
-Resumen de cambios clave desde 3.7.8:
-- Nuevo hub “Cierres & BI” con pestañas: Libro Mensual, Cierre Mensual, Cierre Anual, Informes BI.
-- Libro Mensual:
-  - Gestor de saldos protegido (contraseña: menni1234). Permite cargar/editar/eliminar saldos por mes y banco, o arrastrar el saldo final del mes anterior.
-  - Al pedir saldo inicial, propone usar el cierre previo si existe y ofrece abrir el gestor.
-  - Exportar Excel pregunta si abrir el archivo y lo guarda en carpetas organizadas: reportes/<YYYY-MM>/<general|categoria|cuenta>/.
-  - Cierre de mes solicita firma, muestra totales Debe/Haber y saldos estimados antes de guardar.
-  - Botones de edición/borrado de movimientos protegidos por contraseña.
-- Herramientas:
-  - Auditoría rápida de datos (faltantes de documento/cuenta/banco, duplicados, Debe/Haber inválidos).
-- Sidebar: logo agregado al pie.
+=== NOVEDADES v3.8.3 (2026-03-29) ===
 
-Credenciales y seguridad:
-- Contraseña para acciones sensibles: menni1234 (edición de saldos, cierres, auditorías protegidas).
+1. GESTION DE BANCOS (nueva funcion)
+   - Menu: Herramientas -> boton Gestionar Bancos
+   - Tabla con todos los bancos/cajas registrados.
+   - Botones: Agregar nuevo banco, Editar seleccionado, Eliminar seleccionado.
+   - Al agregar un banco se puede asignar su cuenta contable (57xx) desde un desplegable.
+   - Los cambios se guardan automaticamente; no es necesario editar archivos.
 
-Rutas y organización de reportes:
-- Exportes Excel se crean en reportes/<YYYY-MM>/<modo>/ con opción de abrir al finalizar.
+2. ANO DINAMICO
+   - La app carga el archivo de datos del ano en curso automaticamente.
+   - Al comenzar 2027 cargara shillong_2027.json sin configuracion manual.
 
-Build/instalador:
-- Versión de la app: 3.8.0 PRO. El instalador se llama Instalador_Shillong_v3.8.0_PRO.exe.
+3. CUENTA BANCO AUTOMATICA
+   - Al registrar un movimiento, el campo cuenta_banco se asigna solo.
 
-Notas de operación sugeridas:
-- Antes de cerrar un mes, ejecutar “Auditar” en Libro Mensual y validar saldos iniciales.
-- Usar el gestor de saldos para arrastrar el cierre previo o ajustar manualmente (por banco).
-- Mantener backups en la carpeta “backups” antes de actualizaciones.
+=== NOVEDADES v3.8.0 - v3.8.2 ===
+
+- Nuevo hub Cierres y BI con Libro Mensual, Cierre Mensual, Cierre Anual, Informes BI.
+- Libro Mensual: gestor de saldos protegido (contrasena: menni1234), exportar Excel con apertura opcional.
+- Auditoria rapida en Herramientas.
+- Sidebar con logo inferior.
+
+Credenciales: menni1234 para acciones sensibles.
+Reportes: reportes/YYYY-MM/modo/

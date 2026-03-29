@@ -1,4 +1,4 @@
-# SHILLONG CONTABILIDAD v3.8 PRO (Final Release)
+# SHILLONG CONTABILIDAD v3.8.3 PRO
 
 Sistema contable profesional de gestión comunitaria. Diseñado para comunidades, ONGs y centros educativos que requieren un sistema ágil, multimoneda y con reportes financieros de alto nivel, pero con una interfaz humana y accesible.
 
@@ -32,10 +32,15 @@ Un toque único para humanizar el software:
 - **Importador Excel Blindado**: Detecta cabeceras, limpia datos sucios y valida duplicados antes de importar.
 - **Salida Profesional**: Todos los informes se exportan a Excel (.xlsx) listos para imprimir o auditar.
 
+### 🔹 Administración sin Código (v3.8.3+)
+- **Gestión de Bancos/Cajas**: GUI completa (Herramientas → Gestionar Bancos) para agregar, editar o eliminar bancos sin tocar JSON. Los cambios se aplican al instante.
+- **Configuración 100% externa**: añadir un banco nuevo no requiere recompilar ni modificar código Python.
+- **Asignación automática de cuenta contable**: `cuenta_banco` (57xx) se asigna al guardar movimientos nuevos, leyendo el mapeo de `bancos.json`.
+
 ### 🔹 Arquitectura Técnica (Robusta)
 - **Rutas Inteligentes (utils/rutas.py)**: Sistema híbrido que detecta si corre en script .py o ejecutable .exe compilado, evitando errores de rutas o pérdida de recursos.
 - **DPI Safe**: Interfaz escalable que se ve nítida en pantallas 4K y monitores antiguos.
-- **Datos JSON**: Base de datos ligera, portable y fácil de respaldar (shillong_2026.json).
+- **Datos JSON**: Base de datos ligera, portable y fácil de respaldar (`shillong_{año}.json`). El año se detecta automáticamente — funciona en 2027+ sin cambios de código.
 
 ## 📂 Estructura del Proyecto
 D:\ShillongV3
@@ -43,22 +48,27 @@ D:\ShillongV3
 ├── importador_excel.py # Helper de importación (Raíz)
 ├── core/ # Configuraciones globales y versión
 ├── data/ # Base de datos JSON (Persistente)
-│ ├── shillong_2026.json
-│ ├── bancos.json
+│ ├── shillong_{año}.json     # Año dinámico
+│ ├── bancos.json              # Fuente de verdad bancos + cuentas 57xx
 │ └── plan_contable_v3.json
 ├── models/ # Lógica de Negocio
 │ ├── ContabilidadData.py # Motor de datos (CRUD)
 │ ├── ExportadorExcel... # Motor de reportes openpyxl
 │ └── ...
 ├── ui/ # Interfaz Gráfica (Vistas)
-│ ├── MainWindow.py # Ventana Principal (Coordinador)
-│ ├── Sidebar.py # Menú Lateral Inteligente
-│ ├── HelpView.py # Centro de Ayuda
-│ ├── ToolsView.py # Módulo Espiritual y Sistema
+│ ├── MainWindow.py           # Ventana Principal (Coordinador)
+│ ├── Sidebar.py              # Menú Lateral Inteligente
+│ ├── HelpView.py             # Centro de Ayuda
+│ ├── ToolsView.py            # Herramientas y Sistema
+│ ├── Dialogs/
+│ │   ├── GestorBancosDialog.py   # Gestión de bancos (NUEVO v3.8.3)
+│ │   ├── SaldosInicialesDialog.py
+│ │   └── ...
 │ └── ...
 ├── utils/ # Utilidades
 │ └── rutas.py # Gestor de rutas (Dev vs Prod)
-└── assets/ # Iconos y recursos gráficos
+├── BUILD_NOTES.md  # Notas técnicas para build/CI
+└── assets/         # Iconos y recursos gráficos
 
 ## 🛠 Compilación (Build)
 
