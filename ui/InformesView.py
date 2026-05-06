@@ -34,6 +34,11 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+try:
+    # programmatic exporter for Modelo Evolutivo
+    from models.ExportadorModeloEvolutivo import exportar_modelo_evolutivo
+except Exception:
+    exportar_modelo_evolutivo = None
 
 # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
 # Soporte de ruta de recursos en EXE (PyInstaller)
@@ -90,7 +95,7 @@ class InformesView(QWidget):
         # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
         self.cbo_tipo.addItem("➕ Reporte por Cuentas (Formato Excel)")
         # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
-        self.cbo_tipo.addItem("Reporte por Cuentas (Modelo Sisters)")
+        self.cbo_tipo.addItem("Modelo Evolutivo Presupuestario")
         self.cbo_tipo.currentIndexChanged.connect(self._cambiar_tipo)
         h_sel.addWidget(self.cbo_tipo)
         h_sel.addStretch()
@@ -769,13 +774,27 @@ class InformesView(QWidget):
         Retorna la ruta fija del layout oficial.
         Regla: nunca usar datos de una plantilla cargada por el usuario.
         """
-        principal = Path(ruta_recurso("ui/Modelo por cuentas.xlsx"))
+        # Prefer an explicit blank template first (no sample data)
+        tried = []
+        blank = Path(ruta_recurso("ui/Modelo evolutivo presupuestario 26 - blank.xlsx"))
+        tried.append(str(blank))
+        if blank.exists():
+            return str(blank)
+
+        # Next, prefer the main template in ui/
+        principal = Path(ruta_recurso("ui/Modelo evolutivo presupuestario 26.xlsx"))
+        tried.append(str(principal))
         if principal.exists():
             return str(principal)
 
-        # Fallback controlado al backup oficial del proyecto
-        fallback = Path("backups/Reporte por cuentas -SHILLONG- Modelo seguimiento presupuestario.xlsx")
-        return str(fallback)
+        # Then try an alternative template that exists in the repo
+        alternative = Path(ruta_recurso("ui/Modelo por cuentas.xlsx"))
+        tried.append(str(alternative))
+        if alternative.exists():
+            return str(alternative)
+
+        # If none found, raise a clear error (caller should handle it)
+        raise FileNotFoundError("Ninguna plantilla de modelo encontrada. Se buscaron: " + ", ".join(tried))
 
     def _celda_es_formula(self, cell):
         v = cell.value
@@ -1252,7 +1271,75 @@ class InformesView(QWidget):
     # EXPORTACIÓN XLSX basada en plantilla
     # ================================================================
     def _exportar_excel_modelo_sisters(self, ruta):
-        # Regla: usar SOLO el layout oficial embebido, nunca una plantilla con datos.
+        # Programmatic export: prefer generating the report programmatically
+        # using the calculated totals (avoids relying on potentially stale template data).
+        invertido = self._modo_invertido_bi()
+        totales_exactos = self._totales_sisters_por_cuenta(invertido=invertido)
+
+        # Build ordered lists of accounts per section (respecting layout order if available)
+        def cuentas_seccion(prefijo):
+            cuentas_layout = []
+            try:
+                wb = openpyxl.load_workbook(self._ruta_modelo_sisters_layout(), data_only=False)
+                ws = wb[wb.sheetnames[0]]
+                for r in range(1, ws.max_row + 1):
+                    v = ws.cell(r, 3).value  # column C typically contains account codes
+                    if v is None:
+                        continue
+                    if isinstance(v, (int, float)):
+                        cta_s = str(int(v))
+                    else:
+                        cta_s = str(v).strip()
+                    if cta_s.isdigit() and cta_s.startswith(prefijo):
+                        cuentas_layout.append(cta_s)
+            except Exception:
+                cuentas_layout = []
+
+            cuentas_plan = []
+            for cta in getattr(self.data, "cuentas", {}).keys():
+                cta_s = str(cta).strip()
+                if cta_s.startswith(prefijo):
+                    cuentas_plan.append(cta_s)
+
+            cuentas_mov = []
+            for cta in totales_exactos.keys():
+                cta_s = str(cta).strip()
+                if cta_s.startswith(prefijo):
+                    cuentas_mov.append(cta_s)
+
+            ordenadas = []
+            vistos = set()
+            for c in cuentas_layout:
+                if c not in vistos:
+                    ordenadas.append(c)
+                    vistos.add(c)
+            for c in sorted(set(cuentas_plan + cuentas_mov)):
+                if c not in vistos:
+                    ordenadas.append(c)
+                    vistos.add(c)
+            return ordenadas
+
+        cuentas_by_section = {
+            "6": cuentas_seccion("6"),
+            "7": cuentas_seccion("7"),
+            "2": cuentas_seccion("2"),
+        }
+
+        anio = self.fecha_ini.date().toPython().year
+        periodo_str = f"{self.fecha_ini.date().toString('dd/MM/yyyy')} - {self.fecha_fin.date().toString('dd/MM/yyyy')}"
+
+        # Try programmatic exporter if available
+        if exportar_modelo_evolutivo:
+            try:
+                # optional resolver for account name
+                nombre_por_cuenta = getattr(self.data, "obtener_nombre_cuenta", None)
+                exportar_modelo_evolutivo(ruta, totales_exactos, cuentas_by_section, anio, periodo_str, nombre_por_cuenta)
+                return
+            except Exception:
+                # fallback to template-based exporter if programmatic fails
+                pass
+
+        # Fallback: use template-based fill (legacy behaviour)
         plantilla = self._ruta_modelo_sisters_layout()
         try:
             wb = openpyxl.load_workbook(plantilla, data_only=False)
@@ -1261,69 +1348,32 @@ class InformesView(QWidget):
             QMessageBox.critical(self, "Exportación", f"No se pudo cargar la plantilla:\n{plantilla}\n\n{e}")
             return
 
-        invertido = self._modo_invertido_bi()
-        totales_exactos = self._totales_sisters_por_cuenta(invertido=invertido)
+        # legacy: fill dynamic cells in the template (kept for compatibility)
         codigos_disponibles = set(str(k).strip() for k in getattr(self.data, "cuentas", {}).keys())
         codigos_disponibles.update(str(k).strip() for k in totales_exactos.keys())
 
-        # Detectar fila de encabezado y mapear columnas por nombre (robusto frente a cambios de posición)
-        header_row = None
-        header_map = {}
-        try:
-            max_check = min(40, ws.max_row)
-            for hr in range(1, max_check + 1):
-                vals = [str(ws.cell(hr, c).value).strip().upper() if ws.cell(hr, c).value is not None else "" for c in range(1, ws.max_column + 1)]
-                if any("CUENTA" in v for v in vals):
-                    header_row = hr
-                    for c, v in enumerate(vals, start=1):
-                        if not v:
-                            continue
-                        header_map[v] = c
-                    break
-        except Exception:
-            header_row = None
-
-        def find_col(keyword_list, fallback=None):
-            if header_row and header_map:
-                for key in header_map.keys():
-                    for kw in keyword_list:
-                        if kw in key:
-                            return header_map[key]
+        # columnas por defecto (compatibilidad con versiones antiguas del layout)
+        def find_col(ws, keyword_list, fallback=None):
+            try:
+                for hr in range(1, min(40, ws.max_row) + 1):
+                    vals = [str(ws.cell(hr, c).value).strip().upper() if ws.cell(hr, c).value is not None else "" for c in range(1, ws.max_column + 1)]
+                    for key in vals:
+                        for kw in keyword_list:
+                            if kw in key:
+                                return vals.index(key) + 1
+            except Exception:
+                pass
             return fallback
 
-        # columnas por defecto (compatibilidad con versiones antiguas del layout)
-        code_col = find_col(["CUENTA"], fallback=3)
-        total_col = find_col(["GASTOS", "INGRESOS", "INVERSIONES", "SUMA DE", "SUMA"], fallback=5)
-        banco_col = find_col(["BANCO"], fallback=6)
-        caja_col = find_col(["CAJA"], fallback=7)
-        prev_col = find_col(["MESES", "MESES ANTERIORES", "MESES ANTER"], fallback=8)
-        acum_col = find_col(["SUMA DE", "ACUMULADO", "SUMA"], fallback=7)
-        presupuesto_col = find_col(["PRESUPUESTO"], fallback=None)
-        diferencia_col = find_col(["DIFERENCIA"], fallback=None)
+        code_col = find_col(ws, ["CUENTA"], fallback=3)
+        banco_col = find_col(ws, ["BANCO"], fallback=6)
+        caja_col = find_col(ws, ["CAJA"], fallback=7)
+        prev_col = find_col(ws, ["MESES", "MESES ANTERIORES", "MESES ANTER"], fallback=8)
+        total_col = find_col(ws, ["MES CORRIENTE", "GASTOS", "INGRESOS", "INVERSIONES", "SUMA DE", "SUMA"], fallback=5)
+        presupuesto_col = find_col(ws, ["PRESUPUESTO"], fallback=None)
+        diferencia_col = find_col(ws, ["DIFERENCIA"], fallback=None)
 
-        # Sanitizar fórmulas rotas (#REF). Mantener fórmulas del layout.
-        for row in ws.iter_rows():
-            for cell in row:
-                v = cell.value
-                if isinstance(v, str) and v.startswith("=") and "#REF" in v:
-                    cell.value = 0
-                    cell.number_format = "#,##0.00"
-
-        # Cabecera del formato nuevo (fila 4)
-        fin_dt = self.fecha_fin.date().toPython()
-        try:
-            ws.cell(4, 3).value = f"CUENTAS DE COMUNIDAD DE SHILLONG"
-        except Exception:
-            pass
-
-        # Fecha del reporte (G4)
-        try:
-            ws.cell(4, 7).value = datetime.datetime(fin_dt.year, fin_dt.month, fin_dt.day)
-            ws.cell(4, 7).number_format = "m/d/yyyy"
-        except Exception:
-            pass
-
-        # Rellenar SOLO valores dinámicos (sin romper layout/formulas)
+        # Fill template dynamically (same logic as before)
         for r in range(1, ws.max_row + 1):
             try:
                 v = ws.cell(r, code_col).value if code_col else ws.cell(r, 3).value
@@ -1333,12 +1383,7 @@ class InformesView(QWidget):
                 continue
 
             cuenta = self._normalizar_codigo_template(v, codigos_disponibles)
-
             if not cuenta or not cuenta.isdigit() or cuenta[0] not in ("6", "7", "2"):
-                continue
-
-            # Evitar tocar filas subtotal/total: tienen fórmulas en BANCO/CAJA
-            if banco_col and caja_col and (self._celda_es_formula(ws.cell(r, banco_col)) or self._celda_es_formula(ws.cell(r, caja_col))):
                 continue
 
             vals = totales_exactos.get(cuenta, {"cur_banco": 0.0, "cur_caja": 0.0, "prev_total": 0.0})
@@ -1347,30 +1392,17 @@ class InformesView(QWidget):
             cur_total = cur_banco + cur_caja
             prev_total = float(vals.get("prev_total", 0) or 0)
 
-            # BANCO / CAJA
             if banco_col:
-                ws.cell(r, banco_col).value = round(cur_banco, 2)
-                ws.cell(r, banco_col).number_format = "#,##0.00"
+                ws.cell(r, banco_col).value = round(cur_banco, 2); ws.cell(r, banco_col).number_format = "#,##0.00"
             if caja_col:
-                ws.cell(r, caja_col).value = round(cur_caja, 2)
-                ws.cell(r, caja_col).number_format = "#,##0.00"
-
-            # MESES ANTERIORES
-            if prev_col and not self._celda_es_formula(ws.cell(r, prev_col)):
-                ws.cell(r, prev_col).value = round(prev_total, 2)
-                ws.cell(r, prev_col).number_format = "#,##0.00"
-
-            # TOTAL (col correspondiente)
-            if total_col and not self._celda_es_formula(ws.cell(r, total_col)):
-                ws.cell(r, total_col).value = round(cur_total, 2)
-                ws.cell(r, total_col).number_format = "#,##0.00"
-
-            # PRESUPUESTO: limpiar y forzar 0.0 (si existe columna de presupuesto)
-            if presupuesto_col and not self._celda_es_formula(ws.cell(r, presupuesto_col)):
-                ws.cell(r, presupuesto_col).value = 0.0
-                ws.cell(r, presupuesto_col).number_format = "#,##0.00"
-
-            # DIFERENCIA: PRESUPUESTO - ACUMULADO (si existe columna)
+                ws.cell(r, caja_col).value = round(cur_caja, 2); ws.cell(r, caja_col).number_format = "#,##0.00"
+            if prev_col:
+                ws.cell(r, prev_col).value = round(prev_total, 2); ws.cell(r, prev_col).number_format = "#,##0.00"
+            if total_col:
+                ws.cell(r, total_col).value = round(cur_total, 2); ws.cell(r, total_col).number_format = "#,##0.00"
+            if presupuesto_col:
+                if not self._celda_es_formula(ws.cell(r, presupuesto_col)):
+                    ws.cell(r, presupuesto_col).value = 0.0; ws.cell(r, presupuesto_col).number_format = "#,##0.00"
             if diferencia_col:
                 try:
                     presupuesto_val = float(ws.cell(r, presupuesto_col).value or 0) if presupuesto_col else 0.0
@@ -1378,8 +1410,7 @@ class InformesView(QWidget):
                     presupuesto_val = 0.0
                 diferencia_val = round(presupuesto_val - (cur_total + prev_total), 2)
                 if not self._celda_es_formula(ws.cell(r, diferencia_col)):
-                    ws.cell(r, diferencia_col).value = diferencia_val
-                    ws.cell(r, diferencia_col).number_format = "#,##0.00"
+                    ws.cell(r, diferencia_col).value = diferencia_val; ws.cell(r, diferencia_col).number_format = "#,##0.00"
 
         try:
             wb.save(ruta)
