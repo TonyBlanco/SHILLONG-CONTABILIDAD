@@ -97,8 +97,33 @@ ui/Dialogs/GestorBancosDialog.py        ← NUEVO
 
 ---
 
-## No incluido en este ciclo (backlog)
+## Trabajo actual: Exportador programático para "Modelo evolutivo presupuestario"
 
-- Gestión de `plan_contable_v3.json` desde GUI (agregar cuentas del plan contable sin JSON)
-- Exportar movimientos filtrados por `cuenta_banco`
-- Libro Mayor por cuenta 57xx
+### Contexto
+- El export de "Modelo evolutivo presupuestario" usaba datos embebidos en templates XLSX en lugar de calcular desde `data/shillong_2026.json`.
+- Solución: Generar el reporte programáticamente usando las funciones de cálculo existentes.
+
+### Cambios implementados (commit `a68ff7e`)
+- `models/ExportadorModeloEvolutivo.py`: Nuevo módulo para generar XLSX con layout del reporte (secciones 6=Gastos, 7=Ingresos, 2=Inversiones), headers, datos y totales.
+- `ui/InformesView.py`: Actualizado `_exportar_excel_modelo_sisters()` para usar el exportador programático primero, fallback a template.
+- `tests/test_modelo_evolutivo.py`: Test standalone para verificar generación.
+- `tools/check_dist_template.py` y `tools/force_clean_dist_template.py`: Scripts para inspeccionar y limpiar templates empaquetados.
+
+### Tareas pendientes
+1. **Patch print regeneration**: Modificar `ui/InformesView.py` en `_imprimir()` y `_exportar_excel_vista()` para llamar a `_mostrar_reporte_modelo_sisters()` antes de imprimir/exportar, evitando datos stale en print.
+2. **Rebuild installer**: Ejecutar `.\build_full.ps1` para incluir el nuevo exportador en el EXE.
+3. **Manual GUI verification**: Instalar el EXE, generar el reporte desde la GUI, exportar XLSX y verificar que use datos actuales (comparar con `tools/compare_export_json.py`).
+
+### Checklist antes del build
+- [ ] Confirmar que `models/ExportadorModeloEvolutivo.py` esté incluido en `SHILLONG_v3_PRO.spec` (debería estar por wildcard en `models/`).
+- [ ] Verificar que openpyxl esté en las dependencias del `.spec`.
+- [ ] Bump de versión si aplica: `core/version.json` y `core/version.py` → `3.8.3` (si se considera nueva feature).
+
+### Archivos fuente modificados (commit `a68ff7e`)
+```
+models/ExportadorModeloEvolutivo.py    ← NUEVO
+tests/test_modelo_evolutivo.py         ← NUEVO
+tools/check_dist_template.py          ← NUEVO
+tools/force_clean_dist_template.py    ← NUEVO
+ui/InformesView.py                    ← modificado
+```
