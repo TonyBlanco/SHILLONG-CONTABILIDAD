@@ -1457,8 +1457,14 @@ class InformesView(QWidget):
         html += "</body></html>"
         return html
 
+    def _regenerar_si_modelo_sisters(self):
+        if self.cbo_tipo.currentIndex() == 5:
+            self._limpiar_vista()
+            self._mostrar_reporte_modelo_sisters()
+
     def _previsualizar_impresion(self):
         from PySide6.QtPrintSupport import QPrinter, QPrintPreviewDialog
+        self._regenerar_si_modelo_sisters()
         printer = QPrinter(QPrinter.HighResolution)
         preview = QPrintPreviewDialog(printer, self)
         html = self._html_vista_actual()
@@ -1469,6 +1475,7 @@ class InformesView(QWidget):
 
     def _imprimir(self):
         from PySide6.QtPrintSupport import QPrinter, QPrintDialog
+        self._regenerar_si_modelo_sisters()
         printer = QPrinter(QPrinter.HighResolution)
         dialog = QPrintDialog(printer, self)
         if dialog.exec():

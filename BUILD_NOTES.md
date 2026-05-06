@@ -139,9 +139,8 @@ ui/InformesView.py                    ← modificado
 
 ### Issues
 1. **Print regeneration not patched**: The `_imprimir()` and `_exportar_excel_vista()` methods in `ui/InformesView.py` do not force regenerate the UI view before printing/exporting, which could lead to stale data in printed reports.
-   - **Status**: Pending implementation.
+   - **Status**: ✅ Fixed (2026-05-06) — added `_regenerar_si_modelo_sisters()` helper; called from `_imprimir()` and `_previsualizar_impresion()`.
    - **Impact**: Low - affects print only, not export XLSX.
-   - **Fix**: Add call to `_mostrar_reporte_modelo_sisters()` before print/export.
 
 2. **Installer not rebuilt**: The packaged EXE in `dist/` does not include the new exporter module.
    - **Status**: Pending rebuild.
