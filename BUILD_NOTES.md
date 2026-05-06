@@ -127,3 +127,39 @@ tools/check_dist_template.py          ← NUEVO
 tools/force_clean_dist_template.py    ← NUEVO
 ui/InformesView.py                    ← modificado
 ```
+
+---
+
+## Updates and Issues
+
+### Updates (2026-05-06)
+- **Commit `a68ff7e`**: Implemented programmatic exporter for "Modelo evolutivo presupuestario" report. Fixes issue where exports used embedded sample data instead of real JSON calculations.
+- **Commit `584f4e2`**: Documented pending tasks and current work in BUILD_NOTES.md.
+- **Remote push**: All commits pushed to `origin/main` on GitHub.
+
+### Issues
+1. **Print regeneration not patched**: The `_imprimir()` and `_exportar_excel_vista()` methods in `ui/InformesView.py` do not force regenerate the UI view before printing/exporting, which could lead to stale data in printed reports.
+   - **Status**: Pending implementation.
+   - **Impact**: Low - affects print only, not export XLSX.
+   - **Fix**: Add call to `_mostrar_reporte_modelo_sisters()` before print/export.
+
+2. **Installer not rebuilt**: The packaged EXE in `dist/` does not include the new exporter module.
+   - **Status**: Pending rebuild.
+   - **Impact**: High - users won't have the fix until installer is updated.
+   - **Fix**: Run `.\build_full.ps1` to rebuild with PyInstaller.
+
+3. **Manual verification not done**: No GUI testing of the export in the installed app.
+   - **Status**: Pending.
+   - **Impact**: Medium - code tested standalone, but not in packaged environment.
+   - **Fix**: Install EXE, generate report, export XLSX, compare with `tools/compare_export_json.py`.
+
+4. **Version bump not applied**: Version remains 3.8.2, but new feature added.
+   - **Status**: Pending decision.
+   - **Impact**: Low - versioning for tracking.
+   - **Fix**: Update `core/version.json` and `core/version.py` to 3.8.3 if considering this a minor release.
+
+### Next Steps
+- Patch print regeneration.
+- Rebuild installer.
+- Manual GUI verification.
+- Decide on version bump.
