@@ -125,7 +125,8 @@ class ContabilidadData:
     # AGREGAR MOVIMIENTO (con features)
     # ============================================================
     def agregar_movimiento(self, fecha, documento, concepto, cuenta,
-                           debe, haber, moneda="INR", banco="Caja", estado="pagado"):
+                           debe, haber, moneda="INR", banco="Caja", estado="pagado",
+                           cuenta_banco=""):
 
         # Regla: gasto SIEMPRE INR
         if float(debe or 0) > 0:
@@ -141,6 +142,7 @@ class ContabilidadData:
             "moneda": moneda,
             "estado": estado.lower(),
             "banco": banco,
+            "cuenta_banco": cuenta_banco,
             # Feature añadido → saldo por movimiento
             "saldo": float(haber or 0) - float(debe or 0)
         }
