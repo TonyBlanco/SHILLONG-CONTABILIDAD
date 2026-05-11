@@ -1331,12 +1331,15 @@ class InformesView(QWidget):
         # Try programmatic exporter if available
         if exportar_modelo_evolutivo:
             try:
-                # optional resolver for account name
                 nombre_por_cuenta = getattr(self.data, "obtener_nombre_cuenta", None)
-                exportar_modelo_evolutivo(ruta, totales_exactos, cuentas_by_section, anio, periodo_str, nombre_por_cuenta)
+                plantilla = self._ruta_modelo_sisters_layout()
+                exportar_modelo_evolutivo(
+                    ruta, totales_exactos, cuentas_by_section,
+                    anio, periodo_str, nombre_por_cuenta,
+                    ruta_plantilla=plantilla
+                )
                 return
             except Exception:
-                # fallback to template-based exporter if programmatic fails
                 pass
 
         # Fallback: use template-based fill (legacy behaviour)
