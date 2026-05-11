@@ -72,7 +72,7 @@ var
   Respuesta: Integer;
 begin
   MsgBox('SHALOM' + #13#10 + #13#10 +
-         'Bienvenido al instalador de Shillong Contabilidad v3.8.0 PRO.' + #13#10 +
+         'Bienvenido al instalador de Shillong Contabilidad v{#MyAppVersion} PRO.' + #13#10 +
          'Que este software sea de gran bendición y utilidad.', mbInformation, MB_OK);
 
   Respuesta := MsgBox('AVISO IMPORTANTE' + #13#10 + #13#10 +
