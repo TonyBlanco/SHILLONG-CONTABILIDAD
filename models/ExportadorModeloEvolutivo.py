@@ -17,6 +17,7 @@ Column layout in template (1-based):
 
 import shutil
 import datetime
+import re
 from pathlib import Path
 import openpyxl
 
@@ -35,39 +36,133 @@ TOTAL_LABELS = {"SUMA TOTAL GASTOS", "SUMA TOTAL INGRESOS", "INVERSIONES"}
 
 
 def _normalizar_codigo(v):
-    """Convert any template account code format to 6-digit string, e.g. '629.2' → '629200'."""
+    """Convert any template account code format to 6-digit string, e.g. '629.2' -> '629200'."""
     if v is None:
         return None
     s = str(int(v)) if isinstance(v, (int, float)) else str(v).strip()
-    s = s.replace(".", "").replace(",", "")
+    s = re.sub(r"\D", "", s)
     if not s.isdigit():
         return None
     return s.ljust(6, "0")[:6]
 
 
-def _rollup(codigo, totales_exactos):
+def _parse_template_code(v):
+    """Return normalized code plus interpretation mode for template rows.
+
+    Mode rules:
+    - "exact": dotted/comma formats like 602.40 mean the concrete account 602400.
+    - "group": dashed formats like 602-400 mean the parent/group row for 6024xx.
+    - "auto": fallback for plain numeric codes, preserving the historical rollup logic.
+    """
+    if v is None:
+        return None, "auto"
+
+    raw = str(int(v)) if isinstance(v, (int, float)) else str(v).strip()
+    codigo = _normalizar_codigo(raw)
+    if not codigo:
+        return None, "auto"
+
+    if "-" in raw:
+        return codigo, "group"
+    if "." in raw or "," in raw:
+        return codigo, "exact"
+    return codigo, "auto"
+
+
+def _group_prefix(codigo):
+    codigo = str(codigo).strip()
+    if codigo.endswith("000") and len(codigo) > 3:
+        return codigo[:-3]
+    if codigo.endswith("00") and len(codigo) > 2:
+        return codigo[:-2]
+    return codigo
+
+
+def _has_descendants(codigo, candidate_codes):
+    pref = _group_prefix(codigo)
+    for candidate in candidate_codes:
+        cta = str(candidate).strip()
+        if len(cta) != len(str(codigo)):
+            continue
+        if cta != str(codigo) and cta.startswith(pref):
+            return True
+    return False
+
+
+def _resolve_template_mode(raw_code, normalized_code, sheet_codes, candidate_codes):
+    raw = str(raw_code or "").strip()
+    if not normalized_code:
+        return "auto"
+
+    if "-" in raw:
+        return "group"
+
+    parts = [p for p in re.split(r"[.,]", raw) if p]
+    has_separator = any(sep in raw for sep in (".", ","))
+
+    # A dotted/comma row is exact if the same normalized code also exists as a plain row.
+    if has_separator:
+        for other_raw, other_norm in sheet_codes:
+            if other_norm != normalized_code:
+                continue
+            other_txt = str(other_raw or "").strip()
+            if other_txt == raw:
+                continue
+            if not any(sep in other_txt for sep in (".", ",", "-")):
+                return "exact"
+
+    # Three decimal digits usually map to explicit leaves like 602.401 -> 602401.
+    if has_separator and any(len(p) >= 3 for p in parts[1:]):
+        return "exact"
+
+    if _has_descendants(normalized_code, candidate_codes):
+        return "group"
+
+    if has_separator:
+        return "exact"
+    return "auto"
+
+
+def _rollup(codigo, totales_exactos, mode="auto"):
     """Sum accounts whose 6-char code shares the same meaningful prefix.
 
     Parent accounts like '600000' (ends in 000) roll up all 600xxx children.
     Leaf accounts like '628030' match exactly.
     """
     codigo = str(codigo).strip()
-    if codigo.endswith("000") and len(codigo) > 3:
+    if mode == "exact":
+        pref = codigo
+        exact_match = True
+    elif mode == "group":
+        exact_match = False
+        if codigo.endswith("000") and len(codigo) > 3:
+            pref = codigo[:-3]
+        elif codigo.endswith("00") and len(codigo) > 2:
+            pref = codigo[:-2]
+        else:
+            pref = codigo
+    elif codigo.endswith("000") and len(codigo) > 3:
         pref = codigo[:-3]   # "600000" → "600", "628000" → "628"
+        exact_match = False
     elif codigo.endswith("00") and len(codigo) > 2:
         pref = codigo[:-2]   # "629000" → "6290"
+        exact_match = False
     else:
         pref = codigo         # "628030" → exact match
+        exact_match = True
 
     cur_banco = cur_caja = prev_total = 0.0
     for cta, vals in totales_exactos.items():
         cta_s = str(cta)
         if len(cta_s) != len(codigo):
             continue
-        if cta_s.startswith(pref):
-            cur_banco  += float(vals.get("cur_banco",  0) or 0)
-            cur_caja   += float(vals.get("cur_caja",   0) or 0)
-            prev_total += float(vals.get("prev_total", 0) or 0)
+        if exact_match and cta_s != pref:
+            continue
+        if not exact_match and not cta_s.startswith(pref):
+            continue
+        cur_banco  += float(vals.get("cur_banco",  0) or 0)
+        cur_caja   += float(vals.get("cur_caja",   0) or 0)
+        prev_total += float(vals.get("prev_total", 0) or 0)
     return cur_banco, cur_caja, prev_total
 
 
@@ -126,10 +221,32 @@ def _exportar_desde_plantilla(ruta_archivo, totales_exactos, anio, periodo_str, 
     except Exception:
         pass
 
-    # Scan every row; accumulate section totals; fill data cells
+    # Exact base totals from JSON by section.
     section_totals = {s: [0.0, 0.0, 0.0, 0.0] for s in ("6", "7", "2")}
     # [corriente, banco, caja, anteriores]
+    for cta, vals in totales_exactos.items():
+        cta_s = str(cta).strip()
+        if not cta_s or cta_s[0] not in section_totals:
+            continue
+        banco = float(vals.get("cur_banco", 0) or 0)
+        caja = float(vals.get("cur_caja", 0) or 0)
+        prev = float(vals.get("prev_total", 0) or 0)
+        t = section_totals[cta_s[0]]
+        t[0] += banco + caja
+        t[1] += banco
+        t[2] += caja
+        t[3] += prev
+
     current_section = None
+    sheet_codes = []
+    candidate_codes = set(str(cta).strip() for cta in totales_exactos.keys())
+
+    for row in range(1, ws.max_row + 1):
+        code_raw = ws.cell(row, COL_CUENTA).value
+        code_norm = _normalizar_codigo(code_raw)
+        if code_norm:
+            sheet_codes.append((code_raw, code_norm))
+            candidate_codes.add(code_norm)
 
     for row in range(1, ws.max_row + 1):
         code_raw  = ws.cell(row, COL_CUENTA).value
@@ -167,19 +284,17 @@ def _exportar_desde_plantilla(ruta_archivo, totales_exactos, anio, periodo_str, 
             continue
 
         # Data rows: account code in col C
-        codigo = _normalizar_codigo(code_raw)
+        codigo, _ = _parse_template_code(code_raw)
         if not codigo or not current_section:
             continue
+        if not codigo.isdigit() or codigo[0] not in ("6", "7", "2"):
+            continue
+        if codigo[0] != current_section:
+            continue
+        mode = _resolve_template_mode(code_raw, codigo, sheet_codes, candidate_codes)
 
-        cur_banco, cur_caja, prev_total = _rollup(codigo, totales_exactos)
-        corriente, banco, caja, ant, _ = _fill_row(ws, row, cur_banco, cur_caja, prev_total)
-
-        # Accumulate into section totals
-        t = section_totals[current_section]
-        t[0] += corriente
-        t[1] += banco
-        t[2] += caja
-        t[3] += prev_total
+        cur_banco, cur_caja, prev_total = _rollup(codigo, totales_exactos, mode=mode)
+        _fill_row(ws, row, cur_banco, cur_caja, prev_total)
 
     wb.save(dest)
     return True

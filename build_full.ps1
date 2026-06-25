@@ -60,6 +60,23 @@ if (-not $NoClean) {
 
 # --- COMPILACION PYINSTALLER ---
 Write-Host "Compilando con PyInstaller (spec)..."
+# Ensure blank template is present in `ui/` by copying from backups if available
+Write-Host "Asegurando plantilla blank en ui/ desde backups/..."
+$blankSrc = Join-Path $root "backups\Reporte por cuentas -SHILLONG- Modelo seguimiento presupuestario.xlsx"
+$blankDst = Join-Path $root "ui\Modelo evolutivo presupuestario 26 - blank.xlsx"
+if (Test-Path $blankSrc) {
+    Write-Host "Copiando plantilla blank desde $blankSrc -> $blankDst"
+    Copy-Item -Path $blankSrc -Destination $blankDst -Force
+} else {
+    Write-Host "Plantilla blank en backups no encontrada ($blankSrc). Se intentará generar/limpiar con tools/strip_template_data.py"
+}
+
+# Run template cleaner to avoid packaging sample data
+Write-Host "Limpiando plantillas empaquetadas (tools/strip_template_data.py) ..."
+& $python "tools/strip_template_data.py"
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR: Falló la limpieza de plantillas."; exit 1 }
+
+Write-Host "Compilando con PyInstaller (spec)..."
 & $python -m PyInstaller $specFile --clean --noconfirm
 if ($LASTEXITCODE -ne 0) { Write-Host "ERROR CRITICO en PyInstaller."; exit 1 }
 Write-Host "Compilacion completada."

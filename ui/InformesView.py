@@ -96,6 +96,7 @@ class InformesView(QWidget):
         self.cbo_tipo.addItem("➕ Reporte por Cuentas (Formato Excel)")
         # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
         self.cbo_tipo.addItem("Modelo Evolutivo Presupuestario")
+        self.cbo_tipo.addItem("💧 Flujo de Caja Mensual")
         self.cbo_tipo.currentIndexChanged.connect(self._cambiar_tipo)
         h_sel.addWidget(self.cbo_tipo)
         h_sel.addStretch()
@@ -234,7 +235,11 @@ class InformesView(QWidget):
             self.filtros.addWidget(self.cbo_orden_mayor)
 
         elif tipo == 2:
-            lab = QLabel("Balance profesional SHILLONG agrupado por cuentas.")
+            self.filtros.addWidget(QLabel("Fecha inicio:"))
+            self.filtros.addWidget(self.fecha_ini)
+            self.filtros.addWidget(QLabel("Fecha fin:"))
+            self.filtros.addWidget(self.fecha_fin)
+            lab = QLabel("Balance profesional SHILLONG agrupado por cuentas para el rango seleccionado.")
             lab.setStyleSheet("color:#475569; font-style:italic;")
             self.filtros.addWidget(lab)
 
@@ -261,6 +266,15 @@ class InformesView(QWidget):
             self.filtros.addWidget(QLabel("Fecha fin:"))
             self.filtros.addWidget(self.fecha_fin)
             self.filtros.addWidget(self.chk_export_invertido_bi)
+
+        elif tipo == 6:
+            self.filtros.addWidget(QLabel("Fecha inicio:"))
+            self.filtros.addWidget(self.fecha_ini)
+            self.filtros.addWidget(QLabel("Fecha fin:"))
+            self.filtros.addWidget(self.fecha_fin)
+            lab = QLabel("Entradas y salidas agrupadas por mes para el rango seleccionado.")
+            lab.setStyleSheet("color:#475569; font-style:italic;")
+            self.filtros.addWidget(lab)
 
         # visibilidad de botones
         self.btn_export_mayor.setVisible(tipo == 1)
@@ -293,6 +307,8 @@ class InformesView(QWidget):
         # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
         elif tipo == 5:
             self._mostrar_reporte_modelo_sisters()
+        elif tipo == 6:
+            self._mostrar_flujo_caja_mensual()
 
     def _limpiar_vista(self):
         for i in reversed(range(self.contenedor_layout.count())):
@@ -305,6 +321,44 @@ class InformesView(QWidget):
             return float(str(value).replace(",", "."))
         except (ValueError, TypeError):
             return 0.0
+
+    def _slug_texto(self, texto):
+        limpio = re.sub(r"[^\w\s-]", "", str(texto or "").strip(), flags=re.UNICODE)
+        limpio = re.sub(r"\s+", "_", limpio)
+        return limpio[:80] or "reporte"
+
+    def _carpeta_reportes(self):
+        carpeta = Path("reportes")
+        carpeta.mkdir(exist_ok=True)
+        return carpeta
+
+    def _nombre_archivo_sugerido(self):
+        tipo = self.cbo_tipo.currentIndex()
+        ini = self.fecha_ini.date().toString("yyyyMMdd") if hasattr(self, "fecha_ini") else ""
+        fin = self.fecha_fin.date().toString("yyyyMMdd") if hasattr(self, "fecha_fin") else ""
+
+        if tipo == 0:
+            return f"Diario_General_{ini}_{fin}.xlsx"
+        if tipo == 1:
+            cuenta = self._cuenta_desde_combo(self.cbo_cuenta.currentText()) or "Todas"
+            return f"Libro_Mayor_{self._slug_texto(cuenta)}.xlsx"
+        if tipo == 2:
+            return f"Balance_Sumas_Saldos_{ini}_{fin}.xlsx"
+        if tipo == 3:
+            anio = self.cbo_anio.currentText()
+            mes = f"{self.cbo_mes.currentIndex() + 1:02d}"
+            return f"Resumen_Mensual_{anio}_{mes}.xlsx"
+        if tipo == 4:
+            cuenta = self._cuenta_desde_combo(self.cbo_cuenta.currentText()) or "Todas"
+            return f"Reporte_por_Cuentas_{self._slug_texto(cuenta)}_{ini}_{fin}.xlsx"
+        if tipo == 5:
+            return f"Modelo_Evolutivo_{ini}_{fin}.xlsx"
+        if tipo == 6:
+            return f"CashFlow_Mensual_{ini}_{fin}.xlsx"
+        return f"Reporte_{ini}_{fin}.xlsx"
+
+    def _ruta_exporte_por_defecto(self):
+        return str(self._carpeta_reportes() / self._nombre_archivo_sugerido())
 
     def _cargar_bancos_ordenados(self):
         try:
@@ -553,6 +607,8 @@ class InformesView(QWidget):
     # SUMAS & SALDOS — VISTA SHILLONG
     # ================================================================
     def _mostrar_sumas_saldos(self):
+        ini = self.fecha_ini.date().toPython()
+        fin = self.fecha_fin.date().toPython()
 
         tabla = QTableWidget(0,5)
         tabla.setHorizontalHeaderLabels(
@@ -561,7 +617,7 @@ class InformesView(QWidget):
 
         resumen = defaultdict(lambda: {"nombre":"", "debe":0, "haber":0})
 
-        for m in self.data.movimientos:
+        for m in self._movimientos_en_rango(ini, fin):
             cta = str(m.get("cuenta",""))
             resumen[cta]["nombre"] = m.get("nombre_cuenta","")
             resumen[cta]["debe"] += float(m.get("debe",0))
@@ -635,6 +691,124 @@ class InformesView(QWidget):
 
         self.contenedor_layout.addWidget(tabla)
 
+    def _mostrar_flujo_caja_mensual(self):
+        resumen, detalle_bancos = self._datos_flujo_caja_mensual()
+
+        if not resumen:
+            lab = QLabel("No hay movimientos para el rango seleccionado.")
+            lab.setStyleSheet("color:#475569; font-style:italic;")
+            self.contenedor_layout.addWidget(lab)
+            return
+
+        tabla = QTableWidget(0, 7)
+        tabla.setHorizontalHeaderLabels([
+            "Mes",
+            "Entra Banco",
+            "Entra Caja",
+            "Sale Banco",
+            "Sale Caja",
+            "Flujo Neto",
+            "Acumulado",
+        ])
+
+        acumulado = 0.0
+        total_entra_banco = 0.0
+        total_entra_caja = 0.0
+        total_sale_banco = 0.0
+        total_sale_caja = 0.0
+
+        for fila_data in resumen:
+            entra_banco = fila_data["entra_banco"]
+            entra_caja = fila_data["entra_caja"]
+            sale_banco = fila_data["sale_banco"]
+            sale_caja = fila_data["sale_caja"]
+            flujo = fila_data["flujo"]
+            acumulado = fila_data["acumulado"]
+            total_entra_banco += entra_banco
+            total_entra_caja += entra_caja
+            total_sale_banco += sale_banco
+            total_sale_caja += sale_caja
+
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            fila = [
+                fila_data["mes"],
+                entra_banco,
+                entra_caja,
+                sale_banco,
+                sale_caja,
+                flujo,
+                acumulado,
+            ]
+            for c, val in enumerate(fila):
+                it = QTableWidgetItem(str(val))
+                if c >= 1:
+                    it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                tabla.setItem(r, c, it)
+
+        r = tabla.rowCount()
+        tabla.insertRow(r)
+        tabla.setItem(r, 0, QTableWidgetItem("TOTAL"))
+        tabla.setItem(r, 1, QTableWidgetItem(str(round(total_entra_banco, 2))))
+        tabla.setItem(r, 2, QTableWidgetItem(str(round(total_entra_caja, 2))))
+        tabla.setItem(r, 3, QTableWidgetItem(str(round(total_sale_banco, 2))))
+        tabla.setItem(r, 4, QTableWidgetItem(str(round(total_sale_caja, 2))))
+        tabla.setItem(
+            r,
+            5,
+            QTableWidgetItem(
+                str(
+                    round(
+                        (total_entra_banco + total_entra_caja)
+                        - (total_sale_banco + total_sale_caja),
+                        2,
+                    )
+                )
+            ),
+        )
+        tabla.setItem(r, 6, QTableWidgetItem(str(acumulado)))
+        for c in range(1, 7):
+            if tabla.item(r, c):
+                tabla.item(r, c).setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                tabla.item(r, c).setFont(QFont("Segoe UI", 9, QFont.Bold))
+
+        self.contenedor_layout.addWidget(tabla)
+
+        self.contenedor_layout.addWidget(QLabel("Desglose por Banco"))
+        tabla_bancos = QTableWidget(0, 6)
+        tabla_bancos.setHorizontalHeaderLabels([
+            "Mes",
+            "Banco",
+            "Entra",
+            "Sale",
+            "Flujo Neto",
+            "Acumulado",
+        ])
+
+        acumulado_por_banco = defaultdict(float)
+        for fila_data in detalle_bancos:
+            banco = fila_data["banco"]
+            flujo = round(fila_data["entra"] - fila_data["sale"], 2)
+            acumulado_por_banco[banco] = round(acumulado_por_banco[banco] + flujo, 2)
+
+            r = tabla_bancos.rowCount()
+            tabla_bancos.insertRow(r)
+            fila = [
+                fila_data["mes"],
+                banco,
+                fila_data["entra"],
+                fila_data["sale"],
+                flujo,
+                acumulado_por_banco[banco],
+            ]
+            for c, val in enumerate(fila):
+                it = QTableWidgetItem(str(val))
+                if c >= 2:
+                    it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                tabla_bancos.setItem(r, c, it)
+
+        self.contenedor_layout.addWidget(tabla_bancos)
+
     # ================================================================
     # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
     # ================================================================
@@ -658,6 +832,25 @@ class InformesView(QWidget):
             return None
         return None
 
+    def _cuenta_desde_combo(self, texto):
+        if texto == "Todas":
+            return None
+        if " — " in texto:
+            return texto.split(" — ", 1)[0].strip()
+        if " - " in texto:
+            return texto.split(" - ", 1)[0].strip()
+        return str(texto).strip() or None
+
+    def _movimientos_en_rango(self, fecha_inicio, fecha_fin):
+        movimientos = []
+        for m in getattr(self.data, "movimientos", []):
+            fecha_obj = self._parsear_fecha_movimiento(m.get("fecha", ""))
+            if fecha_obj is None:
+                continue
+            if fecha_inicio <= fecha_obj <= fecha_fin:
+                movimientos.append(m)
+        return movimientos
+
     def _obtener_datos_reporte_por_cuentas(self):
         """
         Agrupa movimientos por cuenta contable usando:
@@ -669,7 +862,7 @@ class InformesView(QWidget):
         fin = self.fecha_fin.date().toPython()
 
         texto_cuenta = self.cbo_cuenta.currentText()
-        cuenta_filtro = None if texto_cuenta == "Todas" else texto_cuenta.split(" - ")[0]
+        cuenta_filtro = self._cuenta_desde_combo(texto_cuenta)
 
         agrupado = defaultdict(list)  # {cuenta: [(fecha_obj, mov_dict), ...]}
         for m in getattr(self.data, "movimientos", []):
@@ -858,6 +1051,61 @@ class InformesView(QWidget):
             return (digitos + ("0" * (6 - len(digitos))))[:6]
         return digitos
 
+    def _parsear_codigo_template(self, valor_celda, codigos_disponibles):
+        codigo = self._normalizar_codigo_template(valor_celda, codigos_disponibles)
+        if not codigo:
+            return None, "auto"
+        return codigo, "auto"
+
+    def _prefijo_grupo_codigo(self, codigo):
+        codigo = str(codigo).strip()
+        if codigo.endswith("000") and len(codigo) > 3:
+            return codigo[:-3]
+        if codigo.endswith("00") and len(codigo) > 2:
+            return codigo[:-2]
+        return codigo
+
+    def _tiene_descendientes_codigo(self, codigo, candidate_codes):
+        pref = self._prefijo_grupo_codigo(codigo)
+        for candidate in candidate_codes:
+            cta = str(candidate).strip()
+            if len(cta) != len(str(codigo)):
+                continue
+            if cta != str(codigo) and cta.startswith(pref):
+                return True
+        return False
+
+    def _resolver_modo_codigo_template(self, valor_celda, codigo, sheet_codes, candidate_codes):
+        txt = str(valor_celda or "").strip()
+        if not codigo:
+            return "auto"
+
+        if "-" in txt:
+            return "group"
+
+        partes = [p for p in re.split(r"[.,]", txt) if p]
+        tiene_sep = any(sep in txt for sep in (".", ","))
+
+        if tiene_sep:
+            for other_raw, other_norm in sheet_codes:
+                if other_norm != codigo:
+                    continue
+                other_txt = str(other_raw or "").strip()
+                if other_txt == txt:
+                    continue
+                if not any(sep in other_txt for sep in (".", ",", "-")):
+                    return "exact"
+
+        if tiene_sep and any(len(p) >= 3 for p in partes[1:]):
+            return "exact"
+
+        if self._tiene_descendientes_codigo(codigo, candidate_codes):
+            return "group"
+
+        if tiene_sep:
+            return "exact"
+        return "auto"
+
     def _totales_sisters_por_cuenta(self, invertido):
         """
         Retorna dict:
@@ -885,12 +1133,14 @@ class InformesView(QWidget):
             debe = float(m.get("debe", 0) or 0)
             haber = float(m.get("haber", 0) or 0)
 
+            # Para el modelo evolutivo siempre se usan los importes contables reales
+            # del asiento: ingresos desde HABER, gastos/inversiones desde DEBE.
+            # El modo invertido de Shillong afecta a la lectura visual de otros
+            # informes, no a esta base de cálculo.
             if cuenta[0] == "7":
-                # Ingresos: interna = haber; invertido = debe
-                importe = debe if invertido else haber
+                importe = haber
             else:
-                # Gastos + Inversiones: interna = debe; invertido = haber
-                importe = haber if invertido else debe
+                importe = debe
 
             if not importe:
                 continue
@@ -905,7 +1155,7 @@ class InformesView(QWidget):
 
         return tot
 
-    def _rollup_sisters(self, cuenta_codigo, totales_exactos):
+    def _rollup_sisters(self, cuenta_codigo, totales_exactos, mode="auto"):
         """
         Suma subcuentas si el código termina en 00/000 (padre), manteniendo largo fijo.
         """
@@ -913,12 +1163,26 @@ class InformesView(QWidget):
         if not codigo:
             return {"cur_banco": 0.0, "cur_caja": 0.0, "prev_total": 0.0}
 
-        if codigo.endswith("000") and len(codigo) > 3:
+        if mode == "exact":
+            pref = codigo
+            exact_match = True
+        elif mode == "group":
+            exact_match = False
+            if codigo.endswith("000") and len(codigo) > 3:
+                pref = codigo[:-3]
+            elif codigo.endswith("00") and len(codigo) > 2:
+                pref = codigo[:-2]
+            else:
+                pref = codigo
+        elif codigo.endswith("000") and len(codigo) > 3:
             pref = codigo[:-3]
+            exact_match = False
         elif codigo.endswith("00") and len(codigo) > 2:
             pref = codigo[:-2]
+            exact_match = False
         else:
             pref = codigo
+            exact_match = True
 
         cur_banco = 0.0
         cur_caja = 0.0
@@ -927,7 +1191,9 @@ class InformesView(QWidget):
             cta_s = str(cta)
             if len(cta_s) != len(codigo):
                 continue
-            if not cta_s.startswith(pref):
+            if exact_match and cta_s != pref:
+                continue
+            if not exact_match and not cta_s.startswith(pref):
                 continue
             cur_banco += float(vals.get("cur_banco", 0) or 0)
             cur_caja += float(vals.get("cur_caja", 0) or 0)
@@ -1110,7 +1376,7 @@ class InformesView(QWidget):
     def _exportar_excel_vista(self):
 
         ruta,_ = QFileDialog.getSaveFileName(
-            self, "Exportar Vista", "Vista.xlsx", "Excel (*.xlsx)"
+            self, "Exportar Informe", self._ruta_exporte_por_defecto(), "Excel (*.xlsx)"
         )
         if not ruta:
             return
@@ -1123,6 +1389,10 @@ class InformesView(QWidget):
         # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
         if self.cbo_tipo.currentIndex() == 5:
             self._exportar_excel_modelo_sisters(ruta)
+            return
+
+        if self.cbo_tipo.currentIndex() == 6:
+            self._exportar_excel_flujo_caja(ruta)
             return
 
         wb=openpyxl.Workbook()
@@ -1266,6 +1536,246 @@ class InformesView(QWidget):
 
         wb.save(ruta)
 
+    def _datos_flujo_caja_mensual(self):
+        ini = self.fecha_ini.date().toPython()
+        fin = self.fecha_fin.date().toPython()
+        invertir = self.chk_shillong.isChecked()
+
+        resumen = defaultdict(
+            lambda: {
+                "entra_banco": 0.0,
+                "entra_caja": 0.0,
+                "sale_banco": 0.0,
+                "sale_caja": 0.0,
+            }
+        )
+        detalle_bancos = defaultdict(lambda: {"entra": 0.0, "sale": 0.0})
+
+        for m in self._movimientos_en_rango(ini, fin):
+            fecha_obj = self._parsear_fecha_movimiento(m.get("fecha", ""))
+            if fecha_obj is None:
+                continue
+
+            debe = float(m.get("debe", 0) or 0)
+            haber = float(m.get("haber", 0) or 0)
+            if invertir:
+                entra = debe
+                sale = haber
+            else:
+                entra = haber
+                sale = debe
+
+            clave = (fecha_obj.year, fecha_obj.month)
+            banco_nombre = str(m.get("banco", "") or "Caja").strip() or "Caja"
+            if self._es_caja(m.get("banco", "")):
+                resumen[clave]["entra_caja"] += entra
+                resumen[clave]["sale_caja"] += sale
+            else:
+                resumen[clave]["entra_banco"] += entra
+                resumen[clave]["sale_banco"] += sale
+            detalle_bancos[(clave, banco_nombre)]["entra"] += entra
+            detalle_bancos[(clave, banco_nombre)]["sale"] += sale
+
+        filas = []
+        acumulado = 0.0
+        for year, month in sorted(resumen.keys()):
+            entra_banco = round(resumen[(year, month)]["entra_banco"], 2)
+            entra_caja = round(resumen[(year, month)]["entra_caja"], 2)
+            sale_banco = round(resumen[(year, month)]["sale_banco"], 2)
+            sale_caja = round(resumen[(year, month)]["sale_caja"], 2)
+            flujo = round((entra_banco + entra_caja) - (sale_banco + sale_caja), 2)
+            acumulado = round(acumulado + flujo, 2)
+            filas.append(
+                {
+                    "mes": self._texto_mes(year, month),
+                    "entra_banco": entra_banco,
+                    "entra_caja": entra_caja,
+                    "sale_banco": sale_banco,
+                    "sale_caja": sale_caja,
+                    "flujo": flujo,
+                    "acumulado": acumulado,
+                }
+            )
+
+        filas_bancos = []
+        for (year_month, banco), valores in sorted(detalle_bancos.items(), key=lambda item: (item[0][0][0], item[0][0][1], item[0][1])):
+            year, month = year_month
+            filas_bancos.append(
+                {
+                    "mes": self._texto_mes(year, month),
+                    "banco": banco,
+                    "entra": round(valores["entra"], 2),
+                    "sale": round(valores["sale"], 2),
+                }
+            )
+
+        return filas, filas_bancos
+
+    def _texto_mes(self, year, month):
+        nombres = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+        ]
+        return f"{nombres[month - 1]} {year}"
+
+    def _exportar_excel_flujo_caja(self, ruta):
+        filas, filas_bancos = self._datos_flujo_caja_mensual()
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Cash Flow"
+
+        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        verde = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        azul_claro = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid")
+        borde = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000")
+        )
+
+        headers = [
+            "Mes",
+            "Entra Banco",
+            "Entra Caja",
+            "Sale Banco",
+            "Sale Caja",
+            "Flujo Neto",
+            "Acumulado",
+        ]
+        col_widths = [14, 16, 16, 16, 16, 16, 16]
+
+        ini = self.fecha_ini.date().toString("dd/MM/yyyy")
+        fin = self.fecha_fin.date().toString("dd/MM/yyyy")
+
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+        titulo = ws.cell(row=1, column=1, value="Cash Flow Mensual")
+        titulo.font = Font(bold=True, color="FFFFFF", size=14)
+        titulo.fill = morado
+        titulo.alignment = Alignment(horizontal="center", vertical="center")
+
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
+        subtitulo = ws.cell(row=2, column=1, value=f"Periodo: {ini} a {fin}")
+        subtitulo.font = Font(italic=True, color="334155")
+        subtitulo.fill = azul_claro
+        subtitulo.alignment = Alignment(horizontal="center", vertical="center")
+
+        row = 4
+        for c, h in enumerate(headers, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = morado
+            cell.border = borde
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        row += 1
+
+        total_entra_banco = 0.0
+        total_entra_caja = 0.0
+        total_sale_banco = 0.0
+        total_sale_caja = 0.0
+        total_flujo = 0.0
+        acumulado_final = 0.0
+
+        for fila in filas:
+            valores = [
+                fila["mes"],
+                fila["entra_banco"],
+                fila["entra_caja"],
+                fila["sale_banco"],
+                fila["sale_caja"],
+                fila["flujo"],
+                fila["acumulado"],
+            ]
+            for c, val in enumerate(valores, start=1):
+                cell = ws.cell(row=row, column=c, value=val)
+                cell.border = borde
+                if c >= 2:
+                    cell.number_format = "#,##0.00"
+                    cell.alignment = Alignment(horizontal="right")
+                else:
+                    cell.alignment = Alignment(horizontal="center")
+            total_entra_banco += fila["entra_banco"]
+            total_entra_caja += fila["entra_caja"]
+            total_sale_banco += fila["sale_banco"]
+            total_sale_caja += fila["sale_caja"]
+            total_flujo += fila["flujo"]
+            acumulado_final = fila["acumulado"]
+            row += 1
+
+        for c in range(1, len(headers) + 1):
+            cell = ws.cell(row=row, column=c)
+            cell.border = borde
+            cell.fill = verde
+
+        totales = [
+            "TOTAL",
+            round(total_entra_banco, 2),
+            round(total_entra_caja, 2),
+            round(total_sale_banco, 2),
+            round(total_sale_caja, 2),
+            round(total_flujo, 2),
+            round(acumulado_final, 2),
+        ]
+        for c, val in enumerate(totales, start=1):
+            cell = ws.cell(row=row, column=c, value=val)
+            cell.font = Font(bold=True)
+            cell.border = borde
+            cell.fill = verde
+            if c >= 2:
+                cell.number_format = "#,##0.00"
+                cell.alignment = Alignment(horizontal="right")
+            else:
+                cell.alignment = Alignment(horizontal="center")
+
+        for idx, width in enumerate(col_widths, start=1):
+            ws.column_dimensions[get_column_letter(idx)].width = width
+
+        ws.freeze_panes = "A5"
+        row += 3
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
+        subtitulo_bancos = ws.cell(row=row, column=1, value="Desglose por Banco")
+        subtitulo_bancos.font = Font(bold=True, color="FFFFFF")
+        subtitulo_bancos.fill = morado
+        subtitulo_bancos.alignment = Alignment(horizontal="center", vertical="center")
+        row += 2
+
+        headers_bancos = ["Mes", "Banco", "Entra", "Sale", "Flujo Neto", "Acumulado"]
+        for c, h in enumerate(headers_bancos, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = morado
+            cell.border = borde
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        row += 1
+
+        acumulado_por_banco = defaultdict(float)
+        for fila in filas_bancos:
+            flujo = round(fila["entra"] - fila["sale"], 2)
+            acumulado_por_banco[fila["banco"]] = round(acumulado_por_banco[fila["banco"]] + flujo, 2)
+            valores = [
+                fila["mes"],
+                fila["banco"],
+                fila["entra"],
+                fila["sale"],
+                flujo,
+                acumulado_por_banco[fila["banco"]],
+            ]
+            for c, val in enumerate(valores, start=1):
+                cell = ws.cell(row=row, column=c, value=val)
+                cell.border = borde
+                if c >= 3:
+                    cell.number_format = "#,##0.00"
+                    cell.alignment = Alignment(horizontal="right")
+                else:
+                    cell.alignment = Alignment(horizontal="center")
+            row += 1
+
+        for idx, width in enumerate([14, 24, 16, 16, 16, 16], start=1):
+            ws.column_dimensions[get_column_letter(idx)].width = max(ws.column_dimensions[get_column_letter(idx)].width or 0, width)
+
+        wb.save(ruta)
+
     # ================================================================
     # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
     # EXPORTACIÓN XLSX basada en plantilla
@@ -1354,6 +1864,14 @@ class InformesView(QWidget):
         # legacy: fill dynamic cells in the template (kept for compatibility)
         codigos_disponibles = set(str(k).strip() for k in getattr(self.data, "cuentas", {}).keys())
         codigos_disponibles.update(str(k).strip() for k in totales_exactos.keys())
+        sheet_codes = []
+        candidate_codes = set(codigos_disponibles)
+        for r in range(1, ws.max_row + 1):
+            raw_code = ws.cell(r, 3).value
+            norm_code = self._normalizar_codigo_template(raw_code, codigos_disponibles)
+            if norm_code:
+                sheet_codes.append((raw_code, norm_code))
+                candidate_codes.add(norm_code)
 
         # columnas por defecto (compatibilidad con versiones antiguas del layout)
         def find_col(ws, keyword_list, fallback=None):
@@ -1385,11 +1903,12 @@ class InformesView(QWidget):
             if v is None:
                 continue
 
-            cuenta = self._normalizar_codigo_template(v, codigos_disponibles)
+            cuenta, _ = self._parsear_codigo_template(v, codigos_disponibles)
             if not cuenta or not cuenta.isdigit() or cuenta[0] not in ("6", "7", "2"):
                 continue
+            mode = self._resolver_modo_codigo_template(v, cuenta, sheet_codes, candidate_codes)
 
-            vals = totales_exactos.get(cuenta, {"cur_banco": 0.0, "cur_caja": 0.0, "prev_total": 0.0})
+            vals = self._rollup_sisters(cuenta, totales_exactos, mode=mode)
             cur_banco = float(vals.get("cur_banco", 0) or 0)
             cur_caja = float(vals.get("cur_caja", 0) or 0)
             cur_total = cur_banco + cur_caja
@@ -1460,6 +1979,91 @@ class InformesView(QWidget):
         html += "</body></html>"
         return html
 
+    def _seleccion_impresion_cash_flow(self):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Impresión Cash Flow")
+        msg.setText("Selecciona el formato para imprimir el cash flow.")
+        btn_global = msg.addButton("Global", QMessageBox.AcceptRole)
+        btn_bancos = msg.addButton("Con todos los bancos", QMessageBox.AcceptRole)
+        btn_cancel = msg.addButton(QMessageBox.Cancel)
+        msg.exec()
+
+        clicked = msg.clickedButton()
+        if clicked == btn_global:
+            return "global"
+        if clicked == btn_bancos:
+            return "bancos"
+        return None
+
+    def _html_flujo_caja(self, modo):
+        resumen, detalle_bancos = self._datos_flujo_caja_mensual()
+        if not resumen:
+            return "<html><body><p>Sin datos para el rango seleccionado.</p></body></html>"
+
+        def render_table(headers, rows):
+            html = "<table><thead><tr>"
+            for h in headers:
+                html += f"<th>{h}</th>"
+            html += "</tr></thead><tbody>"
+            for row in rows:
+                html += "<tr>"
+                for idx, val in enumerate(row):
+                    cls = "num" if idx >= 2 or (modo == "global" and idx >= 1) else ""
+                    html += f"<td class='{cls}'>{val}</td>"
+                html += "</tr>"
+            html += "</tbody></table>"
+            return html
+
+        html = """
+        <html><head><meta charset="utf-8">
+        <style>
+        body { font-family: Segoe UI, Arial, sans-serif; font-size: 10pt; }
+        .title { background:#7030A0; color:white; padding:8px; font-weight:bold; margin-bottom:8px; }
+        .subtitle { background:#DCE6F1; color:#334155; padding:6px; margin-bottom:8px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 6px; margin-bottom: 16px; }
+        th { background:#7030A0; color:white; padding:6px; border:1px solid #000; text-align:left; }
+        td { padding:5px; border:1px solid #000; }
+        td.num { text-align: right; }
+        </style></head><body>
+        """
+        periodo = f"{self.fecha_ini.date().toString('dd/MM/yyyy')} a {self.fecha_fin.date().toString('dd/MM/yyyy')}"
+        html += "<div class='title'>Cash Flow Mensual</div>"
+        html += f"<div class='subtitle'>Periodo: {periodo}</div>"
+
+        if modo == "global":
+            headers = ["Mes", "Entra Banco", "Entra Caja", "Sale Banco", "Sale Caja", "Flujo Neto", "Acumulado"]
+            rows = []
+            for fila in resumen:
+                rows.append([
+                    fila["mes"],
+                    f'{fila["entra_banco"]:.2f}',
+                    f'{fila["entra_caja"]:.2f}',
+                    f'{fila["sale_banco"]:.2f}',
+                    f'{fila["sale_caja"]:.2f}',
+                    f'{fila["flujo"]:.2f}',
+                    f'{fila["acumulado"]:.2f}',
+                ])
+            html += render_table(headers, rows)
+        else:
+            headers = ["Mes", "Banco", "Entra", "Sale", "Flujo Neto", "Acumulado"]
+            rows = []
+            acumulado_por_banco = defaultdict(float)
+            for fila in detalle_bancos:
+                flujo = round(fila["entra"] - fila["sale"], 2)
+                acumulado_por_banco[fila["banco"]] = round(acumulado_por_banco[fila["banco"]] + flujo, 2)
+                rows.append([
+                    fila["mes"],
+                    fila["banco"],
+                    f'{fila["entra"]:.2f}',
+                    f'{fila["sale"]:.2f}',
+                    f'{flujo:.2f}',
+                    f'{acumulado_por_banco[fila["banco"]]:.2f}',
+                ])
+            html += render_table(headers, rows)
+
+        html += "</body></html>"
+        return html
+
     def _regenerar_si_modelo_sisters(self):
         if self.cbo_tipo.currentIndex() == 5:
             self._limpiar_vista()
@@ -1470,7 +2074,13 @@ class InformesView(QWidget):
         self._regenerar_si_modelo_sisters()
         printer = QPrinter(QPrinter.HighResolution)
         preview = QPrintPreviewDialog(printer, self)
-        html = self._html_vista_actual()
+        if self.cbo_tipo.currentIndex() == 6:
+            modo = self._seleccion_impresion_cash_flow()
+            if not modo:
+                return
+            html = self._html_flujo_caja(modo)
+        else:
+            html = self._html_vista_actual()
         doc = QTextDocument()
         doc.setHtml(html)
         preview.paintRequested.connect(lambda p: doc.print_(p))
@@ -1482,7 +2092,13 @@ class InformesView(QWidget):
         printer = QPrinter(QPrinter.HighResolution)
         dialog = QPrintDialog(printer, self)
         if dialog.exec():
-            html = self._html_vista_actual()
+            if self.cbo_tipo.currentIndex() == 6:
+                modo = self._seleccion_impresion_cash_flow()
+                if not modo:
+                    return
+                html = self._html_flujo_caja(modo)
+            else:
+                html = self._html_vista_actual()
             doc = QTextDocument()
             doc.setHtml(html)
             doc.print_(printer)
@@ -1493,7 +2109,7 @@ class InformesView(QWidget):
     def _exportar_libro_mayor(self):
         ruta,_= QFileDialog.getSaveFileName(
             self,"Exportar Libro Mayor SHILLONG",
-            "LibroMayor.xlsx","Excel (*.xlsx)"
+            self._ruta_exporte_por_defecto(),"Excel (*.xlsx)"
         )
         if not ruta:
             return
@@ -1610,7 +2226,7 @@ class InformesView(QWidget):
     def _exportar_balance(self):
         ruta,_= QFileDialog.getSaveFileName(
             self,"Exportar Balance SHILLONG",
-            "Balance_Sumas_Saldos.xlsx","Excel (*.xlsx)"
+            self._ruta_exporte_por_defecto(),"Excel (*.xlsx)"
         )
         if not ruta:
             return
@@ -1629,6 +2245,8 @@ class InformesView(QWidget):
         )
 
         headers=["Cuenta","Nombre","Entra" if invertir else "Debe","Sale" if invertir else "Haber","Saldo"]
+        ini = self.fecha_ini.date().toPython()
+        fin = self.fecha_fin.date().toPython()
 
         row=1
         for c,h in enumerate(headers,start=1):
@@ -1640,7 +2258,7 @@ class InformesView(QWidget):
 
         resumen=defaultdict(lambda:{"nombre":"", "debe":0, "haber":0})
 
-        for m in self.data.movimientos:
+        for m in self._movimientos_en_rango(ini, fin):
             cta=str(m.get("cuenta",""))
             resumen[cta]["nombre"]=m.get("nombre_cuenta","")
             d_orig = float(m.get("debe",0))
