@@ -12,6 +12,7 @@ ENV/
 # Logs
 logs/
 *.log
+build_log*.txt
 
 # Build / packaging artifacts
 build/
@@ -25,7 +26,22 @@ Output/
 # Generated reports / exports
 *.xlsx
 !ui/Modelo por cuentas.xlsx
+!ui/Modelo evolutivo presupuestario 26.xlsx
+!ui/Modelo evolutivo presupuestario 26 - blank.xlsx
 
 # Local data generated at runtime (keep canonical seeds tracked)
 data/*.backup
 data/update_cache.json
+data/*.bak
+data/*.pre_*.bak
+
+# Local backups / verification files
+backups/*.json
+backups/*.bak
+backups/*.xlsx
+!backups/.gitkeep
+test_export.py
+test_informes.py
+
+# Editor / agent local state
+.claude/
