@@ -115,12 +115,25 @@ def _resolve_template_mode(raw_code, normalized_code, sheet_codes, candidate_cod
     if has_separator and any(len(p) >= 3 for p in parts[1:]):
         return "exact"
 
-    if _has_descendants(normalized_code, candidate_codes):
-        return "group"
-
     if has_separator:
         return "exact"
+
+    if _has_descendants(normalized_code, candidate_codes):
+        return "group"
     return "auto"
+
+
+def _cell_is_sum_formula(cell):
+    value = cell.value
+    return isinstance(value, str) and value.strip().upper().startswith("=SUM(")
+
+
+def _template_row_mode(ws, row, raw_code, normalized_code, sheet_codes, candidate_codes):
+    for col in (COL_CORRIENTE, COL_BANCO, COL_CAJA, COL_ANTERIORES, COL_ACUMULADO):
+        if _cell_is_sum_formula(ws.cell(row, col)):
+            return "group"
+
+    return "exact"
 
 
 def _rollup(codigo, totales_exactos, mode="auto"):
@@ -186,21 +199,44 @@ def _fill_row(ws, row, cur_banco, cur_caja, prev_total):
     return corriente, cur_banco, cur_caja, prev_total, acumulado
 
 
+def _normalizar_presupuesto(presupuesto_por_cuenta):
+    if not presupuesto_por_cuenta:
+        return {}
+
+    normalizado = {}
+    for raw_code, raw_value in presupuesto_por_cuenta.items():
+        codigo = _normalizar_codigo(raw_code)
+        if not codigo:
+            continue
+        try:
+            normalizado[codigo] = float(raw_value or 0)
+        except (TypeError, ValueError):
+            normalizado[codigo] = 0.0
+    return normalizado
+
+
 def exportar_modelo_evolutivo(ruta_archivo, totales_exactos, cuentas_by_section,
                                anio, periodo_str="", nombre_por_cuenta=None,
-                               ruta_plantilla=None):
+                               ruta_plantilla=None, presupuesto_por_cuenta=None):
     """
-    Fill the blank template with real data and save to ruta_archivo.
-    Falls back to a minimal programmatic layout if no template is available.
+    Generate the report from live totals and save to ruta_archivo.
+
+    The programmatic path is the primary one because it is the only path that
+    is guaranteed to stay aligned with the JSON source. The template-based path
+    is kept only as a compatibility fallback.
     """
-    if ruta_plantilla and Path(ruta_plantilla).exists():
-        return _exportar_desde_plantilla(
-            ruta_archivo, totales_exactos, anio, periodo_str, ruta_plantilla
+    try:
+        return _exportar_programatico(
+            ruta_archivo, totales_exactos, cuentas_by_section,
+            anio, periodo_str, nombre_por_cuenta, presupuesto_por_cuenta,
+            ruta_plantilla
         )
-    return _exportar_programatico(
-        ruta_archivo, totales_exactos, cuentas_by_section,
-        anio, periodo_str, nombre_por_cuenta
-    )
+    except Exception:
+        if ruta_plantilla and Path(ruta_plantilla).exists():
+            return _exportar_desde_plantilla(
+                ruta_archivo, totales_exactos, anio, periodo_str, ruta_plantilla
+            )
+        raise
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -291,7 +327,7 @@ def _exportar_desde_plantilla(ruta_archivo, totales_exactos, anio, periodo_str, 
             continue
         if codigo[0] != current_section:
             continue
-        mode = _resolve_template_mode(code_raw, codigo, sheet_codes, candidate_codes)
+        mode = _template_row_mode(ws, row, code_raw, codigo, sheet_codes, candidate_codes)
 
         cur_banco, cur_caja, prev_total = _rollup(codigo, totales_exactos, mode=mode)
         _fill_row(ws, row, cur_banco, cur_caja, prev_total)
@@ -305,7 +341,8 @@ def _exportar_desde_plantilla(ruta_archivo, totales_exactos, anio, periodo_str, 
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
-                            anio, periodo_str, nombre_por_cuenta):
+                            anio, periodo_str, nombre_por_cuenta,
+                            presupuesto_por_cuenta=None, ruta_plantilla=None):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
@@ -336,20 +373,115 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
               f"PRESUPUESTO {anio}", "DIFERENCIA"],
     }
     SEC_TOTALS = {"6": "SUMA TOTAL GASTOS", "7": "SUMA TOTAL INGRESOS", "2": "INVERSIONES"}
+    presupuestos = _normalizar_presupuesto(presupuesto_por_cuenta)
+
+    def section_base_totals(sec):
+        cur = banco = caja = prev = 0.0
+        for cta, vals in totales_exactos.items():
+            cta_s = str(cta).strip()
+            if not cta_s.startswith(sec):
+                continue
+            b = float(vals.get("cur_banco", 0) or 0)
+            ca = float(vals.get("cur_caja", 0) or 0)
+            pr = float(vals.get("prev_total", 0) or 0)
+            banco += b
+            caja += ca
+            cur += b + ca
+            prev += pr
+        return cur, banco, caja, prev
+
+    def template_layout_rows():
+        if not ruta_plantilla or not Path(ruta_plantilla).exists():
+            return {}
+
+        wb_tpl = openpyxl.load_workbook(ruta_plantilla, data_only=False)
+        ws_tpl = wb_tpl.active
+        sheet_codes = []
+        candidate_codes = set(str(cta).strip() for cta in totales_exactos.keys())
+        for r in range(1, ws_tpl.max_row + 1):
+            raw = ws_tpl.cell(r, COL_CUENTA).value
+            norm = _normalizar_codigo(raw)
+            if norm:
+                sheet_codes.append((raw, norm))
+                candidate_codes.add(norm)
+
+        rows_by_sec = {"6": [], "7": [], "2": []}
+        current_section = None
+        for r in range(1, ws_tpl.max_row + 1):
+            raw = ws_tpl.cell(r, COL_CUENTA).value
+            label = str(ws_tpl.cell(r, COL_NOMBRE).value or "").strip()
+            raw_txt = str(raw or "").strip()
+            header = (
+                raw_txt.upper().startswith("CUENTAS") or
+                (raw_txt.startswith("=") and any(k in label.upper() for k in ("GASTOS", "INGRESOS", "INVER")))
+            )
+            if header:
+                if "GASTOS" in label:
+                    current_section = "6"
+                elif "INGRESOS" in label:
+                    current_section = "7"
+                elif "INVER" in label:
+                    current_section = "2"
+                continue
+            if label in TOTAL_LABELS:
+                continue
+
+            code = _normalizar_codigo(raw)
+            if not code or not current_section or code[0] != current_section:
+                continue
+            rows_by_sec[current_section].append({
+                "code": code,
+                "raw": raw,
+                "name": label,
+                "mode": _template_row_mode(ws_tpl, r, raw, code, sheet_codes, candidate_codes),
+            })
+        return rows_by_sec
+
+    try:
+        layout_rows = template_layout_rows()
+    except Exception:
+        layout_rows = {}
 
     row = 1
     # Title
     ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=11)
     c = ws.cell(row, 3, "CUENTAS DE COMUNIDAD DE SHILLONG")
     c.font = font_h; c.fill = fill_h; c.alignment = centro
-    ws.cell(row, 6, "FECHA:"); ws.cell(row, 7, datetime.date(anio, 12, 31))
-    row += 4   # match template offset (row 4 in template = data row)
+    row += 1
+
+    ws.cell(row, 6, "FECHA:")
+    ws.cell(row, 7, datetime.date(anio, 12, 31))
+    row += 3   # match template offset (row 4 in template = data row)
 
     for sec in ("6", "7", "2"):
         headers  = SEC_HEADERS[sec]
         n_cols   = len(headers)
         tot_lbl  = SEC_TOTALS[sec]
-        cuentas  = cuentas_by_section.get(sec, [])
+        rows_layout = list(layout_rows.get(sec, []))
+        if rows_layout:
+            vistos_cuentas = {item["code"] for item in rows_layout}
+            extras = [
+                str(c).strip()
+                for c in list(totales_exactos.keys()) + list(presupuestos.keys())
+                if str(c).strip().startswith(sec)
+            ]
+            for cta in sorted(set(extras)):
+                if cta not in vistos_cuentas:
+                    rows_layout.append({"code": cta, "raw": cta, "name": "", "mode": "exact"})
+                    vistos_cuentas.add(cta)
+        else:
+            cuentas  = list(cuentas_by_section.get(sec, []))
+            vistos_cuentas = {str(c).strip() for c in cuentas}
+            extras = [
+                str(c).strip()
+                for c in list(totales_exactos.keys()) + list(presupuestos.keys())
+                if str(c).strip().startswith(sec)
+            ]
+            for cta in sorted(set(extras)):
+                if cta not in vistos_cuentas:
+                    cuentas.append(cta)
+                    vistos_cuentas.add(cta)
+            rows_layout = [{"code": str(c).strip(), "raw": str(c).strip(), "name": "", "mode": "exact"} for c in cuentas]
 
         # Header row
         for ci, h in enumerate(headers, start=3):
@@ -359,34 +491,55 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
             ws.column_dimensions[get_column_letter(ci)].width = 20
         row += 2
 
-        t_corr = t_banco = t_caja = t_ant = 0.0
+        duplicated_codes = {
+            item["code"]
+            for item in rows_layout
+            if sum(1 for other in rows_layout if other["code"] == item["code"]) > 1
+        }
+        budget_used = set()
 
-        for cta in cuentas:
-            nombre = ""
+        for item in rows_layout:
+            cta = item["code"]
+            nombre = item.get("name") or ""
             if callable(nombre_por_cuenta):
-                try: nombre = nombre_por_cuenta(cta)
+                try:
+                    nombre = nombre or nombre_por_cuenta(cta)
                 except Exception: pass
             elif isinstance(nombre_por_cuenta, dict):
-                nombre = nombre_por_cuenta.get(cta, "")
+                nombre = nombre or nombre_por_cuenta.get(cta, "")
 
-            b, ca, pr = _rollup(cta, totales_exactos)
+            b, ca, pr = _rollup(cta, totales_exactos, mode=item.get("mode", "exact"))
             corr = round(b + ca, 2); acum = round(corr + pr, 2)
+            budget_code = _normalizar_codigo(cta)
+            if budget_code in duplicated_codes and budget_code in budget_used:
+                presupuesto = 0.0
+            else:
+                presupuesto = round(presupuestos.get(budget_code, 0.0), 2)
+                budget_used.add(budget_code)
+            diferencia = round(presupuesto - acum, 2)
 
-            vals = [cta, nombre, corr, round(b,2), round(ca,2), round(pr,2), acum, 0.0, -acum]
+            vals = [cta, nombre, corr, round(b,2), round(ca,2), round(pr,2), acum, presupuesto, diferencia]
             for ci, v in enumerate(vals, start=3):
                 c = ws.cell(row, ci, v)
                 c.border = borde
                 if ci >= 5:
                     c.number_format = "#,##0.00"
                     c.alignment = Alignment(horizontal="right")
-            t_corr += corr; t_banco += b; t_caja += ca; t_ant += pr
             row += 1
 
         # Total row
+        t_corr, t_banco, t_caja, t_ant = section_base_totals(sec)
+        t_presupuesto = sum(
+            float(v or 0)
+            for c, v in presupuestos.items()
+            if str(c).strip().startswith(sec)
+        )
         t_acum = round(t_corr + t_ant, 2)
+        t_diferencia = round(t_presupuesto - t_acum, 2)
         ws.cell(row, COL_NOMBRE, tot_lbl).font = Font(bold=True)
         for ci, v in [(5, round(t_corr,2)), (6, round(t_banco,2)),
-                      (7, round(t_caja,2)), (8, round(t_ant,2)), (9, t_acum)]:
+                      (7, round(t_caja,2)), (8, round(t_ant,2)), (9, t_acum),
+                      (10, round(t_presupuesto, 2)), (11, t_diferencia)]:
             c = ws.cell(row, ci, v)
             c.fill = fill_t; c.number_format = "#,##0.00"
         row += 2

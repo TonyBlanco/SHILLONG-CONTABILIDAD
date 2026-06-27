@@ -1,5 +1,5 @@
 #define MyAppName "SHILLONG CONTABILIDAD v3 PRO"
-#define MyAppVersion "3.8.2"
+#define MyAppVersion "3.8.3"
 #define MyAppPublisher "Shillong Soft"
 #define MyAppURL "https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD"
 #define MyAppExeName "SHILLONG_v3_PRO.exe"
@@ -18,7 +18,7 @@ AllowUNCPath=yes
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64
 OutputDir=Output
-OutputBaseFilename=Instalador_Shillong_v3.8.2_PRO
+OutputBaseFilename=Instalador_Shillong_v3.8.3_PRO
 SetupIconFile=assets\shillong_logov3.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -42,6 +42,7 @@ Source: "data\plan_contable_v3.json"; DestDir: "{app}\data"; Flags: onlyifdoesnt
 Source: "data\bancos.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\reglas_conceptos.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\presupuesto_2025.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
+Source: "data\presupuesto_2026.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\kabbalah_72.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\saldos_mensuales.json"; DestDir: "{app}\data"; Flags: onlyifdoesntexist
 Source: "data\manual_shillong.pdf"; DestDir: "{app}\data"; Flags: ignoreversion

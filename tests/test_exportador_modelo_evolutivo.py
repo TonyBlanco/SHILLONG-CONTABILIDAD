@@ -1,14 +1,16 @@
 import os
 import sys
 import unittest
+import tempfile
 from pathlib import Path
+import openpyxl
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PySide6.QtWidgets import QApplication
 
-from models.ExportadorModeloEvolutivo import _parse_template_code, _resolve_template_mode, _rollup
+from models.ExportadorModeloEvolutivo import exportar_modelo_evolutivo, _parse_template_code, _resolve_template_mode, _rollup
 from ui.InformesView import InformesView
 
 
@@ -42,8 +44,8 @@ class TestModeloEvolutivoTemplateCodes(unittest.TestCase):
         candidate_codes = {code for _, code in sheet_codes}
 
         self.assertEqual(_resolve_template_mode("602.40", "602400", sheet_codes, candidate_codes), "exact")
-        self.assertEqual(_resolve_template_mode("650.10", "650100", sheet_codes, candidate_codes), "group")
-        self.assertEqual(_resolve_template_mode("758.00", "758000", sheet_codes, candidate_codes), "group")
+        self.assertEqual(_resolve_template_mode("650.10", "650100", sheet_codes, candidate_codes), "exact")
+        self.assertEqual(_resolve_template_mode("758.00", "758000", sheet_codes, candidate_codes), "exact")
         self.assertEqual(_resolve_template_mode("759.10", "759100", sheet_codes, candidate_codes), "exact")
 
     def test_rollup_group_and_exact_do_not_collide(self):
@@ -99,9 +101,54 @@ class TestModeloEvolutivoTemplateCodes(unittest.TestCase):
             view._rollup_sisters(cuenta_exacta, totales, mode=mode_exacto),
             {"cur_banco": 7651.0, "cur_caja": 0.0, "prev_total": 0.0},
         )
-        self.assertEqual(mode_65010, "group")
-        self.assertEqual(mode_75800, "group")
+        self.assertEqual(mode_65010, "exact")
+        self.assertEqual(mode_75800, "exact")
         self.assertEqual(mode_75910, "exact")
+
+    def test_programmatic_export_respects_template_sum_rows(self):
+        totales = {
+            "602400": {"cur_banco": 0.0, "cur_caja": 2202.0, "prev_total": 0.0},
+            "602401": {"cur_banco": 0.0, "cur_caja": 4630.0, "prev_total": 0.0},
+            "602402": {"cur_banco": 0.0, "cur_caja": 819.0, "prev_total": 0.0},
+            "650300": {"cur_banco": 0.0, "cur_caja": 2000.0, "prev_total": 0.0},
+            "650320": {"cur_banco": 0.0, "cur_caja": 1520.0, "prev_total": 0.0},
+            "650330": {"cur_banco": 0.0, "cur_caja": 470.0, "prev_total": 0.0},
+            "650500": {"cur_banco": 99800.0, "cur_caja": 78000.0, "prev_total": 0.0},
+            "650510": {"cur_banco": 0.0, "cur_caja": 15000.0, "prev_total": 0.0},
+            "650530": {"cur_banco": 0.0, "cur_caja": 200.0, "prev_total": 0.0},
+            "650560": {"cur_banco": 0.0, "cur_caja": 4000.0, "prev_total": 0.0},
+            "650570": {"cur_banco": 0.0, "cur_caja": 1215.0, "prev_total": 0.0},
+            "758000": {"cur_banco": 46043.0, "cur_caja": 29300.0, "prev_total": 0.0},
+            "758100": {"cur_banco": 0.0, "cur_caja": 297852.0, "prev_total": 0.0},
+            "759000": {"cur_banco": 0.0, "cur_caja": 0.0, "prev_total": 0.0},
+            "759100": {"cur_banco": 6000.0, "cur_caja": 0.0, "prev_total": 0.0},
+        }
+        cuentas_by_section = {
+            "6": sorted(c for c in totales if c.startswith("6")),
+            "7": sorted(c for c in totales if c.startswith("7")),
+            "2": [],
+        }
+        presupuestos = {"602400": 35000.0, "650300": 20000.0, "650500": 240000.0, "758000": 35000.0}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "modelo.xlsx"
+            exportar_modelo_evolutivo(
+                out, totales, cuentas_by_section, 2026,
+                nombre_por_cuenta={}, ruta_plantilla="ui/Modelo evolutivo presupuestario 26 - blank.xlsx",
+                presupuesto_por_cuenta=presupuestos,
+            )
+            ws = openpyxl.load_workbook(out, data_only=True).active
+            rows = {
+                (str(ws.cell(r, 3).value), str(ws.cell(r, 4).value)): ws.cell(r, 5).value
+                for r in range(1, ws.max_row + 1)
+            }
+
+        self.assertEqual(rows[("602400", "C. de mat. de limp., lavandería, peluquería y aseo")], 7651)
+        self.assertEqual(rows[("602400", "Material de limpieza")], 2202)
+        self.assertEqual(rows[("650300", "Atenciones comunitarias")], 2000)
+        self.assertEqual(rows[("650500", "Formacion profesional")], 177800)
+        self.assertEqual(rows[("758000", "Donativos")], 75343)
+        self.assertEqual(rows[("759000", "Sueldos y salarios (Prestacion de servicios externos)")], 0)
 
 
 if __name__ == "__main__":

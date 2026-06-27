@@ -989,6 +989,42 @@ class InformesView(QWidget):
         # If none found, raise a clear error (caller should handle it)
         raise FileNotFoundError("Ninguna plantilla de modelo encontrada. Se buscaron: " + ", ".join(tried))
 
+    def _normalizar_codigo_presupuesto(self, valor):
+        if valor is None:
+            return None
+        txt = str(int(valor)) if isinstance(valor, (int, float)) else str(valor).strip()
+        digitos = re.sub(r"\D", "", txt)
+        if not digitos:
+            return None
+        return digitos.ljust(6, "0")[:6]
+
+    def _presupuesto_modelo_sisters(self, anio):
+        ruta = Path(ruta_recurso(f"data/presupuesto_{anio}.json"))
+        if not ruta.exists():
+            return {}
+
+        try:
+            with ruta.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            return {}
+
+        if isinstance(data, dict) and isinstance(data.get("cuentas"), dict):
+            data = data["cuentas"]
+        if not isinstance(data, dict):
+            return {}
+
+        presupuesto = {}
+        for codigo_raw, valor_raw in data.items():
+            codigo = self._normalizar_codigo_presupuesto(codigo_raw)
+            if not codigo:
+                continue
+            try:
+                presupuesto[codigo] = float(valor_raw or 0)
+            except (TypeError, ValueError):
+                presupuesto[codigo] = 0.0
+        return presupuesto
+
     def _celda_es_formula(self, cell):
         v = cell.value
         if v is None:
@@ -1099,12 +1135,24 @@ class InformesView(QWidget):
         if tiene_sep and any(len(p) >= 3 for p in partes[1:]):
             return "exact"
 
-        if self._tiene_descendientes_codigo(codigo, candidate_codes):
-            return "group"
-
         if tiene_sep:
             return "exact"
+
+        if self._tiene_descendientes_codigo(codigo, candidate_codes):
+            return "group"
         return "auto"
+
+    def _fila_template_es_sumatoria(self, ws, fila):
+        for col in (5, 6, 7, 8, 9):
+            valor = ws.cell(fila, col).value
+            if isinstance(valor, str) and valor.strip().upper().startswith("=SUM("):
+                return True
+        return False
+
+    def _modo_fila_template(self, ws, fila, valor_celda, codigo, sheet_codes, candidate_codes):
+        if self._fila_template_es_sumatoria(ws, fila):
+            return "group"
+        return "exact"
 
     def _totales_sisters_por_cuenta(self, invertido):
         """
@@ -1244,6 +1292,7 @@ class InformesView(QWidget):
         invertido = self._modo_invertido_bi()
         totales_exactos = self._totales_sisters_por_cuenta(invertido=invertido)
         anio = self.fecha_ini.date().toPython().year
+        presupuesto_por_cuenta = self._presupuesto_modelo_sisters(anio)
 
         def cuentas_seccion(prefijo):
             # Prioridad: respetar el orden del layout oficial (sin leer datos numéricos).
@@ -1253,13 +1302,8 @@ class InformesView(QWidget):
                 ws = wb[wb.sheetnames[0]]
                 for r in range(1, ws.max_row + 1):
                     v = ws.cell(r, 3).value  # C = código cuenta
-                    if v is None:
-                        continue
-                    if isinstance(v, (int, float)):
-                        cta_s = str(int(v))
-                    else:
-                        cta_s = str(v).strip()
-                    if cta_s.isdigit() and cta_s.startswith(prefijo):
+                    cta_s = self._normalizar_codigo_presupuesto(v)
+                    if cta_s and cta_s.startswith(prefijo):
                         cuentas_layout.append(cta_s)
             except Exception:
                 cuentas_layout = []
@@ -1317,7 +1361,9 @@ class InformesView(QWidget):
                 prev_total = float(vals["prev_total"])
                 acum = cur_total + prev_total
 
-                presupuesto_num = 0.0
+                presupuesto_num = presupuesto_por_cuenta.get(
+                    self._normalizar_codigo_presupuesto(cuenta), 0.0
+                )
                 diferencia_num = presupuesto_num - acum
 
                 r = tabla.rowCount()
@@ -1794,13 +1840,8 @@ class InformesView(QWidget):
                 ws = wb[wb.sheetnames[0]]
                 for r in range(1, ws.max_row + 1):
                     v = ws.cell(r, 3).value  # column C typically contains account codes
-                    if v is None:
-                        continue
-                    if isinstance(v, (int, float)):
-                        cta_s = str(int(v))
-                    else:
-                        cta_s = str(v).strip()
-                    if cta_s.isdigit() and cta_s.startswith(prefijo):
+                    cta_s = self._normalizar_codigo_presupuesto(v)
+                    if cta_s and cta_s.startswith(prefijo):
                         cuentas_layout.append(cta_s)
             except Exception:
                 cuentas_layout = []
@@ -1837,6 +1878,7 @@ class InformesView(QWidget):
 
         anio = self.fecha_ini.date().toPython().year
         periodo_str = f"{self.fecha_ini.date().toString('dd/MM/yyyy')} - {self.fecha_fin.date().toString('dd/MM/yyyy')}"
+        presupuesto_por_cuenta = self._presupuesto_modelo_sisters(anio)
 
         # Try programmatic exporter if available
         if exportar_modelo_evolutivo:
@@ -1846,7 +1888,8 @@ class InformesView(QWidget):
                 exportar_modelo_evolutivo(
                     ruta, totales_exactos, cuentas_by_section,
                     anio, periodo_str, nombre_por_cuenta,
-                    ruta_plantilla=plantilla
+                    ruta_plantilla=plantilla,
+                    presupuesto_por_cuenta=presupuesto_por_cuenta
                 )
                 return
             except Exception:
@@ -1906,7 +1949,7 @@ class InformesView(QWidget):
             cuenta, _ = self._parsear_codigo_template(v, codigos_disponibles)
             if not cuenta or not cuenta.isdigit() or cuenta[0] not in ("6", "7", "2"):
                 continue
-            mode = self._resolver_modo_codigo_template(v, cuenta, sheet_codes, candidate_codes)
+            mode = self._modo_fila_template(ws, r, v, cuenta, sheet_codes, candidate_codes)
 
             vals = self._rollup_sisters(cuenta, totales_exactos, mode=mode)
             cur_banco = float(vals.get("cur_banco", 0) or 0)
@@ -1924,7 +1967,10 @@ class InformesView(QWidget):
                 ws.cell(r, total_col).value = round(cur_total, 2); ws.cell(r, total_col).number_format = "#,##0.00"
             if presupuesto_col:
                 if not self._celda_es_formula(ws.cell(r, presupuesto_col)):
-                    ws.cell(r, presupuesto_col).value = 0.0; ws.cell(r, presupuesto_col).number_format = "#,##0.00"
+                    ws.cell(r, presupuesto_col).value = round(
+                        presupuesto_por_cuenta.get(self._normalizar_codigo_presupuesto(cuenta), 0.0), 2
+                    )
+                    ws.cell(r, presupuesto_col).number_format = "#,##0.00"
             if diferencia_col:
                 try:
                     presupuesto_val = float(ws.cell(r, presupuesto_col).value or 0) if presupuesto_col else 0.0

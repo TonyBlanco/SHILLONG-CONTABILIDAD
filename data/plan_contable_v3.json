@@ -91,6 +91,10 @@
     "nombre": "Teléfonos, internet, mensajerías y correos",
     "descripcion": "Comunicaciones"
   },
+  "630000": {
+    "nombre": "Impuestos y tasas, seguro Moto",
+    "descripcion": "Impuestos, tasas y seguro de moto"
+  },
   "642000": {
     "nombre": "Seguridad Social",
     "descripcion": "Seguridad Social empresa"

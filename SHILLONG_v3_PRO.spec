@@ -18,6 +18,7 @@ a = Analysis(
         ('data/bancos.json', 'data'),
         ('data/reglas_conceptos.json', 'data'),
         ('data/presupuesto_2025.json', 'data'),
+        ('data/presupuesto_2026.json', 'data'),
         ('data/kabbalah_72.json', 'data'),
         ('data/manual_shillong.pdf', 'data'),
         # EXCLUIDOS: shillong_*.json, cierres/*, *.backup, update_cache.json
