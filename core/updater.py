@@ -17,7 +17,7 @@ except ImportError:
     parse_version = None
 
 # Current app version
-APP_VERSION = "3.8.3"
+APP_VERSION = "3.8.4"
 
 # GitHub API URL for releases
 GITHUB_API_URL = "https://api.github.com/repos/TonyBlanco/SHILLONG-CONTABILIDAD/releases/latest"

@@ -3,11 +3,11 @@
 SHILLONG CONTABILIDAD — Version Information
 """
 
-APP_VERSION = "3.8.3"
+APP_VERSION = "3.8.4"
 VERSION = APP_VERSION  # Alias for compatibility
 
 # Build info
-BUILD_DATE = "2026-03-29"
+BUILD_DATE = "2026-07-02"
 ENGINE_VERSION = "4.3.2"
 
 def get_version():

@@ -497,6 +497,20 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
             if sum(1 for other in rows_layout if other["code"] == item["code"]) > 1
         }
         budget_used = set()
+        t_presupuesto = 0.0
+
+        def has_child_budget(group_item):
+            code = group_item["code"]
+            pref = _group_prefix(code)
+            for other in rows_layout:
+                other_code = other["code"]
+                if other_code == code:
+                    continue
+                if not other_code.startswith(pref):
+                    continue
+                if round(presupuestos.get(_normalizar_codigo(other_code), 0.0), 2):
+                    return True
+            return False
 
         for item in rows_layout:
             cta = item["code"]
@@ -517,6 +531,8 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
                 presupuesto = round(presupuestos.get(budget_code, 0.0), 2)
                 budget_used.add(budget_code)
             diferencia = round(presupuesto - acum, 2)
+            if not (item.get("mode") == "group" and has_child_budget(item)):
+                t_presupuesto += presupuesto
 
             vals = [cta, nombre, corr, round(b,2), round(ca,2), round(pr,2), acum, presupuesto, diferencia]
             for ci, v in enumerate(vals, start=3):
@@ -529,11 +545,6 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
 
         # Total row
         t_corr, t_banco, t_caja, t_ant = section_base_totals(sec)
-        t_presupuesto = sum(
-            float(v or 0)
-            for c, v in presupuestos.items()
-            if str(c).strip().startswith(sec)
-        )
         t_acum = round(t_corr + t_ant, 2)
         t_diferencia = round(t_presupuesto - t_acum, 2)
         ws.cell(row, COL_NOMBRE, tot_lbl).font = Font(bold=True)

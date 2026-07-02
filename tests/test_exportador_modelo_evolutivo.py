@@ -128,7 +128,17 @@ class TestModeloEvolutivoTemplateCodes(unittest.TestCase):
             "7": sorted(c for c in totales if c.startswith("7")),
             "2": [],
         }
-        presupuestos = {"602400": 35000.0, "650300": 20000.0, "650500": 240000.0, "758000": 35000.0}
+        presupuestos = {
+            "602400": 35000.0,
+            "628000": 60000.0,
+            "628030": 60000.0,
+            "650100": 65000.0,
+            "650110": 7000.0,
+            "650140": 58000.0,
+            "650300": 20000.0,
+            "650500": 240000.0,
+            "758000": 35000.0,
+        }
 
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "modelo.xlsx"
@@ -139,16 +149,30 @@ class TestModeloEvolutivoTemplateCodes(unittest.TestCase):
             )
             ws = openpyxl.load_workbook(out, data_only=True).active
             rows = {
-                (str(ws.cell(r, 3).value), str(ws.cell(r, 4).value)): ws.cell(r, 5).value
+                (str(ws.cell(r, 3).value), str(ws.cell(r, 4).value)): {
+                    "corriente": ws.cell(r, 5).value,
+                    "presupuesto": ws.cell(r, 10).value,
+                }
                 for r in range(1, ws.max_row + 1)
             }
+            total_gastos_budget = next(
+                ws.cell(r, 10).value
+                for r in range(1, ws.max_row + 1)
+                if ws.cell(r, 4).value == "SUMA TOTAL GASTOS"
+            )
 
-        self.assertEqual(rows[("602400", "C. de mat. de limp., lavandería, peluquería y aseo")], 7651)
-        self.assertEqual(rows[("602400", "Material de limpieza")], 2202)
-        self.assertEqual(rows[("650300", "Atenciones comunitarias")], 2000)
-        self.assertEqual(rows[("650500", "Formacion profesional")], 177800)
-        self.assertEqual(rows[("758000", "Donativos")], 75343)
-        self.assertEqual(rows[("759000", "Sueldos y salarios (Prestacion de servicios externos)")], 0)
+        self.assertEqual(rows[("602400", "C. de mat. de limp., lavandería, peluquería y aseo")]["corriente"], 7651)
+        self.assertEqual(rows[("602400", "Material de limpieza")]["corriente"], 2202)
+        self.assertEqual(rows[("650300", "Atenciones comunitarias")]["corriente"], 2000)
+        self.assertEqual(rows[("650500", "Formacion profesional")]["corriente"], 177800)
+        self.assertEqual(rows[("758000", "Donativos")]["corriente"], 75343)
+        self.assertEqual(rows[("759000", "Sueldos y salarios (Prestacion de servicios externos)")]["corriente"], 0)
+        self.assertEqual(rows[("628000", "Suministros")]["presupuesto"], 60000)
+        self.assertEqual(rows[("628030", "Suministro electricidad")]["presupuesto"], 60000)
+        self.assertEqual(rows[("650100", "Asistencia sanitaria varia")]["presupuesto"], 65000)
+        self.assertEqual(rows[("650110", "Odontología-consultas-prótesis")]["presupuesto"], 7000)
+        self.assertEqual(rows[("650140", "Consultas, análisis, exploraciones")]["presupuesto"], 58000)
+        self.assertEqual(total_gastos_budget, 420000)
 
 
 if __name__ == "__main__":
