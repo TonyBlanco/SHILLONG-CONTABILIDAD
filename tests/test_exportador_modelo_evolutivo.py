@@ -152,6 +152,7 @@ class TestModeloEvolutivoTemplateCodes(unittest.TestCase):
                 (str(ws.cell(r, 3).value), str(ws.cell(r, 4).value)): {
                     "corriente": ws.cell(r, 5).value,
                     "presupuesto": ws.cell(r, 10).value,
+                    "diferencia": ws.cell(r, 11).value,
                 }
                 for r in range(1, ws.max_row + 1)
             }
@@ -163,6 +164,8 @@ class TestModeloEvolutivoTemplateCodes(unittest.TestCase):
 
         self.assertEqual(rows[("602400", "C. de mat. de limp., lavandería, peluquería y aseo")]["corriente"], 7651)
         self.assertEqual(rows[("602400", "Material de limpieza")]["corriente"], 2202)
+        self.assertEqual(rows[("602400", "Material de limpieza")]["presupuesto"], 35000)
+        self.assertEqual(rows[("602400", "Material de limpieza")]["diferencia"], 32798)
         self.assertEqual(rows[("650300", "Atenciones comunitarias")]["corriente"], 2000)
         self.assertEqual(rows[("650500", "Formacion profesional")]["corriente"], 177800)
         self.assertEqual(rows[("758000", "Donativos")]["corriente"], 75343)

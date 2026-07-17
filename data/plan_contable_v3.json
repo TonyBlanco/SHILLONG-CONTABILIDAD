@@ -322,5 +322,13 @@
   "555000": {
     "nombre": "PARTIDAS PENDIENTES DE APLICACIÓN",
     "descripcion": "Pendientes aplicación"
+  },
+  "556": {
+    "nombre": "CAMBIO EUROS",
+    "descripcion": "Cambio Euros"
+  },
+  "557": {
+    "nombre": "CONTRAPARTIDA",
+    "descripcion": "Contra partida"
   }
 }

@@ -128,6 +128,20 @@ class TestInformesView(unittest.TestCase):
         self.assertEqual(tabla_bancos.item(1, 1).text(), "BBVA")
         self.assertEqual(tabla_bancos.item(1, 2).text(), "40.0")
 
+    def test_resumen_tesoreria_muestra_mes(self):
+        self.view.cbo_tipo.setCurrentIndex(7)
+        self.view.fecha_ini.setDate(QDate(2026, 1, 1))
+        self.view.fecha_fin.setDate(QDate(2026, 6, 30))
+
+        self.view._limpiar_vista()
+        self.view._mostrar_resumen_tesoreria()
+
+        tabla = self.view.contenedor_layout.itemAt(0).widget()
+        self.assertIsInstance(tabla, QTableWidget)
+        self.assertEqual(tabla.rowCount(), 6)
+        self.assertEqual(tabla.item(0, 0).text(), "Enero 2026")
+        self.assertEqual(tabla.item(4, 0).text(), "Mayo 2026")
+
 
 if __name__ == "__main__":
     unittest.main()

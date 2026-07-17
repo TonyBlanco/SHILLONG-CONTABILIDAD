@@ -97,6 +97,7 @@ class InformesView(QWidget):
         # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
         self.cbo_tipo.addItem("Modelo Evolutivo Presupuestario")
         self.cbo_tipo.addItem("💧 Flujo de Caja Mensual")
+        self.cbo_tipo.addItem("Resumen de Tesorería")
         self.cbo_tipo.currentIndexChanged.connect(self._cambiar_tipo)
         h_sel.addWidget(self.cbo_tipo)
         h_sel.addStretch()
@@ -276,6 +277,15 @@ class InformesView(QWidget):
             lab.setStyleSheet("color:#475569; font-style:italic;")
             self.filtros.addWidget(lab)
 
+        elif tipo == 7:
+            self.filtros.addWidget(QLabel("Fecha inicio:"))
+            self.filtros.addWidget(self.fecha_ini)
+            self.filtros.addWidget(QLabel("Fecha fin:"))
+            self.filtros.addWidget(self.fecha_fin)
+            lab = QLabel("Saldo final mensual de Caja y de cada banco/origen.")
+            lab.setStyleSheet("color:#475569; font-style:italic;")
+            self.filtros.addWidget(lab)
+
         # visibilidad de botones
         self.btn_export_mayor.setVisible(tipo == 1)
         self.btn_export_balance.setVisible(tipo == 2)
@@ -309,6 +319,8 @@ class InformesView(QWidget):
             self._mostrar_reporte_modelo_sisters()
         elif tipo == 6:
             self._mostrar_flujo_caja_mensual()
+        elif tipo == 7:
+            self._mostrar_resumen_tesoreria()
 
     def _limpiar_vista(self):
         for i in reversed(range(self.contenedor_layout.count())):
@@ -355,6 +367,8 @@ class InformesView(QWidget):
             return f"Modelo_Evolutivo_{ini}_{fin}.xlsx"
         if tipo == 6:
             return f"CashFlow_Mensual_{ini}_{fin}.xlsx"
+        if tipo == 7:
+            return f"Resumen_Tesoreria_{ini}_{fin}.xlsx"
         return f"Reporte_{ini}_{fin}.xlsx"
 
     def _ruta_exporte_por_defecto(self):
@@ -808,6 +822,86 @@ class InformesView(QWidget):
                 tabla_bancos.setItem(r, c, it)
 
         self.contenedor_layout.addWidget(tabla_bancos)
+
+    def _datos_resumen_tesoreria(self):
+        ini = self.fecha_ini.date().toPython()
+        fin = self.fecha_fin.date().toPython()
+        bancos_ordenados = self._cargar_bancos_ordenados()
+
+        movimientos = []
+        for m in getattr(self.data, "movimientos", []):
+            fecha_obj = self._parsear_fecha_movimiento(m.get("fecha", ""))
+            if fecha_obj is None or fecha_obj > fin:
+                continue
+            banco = str(m.get("banco", "") or "Caja").strip() or "Caja"
+            if banco not in bancos_ordenados:
+                bancos_ordenados.append(banco)
+            movimientos.append((fecha_obj, banco, m))
+
+        meses = []
+        cursor = datetime.date(ini.year, ini.month, 1)
+        limite = datetime.date(fin.year, fin.month, 1)
+        while cursor <= limite:
+            meses.append((cursor.year, cursor.month))
+            if cursor.month == 12:
+                cursor = datetime.date(cursor.year + 1, 1, 1)
+            else:
+                cursor = datetime.date(cursor.year, cursor.month + 1, 1)
+
+        saldos = defaultdict(float)
+        filas = []
+        for year, month in meses:
+            if month == 12:
+                fin_mes = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
+            else:
+                fin_mes = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
+            corte = min(fin_mes, fin)
+
+            for fecha_obj, banco, m in movimientos:
+                if fecha_obj <= corte:
+                    saldos[banco] += float(m.get("haber", 0) or 0) - float(m.get("debe", 0) or 0)
+
+            fila = {"Mes": self._texto_mes(year, month)}
+            total_bancos = 0.0
+            caja = 0.0
+            for banco in bancos_ordenados:
+                saldo = round(saldos[banco], 2)
+                fila[banco] = saldo
+                if self._es_caja(banco):
+                    caja += saldo
+                else:
+                    total_bancos += saldo
+            fila["TOTAL BANCOS"] = round(total_bancos, 2)
+            fila["TOTAL TESORERIA"] = round(caja + total_bancos, 2)
+            filas.append(fila)
+
+            saldos.clear()
+
+        return bancos_ordenados, filas
+
+    def _mostrar_resumen_tesoreria(self):
+        bancos, filas = self._datos_resumen_tesoreria()
+
+        if not filas:
+            lab = QLabel("No hay meses para el rango seleccionado.")
+            lab.setStyleSheet("color:#475569; font-style:italic;")
+            self.contenedor_layout.addWidget(lab)
+            return
+
+        headers = ["Mes"] + bancos + ["TOTAL BANCOS", "TOTAL TESORERIA"]
+        tabla = QTableWidget(0, len(headers))
+        tabla.setHorizontalHeaderLabels(headers)
+
+        for fila_data in filas:
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            for c, header in enumerate(headers):
+                it = QTableWidgetItem(str(fila_data.get(header, "")))
+                if c >= 1:
+                    it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                tabla.setItem(r, c, it)
+
+        self.contenedor_layout.addWidget(tabla)
 
     # ================================================================
     # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
@@ -1416,6 +1510,32 @@ class InformesView(QWidget):
         render_seccion("7", "SUMA TOTAL INGRESOS")
         render_seccion("2", "INVERSIONES")
 
+        ingresos_acum = 0.0
+        gastos_inversiones_acum = 0.0
+        for cta, vals in totales_exactos.items():
+            cta_s = str(cta)
+            cur = float(vals.get("cur_banco", 0) or 0) + float(vals.get("cur_caja", 0) or 0)
+            acum = cur + float(vals.get("prev_total", 0) or 0)
+            if cta_s.startswith("7"):
+                ingresos_acum += acum
+            elif cta_s.startswith(("6", "2")):
+                gastos_inversiones_acum += acum
+
+        tabla_balance = QTableWidget(0, 2)
+        tabla_balance.setHorizontalHeaderLabels(["BALANCE", "Importe"])
+        for label, value in (
+            ("INGRESOS", ingresos_acum),
+            ("GASTOS E INVERSIONES", gastos_inversiones_acum),
+            ("BALANCE", ingresos_acum - gastos_inversiones_acum),
+        ):
+            r = tabla_balance.rowCount()
+            tabla_balance.insertRow(r)
+            tabla_balance.setItem(r, 0, QTableWidgetItem(label))
+            item_valor = QTableWidgetItem(str(round(value, 2)))
+            item_valor.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            tabla_balance.setItem(r, 1, item_valor)
+        self.contenedor_layout.addWidget(tabla_balance)
+
     # ================================================================
     # EXPORTAR VISTA ACTUAL
     # ================================================================
@@ -1439,6 +1559,10 @@ class InformesView(QWidget):
 
         if self.cbo_tipo.currentIndex() == 6:
             self._exportar_excel_flujo_caja(ruta)
+            return
+
+        if self.cbo_tipo.currentIndex() == 7:
+            self._exportar_excel_resumen_tesoreria(ruta)
             return
 
         wb=openpyxl.Workbook()
@@ -1820,6 +1944,78 @@ class InformesView(QWidget):
         for idx, width in enumerate([14, 24, 16, 16, 16, 16], start=1):
             ws.column_dimensions[get_column_letter(idx)].width = max(ws.column_dimensions[get_column_letter(idx)].width or 0, width)
 
+        wb.save(ruta)
+
+    def _exportar_excel_resumen_tesoreria(self, ruta):
+        bancos, filas = self._datos_resumen_tesoreria()
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Resumen Tesoreria"
+
+        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
+        verde = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        azul_claro = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid")
+        borde = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000")
+        )
+
+        headers = ["Mes"] + bancos + ["TOTAL BANCOS", "TOTAL TESORERIA"]
+        ini = self.fecha_ini.date().toString("dd/MM/yyyy")
+        fin = self.fecha_fin.date().toString("dd/MM/yyyy")
+
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+        titulo = ws.cell(row=1, column=1, value="Resumen de Tesorería")
+        titulo.font = Font(bold=True, color="FFFFFF", size=14)
+        titulo.fill = morado
+        titulo.alignment = Alignment(horizontal="center", vertical="center")
+
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
+        subtitulo = ws.cell(row=2, column=1, value=f"Periodo: {ini} a {fin}")
+        subtitulo.font = Font(italic=True, color="334155")
+        subtitulo.fill = azul_claro
+        subtitulo.alignment = Alignment(horizontal="center", vertical="center")
+
+        row = 4
+        for c, h in enumerate(headers, start=1):
+            cell = ws.cell(row=row, column=c, value=h)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = morado
+            cell.border = borde
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        row += 1
+
+        for fila in filas:
+            for c, header in enumerate(headers, start=1):
+                cell = ws.cell(row=row, column=c, value=fila.get(header, ""))
+                cell.border = borde
+                if c >= 2:
+                    cell.number_format = "#,##0.00"
+                    cell.alignment = Alignment(horizontal="right")
+                else:
+                    cell.alignment = Alignment(horizontal="center")
+            row += 1
+
+        if filas:
+            for c, header in enumerate(headers, start=1):
+                cell = ws.cell(row=row, column=c, value=filas[-1].get(header, ""))
+                cell.font = Font(bold=True)
+                cell.fill = verde
+                cell.border = borde
+                if c >= 2:
+                    cell.number_format = "#,##0.00"
+                    cell.alignment = Alignment(horizontal="right")
+                else:
+                    cell.alignment = Alignment(horizontal="center")
+            ws.cell(row=row, column=1, value="SALDO FINAL")
+
+        for idx, header in enumerate(headers, start=1):
+            ws.column_dimensions[get_column_letter(idx)].width = max(16, min(len(str(header)) + 4, 32))
+
+        ws.freeze_panes = "A5"
         wb.save(ruta)
 
     # ================================================================

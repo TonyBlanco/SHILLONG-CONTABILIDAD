@@ -47,6 +47,18 @@
       "nombre": "Post-office sr Shairilin",
       "saldo": 0.0,
       "cuenta_contable": "5742"
+    },
+    {
+      "id": 9,
+      "nombre": "Cambio Euros",
+      "saldo": 0.0,
+      "cuenta_contable": "556"
+    },
+    {
+      "id": 10,
+      "nombre": "Contra partida",
+      "saldo": 0.0,
+      "cuenta_contable": "557"
     }
   ]
 }

@@ -121,6 +121,18 @@ def repara_errores_debe_haber(archivo_entrada="data/shillong_2026.json"):
     else:
         print("\n👍 Todo parece correcto. No se encontraron errores de Debe/Haber.")
 
+
+def reparar_json(archivo_entrada):
+    """Alias compatible usado por ToolsView y los tests."""
+    try:
+        if hasattr(archivo_entrada, "as_posix"):
+            archivo_entrada = str(archivo_entrada)
+    except Exception:
+        pass
+
+    return repara_errores_debe_haber(archivo_entrada)
+
+
 if __name__ == "__main__":
     from datetime import datetime
     _archivo = f"data/shillong_{datetime.now().year}.json"

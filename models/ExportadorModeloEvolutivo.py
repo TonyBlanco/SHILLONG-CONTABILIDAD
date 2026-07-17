@@ -443,6 +443,7 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
         layout_rows = {}
 
     row = 1
+    section_acumulados = {}
     # Title
     ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=11)
     c = ws.cell(row, 3, "CUENTAS DE COMUNIDAD DE SHILLONG")
@@ -512,6 +513,15 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
                     return True
             return False
 
+        def has_exact_duplicate(group_item):
+            code = group_item["code"]
+            return any(
+                other is not group_item
+                and other["code"] == code
+                and other.get("mode") == "exact"
+                for other in rows_layout
+            )
+
         for item in rows_layout:
             cta = item["code"]
             nombre = item.get("name") or ""
@@ -525,7 +535,9 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
             b, ca, pr = _rollup(cta, totales_exactos, mode=item.get("mode", "exact"))
             corr = round(b + ca, 2); acum = round(corr + pr, 2)
             budget_code = _normalizar_codigo(cta)
-            if budget_code in duplicated_codes and budget_code in budget_used:
+            if item.get("mode") == "group" and has_exact_duplicate(item):
+                presupuesto = 0.0
+            elif budget_code in duplicated_codes and budget_code in budget_used:
                 presupuesto = 0.0
             else:
                 presupuesto = round(presupuestos.get(budget_code, 0.0), 2)
@@ -546,6 +558,7 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
         # Total row
         t_corr, t_banco, t_caja, t_ant = section_base_totals(sec)
         t_acum = round(t_corr + t_ant, 2)
+        section_acumulados[sec] = t_acum
         t_diferencia = round(t_presupuesto - t_acum, 2)
         ws.cell(row, COL_NOMBRE, tot_lbl).font = Font(bold=True)
         for ci, v in [(5, round(t_corr,2)), (6, round(t_banco,2)),
@@ -554,6 +567,34 @@ def _exportar_programatico(ruta_archivo, totales_exactos, cuentas_by_section,
             c = ws.cell(row, ci, v)
             c.fill = fill_t; c.number_format = "#,##0.00"
         row += 2
+
+    ingresos_acum = round(section_acumulados.get("7", 0.0), 2)
+    gastos_inversiones_acum = round(
+        section_acumulados.get("6", 0.0) + section_acumulados.get("2", 0.0), 2
+    )
+    balance = round(ingresos_acum - gastos_inversiones_acum, 2)
+
+    ws.cell(row, COL_NOMBRE, "BALANCE").font = Font(bold=True)
+    ws.cell(row, COL_NOMBRE).fill = fill_t
+    row += 1
+
+    for label, value in (
+        ("INGRESOS", ingresos_acum),
+        ("GASTOS E INVERSIONES", gastos_inversiones_acum),
+        ("BALANCE", balance),
+    ):
+        label_cell = ws.cell(row, COL_NOMBRE, label)
+        value_cell = ws.cell(row, COL_ACUMULADO, value)
+        label_cell.border = borde
+        value_cell.border = borde
+        value_cell.number_format = "#,##0.00"
+        value_cell.alignment = Alignment(horizontal="right")
+        if label == "BALANCE":
+            label_cell.font = Font(bold=True)
+            value_cell.font = Font(bold=True)
+            label_cell.fill = fill_t
+            value_cell.fill = fill_t
+        row += 1
 
     dest = Path(ruta_archivo)
     dest.parent.mkdir(parents=True, exist_ok=True)
