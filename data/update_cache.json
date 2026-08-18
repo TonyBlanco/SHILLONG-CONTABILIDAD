@@ -1,8 +1,0 @@
-{
-  "update_available": false,
-  "remote_version": "3.8.0",
-  "local_version": "3.8.0",
-  "download_url": "https://github.com/TonyBlanco/SHILLONG-CONTABILIDAD/releases/download/v3.8.0/Instalador_Shillong_v3.8.0_PRO.exe",
-  "release_notes": "[RELEASE.md](https://github.com/user-attachments/files/23969799/RELEASE.md)\r\n## Archivos clave tocados\r\n- `ui/LibroMensualView.py`, `models/SaldosMensuales.py`, `ui/ToolsView.py`, `ui/Sidebar.py`, `ui/CierresHub.py`, `ui/MainWindow.py`, `ui/CierreMensualView.py`.\r\n",
-  "timestamp": 1771770522.2843747
-}

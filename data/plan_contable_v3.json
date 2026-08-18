@@ -324,11 +324,11 @@
     "descripcion": "Pendientes aplicación"
   },
   "556": {
-    "nombre": "CAMBIO EUROS",
-    "descripcion": "Cambio Euros"
+    "nombre": "Cambio Euros",
+    "descripcion": "Operaciones de cambio de divisas (euros/rupias). Entrada de dinero = DEBE / Salida o pago = HABER."
   },
   "557": {
-    "nombre": "CONTRAPARTIDA",
-    "descripcion": "Contra partida"
+    "nombre": "Contrapartida",
+    "descripcion": "Cuenta contrapartida para trasvases internos de tesorería (caja, bancos, cambio de divisas)."
   }
 }

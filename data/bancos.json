@@ -56,9 +56,29 @@
     },
     {
       "id": 10,
-      "nombre": "Contra partida",
+      "nombre": "Contrapartida",
       "saldo": 0.0,
       "cuenta_contable": "557"
+    },
+    {
+      "id": 11,
+      "nombre": "Federal Bank",
+      "saldo": 0.0
+    },
+    {
+      "id": 12,
+      "nombre": "SBI",
+      "saldo": 0.0
+    },
+    {
+      "id": 13,
+      "nombre": "Union Bank",
+      "saldo": 0.0
+    },
+    {
+      "id": 14,
+      "nombre": "Otro",
+      "saldo": 0.0
     }
   ]
 }

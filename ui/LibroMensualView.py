@@ -72,7 +72,27 @@ class LibroMensualView(QWidget):
             with open("data/bancos.json", "r", encoding="utf-8") as f:
                 return ["Todos"] + [b["nombre"] for b in json.load(f).get("banks", [])]
         except (IOError, json.JSONDecodeError, KeyError):
-            return ["Todos", "Caja"]
+            return ["Todos", "Caja", "Cambio Euros", "Contrapartida"]
+
+    def _clave_fecha_mov(self, m):
+        """Clave ordenable (año, mes, día) para ordenar por fecha.
+        Acepta DD/MM/YYYY, YYYY-MM-DD y DD-MM-YYYY; fechas inválidas al final.
+        El orden dentro del MISMO día conserva el de registro (sorted es estable)."""
+        f = str(m.get("fecha", "")).strip()
+        try:
+            if "/" in f:
+                d, mm, a = map(int, f.split("/"))
+            elif "-" in f:
+                p = f.split("-")
+                if len(p[0]) == 4:
+                    a, mm, d = int(p[0]), int(p[1]), int(p[2])
+                else:
+                    d, mm, a = int(p[0]), int(p[1]), int(p[2])
+            else:
+                return (9999, 12, 31)
+            return (a, mm, d)
+        except (ValueError, IndexError):
+            return (9999, 12, 31)
 
     def _cargar_reglas(self):
         try:
@@ -525,7 +545,9 @@ class LibroMensualView(QWidget):
             QMessageBox.warning(self, "Atención", "Debe introducir el saldo inicial para visualizar el mes.")
             return
 
-        movs = self.data.movimientos_por_mes(mes, año)
+        # Ordenar por fecha para que el saldo acumulado sea REAL (el JSON está
+        # en orden de registro, no de fecha). Mismo día → orden de registro.
+        movs = sorted(self.data.movimientos_por_mes(mes, año), key=self._clave_fecha_mov)
 
         self.tabla.setRowCount(0)
         saldo_acum = saldo_inicial
@@ -827,8 +849,8 @@ class LibroMensualView(QWidget):
         # Se elimina la lógica que forzaba el guardado en la carpeta 'reportes' interna.
         # El archivo se guardará exactamente donde el usuario seleccionó.
 
-        # Recopilar datos filtrados
-        movs_raw = self.data.movimientos_por_mes(mes, año)
+        # Recopilar datos filtrados (ordenados por fecha para saldos reales)
+        movs_raw = sorted(self.data.movimientos_por_mes(mes, año), key=self._clave_fecha_mov)
         datos_prep = []
 
         # Insertar fila de saldo inicial al inicio

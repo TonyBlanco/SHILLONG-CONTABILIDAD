@@ -152,7 +152,7 @@ class DiarioView(QWidget):
             with open("data/bancos.json", "r", encoding="utf-8") as f:
                 return [b["nombre"] for b in json.load(f).get("banks", [])]
         except (IOError, json.JSONDecodeError, KeyError):
-            return ["Caja"]
+            return ["Caja", "Cambio Euros", "Contrapartida"]
 
     def _build_ui(self):
         layout = QVBoxLayout(self)

@@ -146,7 +146,19 @@ def main():
     # 1. ACTIVAR LOGS ANTES DE NADA
     setup_logging()
 
-    print("SHILLONG CONTABILIDAD v3.8.1 PRO -- Engine v4.3.2 Iniciado")
+    # 1.5. MIGRACIÓN DE CONFIGURACIÓN BASE (bancos.json / plan_contable_v3.json)
+    # El instalador usa onlyifdoesntexist, así que las instalaciones existentes
+    # no reciben las nuevas entradas (p.ej. 556/557, Cambio Euros/Contrapartida).
+    # Aquí se hace backup y se fusiona lo que falta, sin tocar lo de la usuaria.
+    try:
+        from models.migrar_config import migrar_configuracion
+        cambios = migrar_configuracion()
+        for archivo, añadidos in cambios:
+            logging.info(f"Migración {archivo}: añadidas {len(añadidos)} entradas")
+    except Exception as e:
+        logging.error(f"Error en migración de configuración: {e}")
+
+    print(f"SHILLONG CONTABILIDAD v{APP_VERSION} PRO -- Engine v4.3.2 Iniciado")
     print(f"ROOT_DIR detectado: {ROOT_DIR}")
     print(f"UI_DIR: {UI_DIR}")
     print(f"MODELS_DIR: {MODELS_DIR}")

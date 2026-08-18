@@ -30,6 +30,14 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
+
+# Lógica del Resumen de Tesorería compartida con TesoreriaView
+from models.tesoreria import (
+    obtener_bancos_config,
+    cargar_saldos_iniciales_año,
+    datos_tesoreria,
+    exportar_excel_tesoreria,
+)
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
@@ -95,9 +103,10 @@ class InformesView(QWidget):
         # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
         self.cbo_tipo.addItem("➕ Reporte por Cuentas (Formato Excel)")
         # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
-        self.cbo_tipo.addItem("Modelo Evolutivo Presupuestario")
+        self.cbo_tipo.addItem("Reporte por Cuentas (Modelo Sisters)")
+        # FEATURE — Resumen de Tesorería (balance acumulado por mes)
+        self.cbo_tipo.addItem("💶 Resumen de Tesorería (Acumulado)")
         self.cbo_tipo.addItem("💧 Flujo de Caja Mensual")
-        self.cbo_tipo.addItem("Resumen de Tesorería")
         self.cbo_tipo.currentIndexChanged.connect(self._cambiar_tipo)
         h_sel.addWidget(self.cbo_tipo)
         h_sel.addStretch()
@@ -268,21 +277,16 @@ class InformesView(QWidget):
             self.filtros.addWidget(self.fecha_fin)
             self.filtros.addWidget(self.chk_export_invertido_bi)
 
+        # FEATURE — Resumen de Tesorería
         elif tipo == 6:
-            self.filtros.addWidget(QLabel("Fecha inicio:"))
-            self.filtros.addWidget(self.fecha_ini)
-            self.filtros.addWidget(QLabel("Fecha fin:"))
-            self.filtros.addWidget(self.fecha_fin)
-            lab = QLabel("Entradas y salidas agrupadas por mes para el rango seleccionado.")
-            lab.setStyleSheet("color:#475569; font-style:italic;")
-            self.filtros.addWidget(lab)
-
+            self.filtros.addWidget(QLabel("Año:"))
+            self.filtros.addWidget(self.cbo_anio)
         elif tipo == 7:
             self.filtros.addWidget(QLabel("Fecha inicio:"))
             self.filtros.addWidget(self.fecha_ini)
             self.filtros.addWidget(QLabel("Fecha fin:"))
             self.filtros.addWidget(self.fecha_fin)
-            lab = QLabel("Saldo final mensual de Caja y de cada banco/origen.")
+            lab = QLabel("Entradas y salidas agrupadas por mes para el rango seleccionado.")
             lab.setStyleSheet("color:#475569; font-style:italic;")
             self.filtros.addWidget(lab)
 
@@ -317,10 +321,11 @@ class InformesView(QWidget):
         # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
         elif tipo == 5:
             self._mostrar_reporte_modelo_sisters()
+        # FEATURE — Resumen de Tesorería
         elif tipo == 6:
-            self._mostrar_flujo_caja_mensual()
-        elif tipo == 7:
             self._mostrar_resumen_tesoreria()
+        elif tipo == 7:
+            self._mostrar_flujo_caja_mensual()
 
     def _limpiar_vista(self):
         for i in reversed(range(self.contenedor_layout.count())):
@@ -366,9 +371,9 @@ class InformesView(QWidget):
         if tipo == 5:
             return f"Modelo_Evolutivo_{ini}_{fin}.xlsx"
         if tipo == 6:
-            return f"CashFlow_Mensual_{ini}_{fin}.xlsx"
-        if tipo == 7:
             return f"Resumen_Tesoreria_{ini}_{fin}.xlsx"
+        if tipo == 7:
+            return f"CashFlow_Mensual_{ini}_{fin}.xlsx"
         return f"Reporte_{ini}_{fin}.xlsx"
 
     def _ruta_exporte_por_defecto(self):
@@ -822,86 +827,6 @@ class InformesView(QWidget):
                 tabla_bancos.setItem(r, c, it)
 
         self.contenedor_layout.addWidget(tabla_bancos)
-
-    def _datos_resumen_tesoreria(self):
-        ini = self.fecha_ini.date().toPython()
-        fin = self.fecha_fin.date().toPython()
-        bancos_ordenados = self._cargar_bancos_ordenados()
-
-        movimientos = []
-        for m in getattr(self.data, "movimientos", []):
-            fecha_obj = self._parsear_fecha_movimiento(m.get("fecha", ""))
-            if fecha_obj is None or fecha_obj > fin:
-                continue
-            banco = str(m.get("banco", "") or "Caja").strip() or "Caja"
-            if banco not in bancos_ordenados:
-                bancos_ordenados.append(banco)
-            movimientos.append((fecha_obj, banco, m))
-
-        meses = []
-        cursor = datetime.date(ini.year, ini.month, 1)
-        limite = datetime.date(fin.year, fin.month, 1)
-        while cursor <= limite:
-            meses.append((cursor.year, cursor.month))
-            if cursor.month == 12:
-                cursor = datetime.date(cursor.year + 1, 1, 1)
-            else:
-                cursor = datetime.date(cursor.year, cursor.month + 1, 1)
-
-        saldos = defaultdict(float)
-        filas = []
-        for year, month in meses:
-            if month == 12:
-                fin_mes = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                fin_mes = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
-            corte = min(fin_mes, fin)
-
-            for fecha_obj, banco, m in movimientos:
-                if fecha_obj <= corte:
-                    saldos[banco] += float(m.get("haber", 0) or 0) - float(m.get("debe", 0) or 0)
-
-            fila = {"Mes": self._texto_mes(year, month)}
-            total_bancos = 0.0
-            caja = 0.0
-            for banco in bancos_ordenados:
-                saldo = round(saldos[banco], 2)
-                fila[banco] = saldo
-                if self._es_caja(banco):
-                    caja += saldo
-                else:
-                    total_bancos += saldo
-            fila["TOTAL BANCOS"] = round(total_bancos, 2)
-            fila["TOTAL TESORERIA"] = round(caja + total_bancos, 2)
-            filas.append(fila)
-
-            saldos.clear()
-
-        return bancos_ordenados, filas
-
-    def _mostrar_resumen_tesoreria(self):
-        bancos, filas = self._datos_resumen_tesoreria()
-
-        if not filas:
-            lab = QLabel("No hay meses para el rango seleccionado.")
-            lab.setStyleSheet("color:#475569; font-style:italic;")
-            self.contenedor_layout.addWidget(lab)
-            return
-
-        headers = ["Mes"] + bancos + ["TOTAL BANCOS", "TOTAL TESORERIA"]
-        tabla = QTableWidget(0, len(headers))
-        tabla.setHorizontalHeaderLabels(headers)
-
-        for fila_data in filas:
-            r = tabla.rowCount()
-            tabla.insertRow(r)
-            for c, header in enumerate(headers):
-                it = QTableWidgetItem(str(fila_data.get(header, "")))
-                if c >= 1:
-                    it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                tabla.setItem(r, c, it)
-
-        self.contenedor_layout.addWidget(tabla)
 
     # ================================================================
     # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)
@@ -1557,12 +1482,13 @@ class InformesView(QWidget):
             self._exportar_excel_modelo_sisters(ruta)
             return
 
+        # FEATURE — Resumen de Tesorería
         if self.cbo_tipo.currentIndex() == 6:
+            self._exportar_excel_tesoreria(ruta)
+        if self.cbo_tipo.currentIndex() == 7:
             self._exportar_excel_flujo_caja(ruta)
             return
 
-        if self.cbo_tipo.currentIndex() == 7:
-            self._exportar_excel_resumen_tesoreria(ruta)
             return
 
         wb=openpyxl.Workbook()
@@ -1946,78 +1872,6 @@ class InformesView(QWidget):
 
         wb.save(ruta)
 
-    def _exportar_excel_resumen_tesoreria(self, ruta):
-        bancos, filas = self._datos_resumen_tesoreria()
-
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Resumen Tesoreria"
-
-        morado = PatternFill(start_color="7030A0", end_color="7030A0", fill_type="solid")
-        verde = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
-        azul_claro = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid")
-        borde = Border(
-            left=Side(style="thin", color="000000"),
-            right=Side(style="thin", color="000000"),
-            top=Side(style="thin", color="000000"),
-            bottom=Side(style="thin", color="000000")
-        )
-
-        headers = ["Mes"] + bancos + ["TOTAL BANCOS", "TOTAL TESORERIA"]
-        ini = self.fecha_ini.date().toString("dd/MM/yyyy")
-        fin = self.fecha_fin.date().toString("dd/MM/yyyy")
-
-        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
-        titulo = ws.cell(row=1, column=1, value="Resumen de Tesorería")
-        titulo.font = Font(bold=True, color="FFFFFF", size=14)
-        titulo.fill = morado
-        titulo.alignment = Alignment(horizontal="center", vertical="center")
-
-        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(headers))
-        subtitulo = ws.cell(row=2, column=1, value=f"Periodo: {ini} a {fin}")
-        subtitulo.font = Font(italic=True, color="334155")
-        subtitulo.fill = azul_claro
-        subtitulo.alignment = Alignment(horizontal="center", vertical="center")
-
-        row = 4
-        for c, h in enumerate(headers, start=1):
-            cell = ws.cell(row=row, column=c, value=h)
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = morado
-            cell.border = borde
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-        row += 1
-
-        for fila in filas:
-            for c, header in enumerate(headers, start=1):
-                cell = ws.cell(row=row, column=c, value=fila.get(header, ""))
-                cell.border = borde
-                if c >= 2:
-                    cell.number_format = "#,##0.00"
-                    cell.alignment = Alignment(horizontal="right")
-                else:
-                    cell.alignment = Alignment(horizontal="center")
-            row += 1
-
-        if filas:
-            for c, header in enumerate(headers, start=1):
-                cell = ws.cell(row=row, column=c, value=filas[-1].get(header, ""))
-                cell.font = Font(bold=True)
-                cell.fill = verde
-                cell.border = borde
-                if c >= 2:
-                    cell.number_format = "#,##0.00"
-                    cell.alignment = Alignment(horizontal="right")
-                else:
-                    cell.alignment = Alignment(horizontal="center")
-            ws.cell(row=row, column=1, value="SALDO FINAL")
-
-        for idx, header in enumerate(headers, start=1):
-            ws.column_dimensions[get_column_letter(idx)].width = max(16, min(len(str(header)) + 4, 32))
-
-        ws.freeze_panes = "A5"
-        wb.save(ruta)
-
     # ================================================================
     # FEATURE v3.8.0 — Reporte por Cuentas (Modelo Sisters)
     # EXPORTACIÓN XLSX basada en plantilla
@@ -2180,6 +2034,89 @@ class InformesView(QWidget):
             wb.save(ruta)
         except Exception as e:
             QMessageBox.critical(self, "Exportación", f"No se pudo guardar el archivo:\n{ruta}\n\n{e}")
+
+    # ================================================================
+    # FEATURE — RESUMEN DE TESORERÍA (Saldo acumulado por mes)
+    # ================================================================
+    def _obtener_bancos_config(self):
+        """Bancos/tesorería desde data/bancos.json (Caja + bancos + Cambio Euros + Contrapartida)."""
+        return obtener_bancos_config()
+
+    def _cargar_saldos_iniciales_año(self, año):
+        """
+        Saldo inicial real de cada tesorería para el año: usa el PRIMER mes del año
+        que tenga saldo registrado en saldos_mensuales.json (no asume enero).
+        """
+        return cargar_saldos_iniciales_año(año)
+
+    def _datos_tesoreria(self):
+        """Devuelve (año, bancos, acum): saldos acumulados por mes (models/tesoreria.py)."""
+        año = int(self.cbo_anio.currentText())
+        bancos, acum = datos_tesoreria(self.data.movimientos, año)
+        return año, bancos, acum
+
+    def _mostrar_resumen_tesoreria(self):
+        año, bancos, acum = self._datos_tesoreria()
+        MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
+                 "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+        header = QLabel(f"💶 RESUMEN DE TESORERÍA {año} — Saldo acumulado por mes")
+        header.setStyleSheet(
+            "background:#7030A0; color:white; font-size:16px; padding:6px; font-weight:bold;"
+        )
+        self.contenedor_layout.addWidget(header)
+
+        tabla = QTableWidget(0, 13)
+        tabla.setHorizontalHeaderLabels(["BANCO / TESORERÍA"] + MESES)
+
+        totales = [None] * 12  # None = mes sin data real (celda vacía)
+        for banco in bancos:
+            vals = acum[banco]
+            r = tabla.rowCount()
+            tabla.insertRow(r)
+            tabla.setItem(r, 0, QTableWidgetItem(banco))
+            for c in range(12):
+                v = vals[c]
+                if v is None:
+                    continue  # mes sin movimientos → celda vacía
+                if totales[c] is None:
+                    totales[c] = 0.0
+                totales[c] += v
+                it = QTableWidgetItem(f"{v:,.2f}")
+                it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                tabla.setItem(r, c + 1, it)
+
+        r = tabla.rowCount()
+        tabla.insertRow(r)
+        item_total = QTableWidgetItem("TOTAL")
+        f = item_total.font()
+        f.setBold(True)
+        item_total.setFont(f)
+        tabla.setItem(r, 0, item_total)
+        for c in range(12):
+            v = totales[c]
+            if v is None:
+                continue  # ningún banco tiene data en ese mes → TOTAL vacío
+            it = QTableWidgetItem(f"{v:,.2f}")
+            it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            f = it.font()
+            f.setBold(True)
+            it.setFont(f)
+            tabla.setItem(r, c + 1, it)
+
+        self.contenedor_layout.addWidget(tabla)
+
+        nota = QLabel(
+            "Saldo acumulado = saldo inicial real del primer mes disponible del año "
+            "en saldos_mensuales.json (o 0 si no hay saldo registrado) + ingresos − gastos "
+            "de todos los meses hasta el mes indicado (solo pagados)."
+        )
+        nota.setStyleSheet("color:#475569; font-style:italic;")
+        self.contenedor_layout.addWidget(nota)
+
+    def _exportar_excel_tesoreria(self, ruta):
+        año, bancos, acum = self._datos_tesoreria()
+        exportar_excel_tesoreria(ruta, año, bancos, acum)
 
     # ================================================================
     # FEATURE v3.8.0 — Reporte por Cuentas (Informes BI)

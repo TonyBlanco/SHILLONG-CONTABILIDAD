@@ -45,7 +45,7 @@ class PendientesView(QWidget):
             with open("data/bancos.json", "r", encoding="utf-8") as f:
                 return ["Todos"] + [b["nombre"] for b in json.load(f).get("banks", [])]
         except (IOError, json.JSONDecodeError, KeyError):
-            return ["Todos", "Caja"]
+            return ["Todos", "Caja", "Cambio Euros", "Contrapartida"]
 
     def _cargar_cuentas(self):
         cuentas = ["Todas"]

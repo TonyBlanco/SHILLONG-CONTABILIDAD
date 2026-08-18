@@ -123,15 +123,17 @@ def repara_errores_debe_haber(archivo_entrada="data/shillong_2026.json"):
 
 
 def reparar_json(archivo_entrada):
-    """Alias compatible usado por ToolsView y los tests."""
+    """Compatibilidad: wrapper esperado por los tests.
+    Acepta una ruta (Path o str) y llama a `repara_errores_debe_haber`.
+    """
+    # Normalizar a cadena si se pasa un Path
     try:
-        if hasattr(archivo_entrada, "as_posix"):
+        if hasattr(archivo_entrada, 'as_posix'):
             archivo_entrada = str(archivo_entrada)
     except Exception:
         pass
 
     return repara_errores_debe_haber(archivo_entrada)
-
 
 if __name__ == "__main__":
     from datetime import datetime

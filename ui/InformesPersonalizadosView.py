@@ -11,9 +11,9 @@ from PySide6.QtWidgets import (
     QMessageBox, QGridLayout, QFrame
 )
 from PySide6.QtCore import Qt, QDate
-from PySide6.QtGui import QFont
 import datetime
 import json
+
 
 class InformesPersonalizadosView(QWidget):
     def __init__(self, data):
@@ -34,25 +34,25 @@ class InformesPersonalizadosView(QWidget):
         # Contenedor principal con scroll
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+
         contenedor = QWidget()
         contenedor_layout = QVBoxLayout(contenedor)
-        
+
         # Panel de columnas
         columnas_box = self._crear_panel_columnas()
         contenedor_layout.addWidget(columnas_box)
-        
+
         # Panel de filtros
         filtros_box = self._crear_panel_filtros()
         contenedor_layout.addWidget(filtros_box)
-        
+
         scroll.setWidget(contenedor)
         layout.addWidget(scroll, 1)
 
         # Botones de acción
         botones_layout = QHBoxLayout()
-        
+
         self.btn_generar = QPushButton("🔍 Generar Reporte")
         self.btn_generar.setStyleSheet("""
             QPushButton {
@@ -62,7 +62,7 @@ class InformesPersonalizadosView(QWidget):
             QPushButton:hover { background: #1d4ed8; }
         """)
         self.btn_generar.clicked.connect(self._generar_reporte)
-        
+
         self.btn_exportar = QPushButton("📄 Exportar a Excel")
         self.btn_exportar.setStyleSheet("""
             QPushButton {
@@ -73,7 +73,7 @@ class InformesPersonalizadosView(QWidget):
         """)
         self.btn_exportar.clicked.connect(self._exportar_excel)
         self.btn_exportar.setEnabled(False)
-        
+
         self.btn_limpiar = QPushButton("🔄 Limpiar Filtros")
         self.btn_limpiar.setStyleSheet("""
             QPushButton {
@@ -83,12 +83,12 @@ class InformesPersonalizadosView(QWidget):
             QPushButton:hover { background: #475569; }
         """)
         self.btn_limpiar.clicked.connect(self._limpiar_filtros)
-        
+
         botones_layout.addWidget(self.btn_generar)
         botones_layout.addWidget(self.btn_exportar)
         botones_layout.addWidget(self.btn_limpiar)
         botones_layout.addStretch()
-        
+
         layout.addLayout(botones_layout)
 
         # Herramientas de estilo/exportación (como Libro Mensual)
@@ -106,9 +106,9 @@ class InformesPersonalizadosView(QWidget):
         self.tabla_resultados.setAlternatingRowColors(True)
         self.tabla_resultados.setStyleSheet("""
             QTableWidget { font-size: 13px; gridline-color: #e2e8f0; }
-            QHeaderView::section { 
-                background: #f8fafc; padding: 8px; 
-                font-weight: bold; border: none; 
+            QHeaderView::section {
+                background: #f8fafc; padding: 8px;
+                font-weight: bold; border: none;
             }
         """)
         layout.addWidget(self.tabla_resultados, 2)
@@ -119,7 +119,7 @@ class InformesPersonalizadosView(QWidget):
             font-size: 16px; font-weight: bold; color: #1e293b;
             padding: 15px; background: #e0e7ff; border-radius: 8px;
         """)
-        self.lbl_totales.setAlignment(Qt.AlignCenter)
+        self.lbl_totales.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.lbl_totales)
 
     def _crear_panel_columnas(self):
@@ -132,9 +132,9 @@ class InformesPersonalizadosView(QWidget):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 10px; }
         """)
-        
+
         layout = QGridLayout()
-        
+
         # Definir todas las columnas posibles
         columnas = [
             ("Fecha", True), ("Concepto", True), ("Cuenta", True),
@@ -142,22 +142,22 @@ class InformesPersonalizadosView(QWidget):
             ("Saldo", True), ("Banco", True), ("Documento", False),
             ("Estado", False), ("Categoría", False)
         ]
-        
+
         self.columnas_checks = {}
         row, col = 0, 0
-        
+
         for nombre, default in columnas:
             chk = QCheckBox(nombre)
             chk.setChecked(default)
             chk.setStyleSheet("font-weight: normal;")
             self.columnas_checks[nombre] = chk
             layout.addWidget(chk, row, col)
-            
+
             col += 1
             if col > 3:
                 col = 0
                 row += 1
-        
+
         box.setLayout(layout)
         return box
 
@@ -171,31 +171,31 @@ class InformesPersonalizadosView(QWidget):
             }
             QGroupBox::title { subcontrol-origin: margin; left: 10px; }
         """)
-        
+
         layout = QGridLayout()
         row = 0
-        
+
         # Rango de fechas
         layout.addWidget(QLabel("Fecha Inicio:"), row, 0)
         self.fecha_ini = QDateEdit()
         self.fecha_ini.setCalendarPopup(True)
         self.fecha_ini.setDate(QDate.currentDate().addMonths(-1))
         layout.addWidget(self.fecha_ini, row, 1)
-        
+
         layout.addWidget(QLabel("Fecha Fin:"), row, 2)
         self.fecha_fin = QDateEdit()
         self.fecha_fin.setCalendarPopup(True)
         self.fecha_fin.setDate(QDate.currentDate())
         layout.addWidget(self.fecha_fin, row, 3)
         row += 1
-        
+
         # Banco
         layout.addWidget(QLabel("Banco:"), row, 0)
         self.cbo_banco = QComboBox()
         self.cbo_banco.addItem("Todos")
         self._cargar_bancos()
         layout.addWidget(self.cbo_banco, row, 1)
-        
+
         # Cuenta
         layout.addWidget(QLabel("Cuenta:"), row, 2)
         self.cbo_cuenta = QComboBox()
@@ -203,7 +203,7 @@ class InformesPersonalizadosView(QWidget):
         self._cargar_cuentas()
         layout.addWidget(self.cbo_cuenta, row, 3)
         row += 1
-        
+
         # Categoría
         layout.addWidget(QLabel("Categoría:"), row, 0)
         self.cbo_categoria = QComboBox()
@@ -212,39 +212,39 @@ class InformesPersonalizadosView(QWidget):
             "ONLINE", "THERAPEUTIC", "DIET", "OTROS"
         ])
         layout.addWidget(self.cbo_categoria, row, 1)
-        
+
         # Estado
         layout.addWidget(QLabel("Estado:"), row, 2)
         self.cbo_estado = QComboBox()
         self.cbo_estado.addItems(["Todos", "Pagado", "Pendiente"])
         layout.addWidget(self.cbo_estado, row, 3)
         row += 1
-        
+
         # Tipo de movimiento
         layout.addWidget(QLabel("Tipo:"), row, 0)
         self.cbo_tipo = QComboBox()
         self.cbo_tipo.addItems(["Todos", "Solo Ingresos", "Solo Gastos"])
         layout.addWidget(self.cbo_tipo, row, 1)
-        
+
         # Monto mínimo
         layout.addWidget(QLabel("Monto Mín:"), row, 2)
         self.txt_monto_min = QLineEdit()
         self.txt_monto_min.setPlaceholderText("0.00")
         layout.addWidget(self.txt_monto_min, row, 3)
         row += 1
-        
+
         # Monto máximo
         layout.addWidget(QLabel("Monto Máx:"), row, 0)
         self.txt_monto_max = QLineEdit()
         self.txt_monto_max.setPlaceholderText("999999.99")
         layout.addWidget(self.txt_monto_max, row, 1)
-        
+
         # Búsqueda por texto
         layout.addWidget(QLabel("Buscar:"), row, 2)
         self.txt_buscar = QLineEdit()
         self.txt_buscar.setPlaceholderText("Concepto, documento...")
         layout.addWidget(self.txt_buscar, row, 3)
-        
+
         box.setLayout(layout)
         return box
 
@@ -256,6 +256,8 @@ class InformesPersonalizadosView(QWidget):
                     self.cbo_banco.addItem(b.get("nombre", ""))
         except (IOError, json.JSONDecodeError):
             self.cbo_banco.addItem("Caja")
+            self.cbo_banco.addItem("Cambio Euros")
+            self.cbo_banco.addItem("Contrapartida")
 
     def _cargar_cuentas(self):
         for cta, info in self.data.cuentas.items():
@@ -277,7 +279,7 @@ class InformesPersonalizadosView(QWidget):
             self.chk_export_invertido.setChecked(False)
         if hasattr(self, "chk_estilo_shillong"):
             self.chk_estilo_shillong.setChecked(False)
-        
+
         self.tabla_resultados.setRowCount(0)
         self.lbl_totales.clear()
         self.btn_exportar.setEnabled(False)
@@ -298,25 +300,19 @@ class InformesPersonalizadosView(QWidget):
             self._mostrar_resultados(self.datos_actuales, self.columnas_actuales)
 
     def _generar_reporte(self):
-        # Obtener filtros
         filtros = self._obtener_filtros()
-        
-        # Consultar datos
-        from models.ContabilidadData import ContabilidadData
+
         if hasattr(self.data, 'consulta_personalizada'):
             movimientos = self.data.consulta_personalizada(filtros)
         else:
-            # Fallback si el método aún no está implementado
             movimientos = self._aplicar_filtros_manual(self.data.movimientos, filtros)
-        
-        # Obtener columnas seleccionadas
+
         columnas = [k for k, v in self.columnas_checks.items() if v.isChecked()]
-        
+
         if not columnas:
             QMessageBox.warning(self, "Sin Columnas", "Debe seleccionar al menos una columna.")
             return
-        
-        # Mostrar resultados
+
         self._mostrar_resultados(movimientos, columnas)
         self.datos_actuales = movimientos
         self.columnas_actuales = columnas
@@ -324,59 +320,48 @@ class InformesPersonalizadosView(QWidget):
 
     def _obtener_filtros(self):
         filtros = {}
-        
-        # Fechas
         filtros['fecha_inicio'] = self.fecha_ini.date().toPython()
         filtros['fecha_fin'] = self.fecha_fin.date().toPython()
-        
-        # Banco
+
         if self.cbo_banco.currentText() != "Todos":
             filtros['banco'] = self.cbo_banco.currentText()
-        
-        # Cuenta
+
         if self.cbo_cuenta.currentText() != "Todas":
             cuenta_texto = self.cbo_cuenta.currentText().split(" — ")[0]
             filtros['cuenta'] = cuenta_texto
-        
-        # Categoría
+
         if self.cbo_categoria.currentText() != "Todas":
             filtros['categoria'] = self.cbo_categoria.currentText()
-        
-        # Estado
+
         if self.cbo_estado.currentText() != "Todos":
             filtros['estado'] = self.cbo_estado.currentText().lower()
-        
-        # Tipo
+
         if self.cbo_tipo.currentIndex() == 1:
             filtros['tipo'] = 'ingresos'
         elif self.cbo_tipo.currentIndex() == 2:
             filtros['tipo'] = 'gastos'
-        
-        # Montos
+
         try:
             if self.txt_monto_min.text():
                 filtros['monto_min'] = float(self.txt_monto_min.text())
         except ValueError:
             pass
-        
+
         try:
             if self.txt_monto_max.text():
                 filtros['monto_max'] = float(self.txt_monto_max.text())
         except ValueError:
             pass
-        
-        # Búsqueda
+
         if self.txt_buscar.text():
             filtros['buscar'] = self.txt_buscar.text().lower()
-        
+
         return filtros
 
     def _aplicar_filtros_manual(self, movimientos, filtros):
-        """Fallback para aplicar filtros manualmente."""
         resultado = []
-        
+
         for m in movimientos:
-            # Filtro de fecha
             fecha_str = m.get("fecha", "")
             try:
                 if "/" in fecha_str:
@@ -390,50 +375,44 @@ class InformesPersonalizadosView(QWidget):
                         fecha_mov = datetime.date(int(parts[2]), int(parts[1]), int(parts[0]))
                 else:
                     continue
-                
+
                 if fecha_mov < filtros['fecha_inicio'] or fecha_mov > filtros['fecha_fin']:
                     continue
             except (ValueError, IndexError):
                 continue
-            
-            # Filtro de banco
+
             if 'banco' in filtros and m.get("banco") != filtros['banco']:
                 continue
-            
-            # Filtro de cuenta
+
             if 'cuenta' in filtros and str(m.get("cuenta")) != filtros['cuenta']:
                 continue
-            
-            # Filtro de estado
+
             if 'estado' in filtros and m.get("estado", "").lower() != filtros['estado']:
                 continue
-            
-            # Filtro de tipo
+
             debe = float(m.get("debe", 0) or 0)
             haber = float(m.get("haber", 0) or 0)
-            
+
             if 'tipo' in filtros:
                 if filtros['tipo'] == 'ingresos' and haber == 0:
                     continue
                 if filtros['tipo'] == 'gastos' and debe == 0:
                     continue
-            
-            # Filtro de monto
+
             monto = debe if debe > 0 else haber
             if 'monto_min' in filtros and monto < filtros['monto_min']:
                 continue
             if 'monto_max' in filtros and monto > filtros['monto_max']:
                 continue
-            
-            # Filtro de búsqueda
+
             if 'buscar' in filtros:
                 buscar = filtros['buscar']
                 if buscar not in str(m.get("concepto", "")).lower() and \
                    buscar not in str(m.get("documento", "")).lower():
                     continue
-            
+
             resultado.append(m)
-        
+
         return resultado
 
     def _mostrar_resultados(self, movimientos, columnas):
@@ -446,11 +425,11 @@ class InformesPersonalizadosView(QWidget):
         self.tabla_resultados.setRowCount(0)
         self.tabla_resultados.setColumnCount(len(columnas_vista))
         self.tabla_resultados.setHorizontalHeaderLabels(columnas_vista)
-        
+
         total_debe = 0.0
         total_haber = 0.0
         saldo_acum = 0.0
-        
+
         for m in movimientos:
             debe_orig = float(m.get("debe", 0) or 0)
             haber_orig = float(m.get("haber", 0) or 0)
@@ -464,20 +443,19 @@ class InformesPersonalizadosView(QWidget):
                 saldo_acum += haber - debe
             total_debe += debe
             total_haber += haber
-            
+
             row = self.tabla_resultados.rowCount()
             self.tabla_resultados.insertRow(row)
-            
+
             for col, nombre_col in enumerate(columnas):
                 valor = self._obtener_valor_columna(m, nombre_col, saldo_acum, invertir)
                 item = QTableWidgetItem(str(valor))
-                
+
                 if nombre_col in ["Debe", "Haber", "Saldo"]:
-                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
                 self.tabla_resultados.setItem(row, col, item)
-        
-        # Actualizar totales
+
         self.lbl_totales.setText(
             f"📊 Movimientos: {len(movimientos)} | "
             f"{'Entra' if invertir else 'Debe'}: {total_debe:,.2f} | "
@@ -508,14 +486,22 @@ class InformesPersonalizadosView(QWidget):
         return mapeo.get(nombre_col, "")
 
     def _obtener_categoria(self, cuenta):
-        """Determina la categoría de una cuenta."""
         try:
             c = int(str(cuenta).split()[0])
-            if 600000 <= c <= 609999: return "FOOD"
-            if 610000 <= c <= 619999: return "MEDICINE"
-            if 620000 <= c <= 629999: return "HYGIENE"
-            if 640000 <= c <= 649999: return "SALARY"
-            if 629200 <= c <= 629299: return "ONLINE"
+            # Comestibles (603000) y limpieza/aseo (6024xx) están dentro de
+            # 600000-609999 (farmacia), así que se evalúan antes que MEDICINE
+            if 603000 <= c <= 603999:
+                return "FOOD"
+            if 602400 <= c <= 602499:
+                return "HYGIENE"
+            if 620401 <= c <= 620499:
+                return "HYGIENE"
+            if 600000 <= c <= 609999:
+                return "MEDICINE"
+            if 629200 <= c <= 629299:
+                return "ONLINE"
+            if 640000 <= c <= 649999:
+                return "SALARY"
         except (ValueError, TypeError, IndexError):
             pass
         return "OTROS"
@@ -524,22 +510,21 @@ class InformesPersonalizadosView(QWidget):
         if not hasattr(self, 'datos_actuales') or not self.datos_actuales:
             QMessageBox.warning(self, "Sin Datos", "Genere un reporte primero.")
             return
-        
+
         ruta, _ = QFileDialog.getSaveFileName(
             self, "Guardar Reporte", "Reporte_Personalizado.xlsx", "Excel (*.xlsx)"
         )
-        
+
         if not ruta:
             return
-        
+
         try:
             from models.ExportadorExcelMensual import ExportadorExcelMensual
             invertir = self._usar_inversion_exportacion()
-            
-            # Preparar datos con columnas personalizadas
+
             datos_export = []
             saldo = 0.0
-            
+
             for m in self.datos_actuales:
                 debe_orig = float(m.get("debe", 0) or 0)
                 haber_orig = float(m.get("haber", 0) or 0)
@@ -551,7 +536,7 @@ class InformesPersonalizadosView(QWidget):
                     debe = debe_orig
                     haber = haber_orig
                     saldo += haber - debe
-                
+
                 item = m.copy()
                 item["debe"] = debe
                 item["haber"] = haber
@@ -559,11 +544,10 @@ class InformesPersonalizadosView(QWidget):
                 item["categoria"] = self._obtener_categoria(m.get("cuenta"))
                 item["nombre_cuenta"] = self.data.obtener_nombre_cuenta(m.get("cuenta"))
                 datos_export.append(item)
-            
-            # Usar el exportador existente con formato Sisters
+
             periodo = f"{self.fecha_ini.date().toString('dd/MM/yyyy')} - {self.fecha_fin.date().toString('dd/MM/yyyy')}"
             ExportadorExcelMensual.exportar_general(ruta, datos_export, periodo)
-            
+
             QMessageBox.information(self, "Éxito", "Reporte exportado correctamente.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo exportar: {str(e)}")

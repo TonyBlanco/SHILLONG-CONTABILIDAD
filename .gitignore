@@ -25,8 +25,7 @@ Output/
 
 # Generated reports / exports
 *.xlsx
-!ui/Modelo por cuentas.xlsx
-!ui/Modelo evolutivo presupuestario 26.xlsx
+!ui/Modelo por cuentas.xlsx !ui/Modelo evolutivo presupuestario 26.xlsx
 !ui/Modelo evolutivo presupuestario 26 - blank.xlsx
 
 # Local data generated at runtime (keep canonical seeds tracked)

@@ -226,14 +226,17 @@ class RegistrarView(QWidget):
             QRadioButton::indicator { width:0;height:0; }
         """
 
-        self._bancos_disponibles = self._cargar_bancos()
-        self.banco_combo.addItems(self._bancos_disponibles)
-        # Seleccionar 'Caja' por defecto si existe
-        if "Caja" in self._bancos_disponibles:
+        # Cargar bancos desde configuración si existe, si no usar lista por defecto
+        try:
+            bancos = self._cargar_bancos()
+        except Exception:
+            bancos = ["Caja","Federal Bank","SBI","Union Bank","Otro","Cambio Euros","Contrapartida"]
+
+        self.banco_combo.addItems(bancos)
+        if "Caja" in bancos:
             self.banco_combo.setCurrentText("Caja")
         banco_layout.addWidget(self.banco_combo)
         banco_estado.addLayout(banco_layout)
-
         # Estado (Pagado/Pendiente)
         estado_layout = QHBoxLayout()
         self.estado_buttons = QButtonGroup(self)
@@ -329,6 +332,14 @@ class RegistrarView(QWidget):
     # ============================================================
     # PARSEOS
     # ============================================================
+    def _cargar_bancos(self):
+        """Carga los bancos desde data/bancos.json (persistente junto al exe)."""
+        try:
+            with open("data/bancos.json", "r", encoding="utf-8") as f:
+                return [b["nombre"] for b in json.load(f).get("banks", [])]
+        except (IOError, json.JSONDecodeError, KeyError):
+            return ["Caja", "Federal Bank", "SBI", "Union Bank", "Otro", "Cambio Euros", "Contrapartida"]
+
     def _parse_float(self, txt):
         """
         Parse float from string handling both Spanish and standard decimal formats.

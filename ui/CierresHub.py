@@ -10,6 +10,8 @@ from ui.LibroMensualView import LibroMensualView
 from ui.CierreMensualView import CierreMensualView
 from ui.CierreView import CierreView
 from ui.InformesView import InformesView
+from ui.InformesPersonalizadosView import InformesPersonalizadosView
+from ui.TesoreriaView import TesoreriaView
 
 
 class CierresHub(QWidget):
@@ -42,11 +44,20 @@ class CierresHub(QWidget):
         self.tab_informes = InformesView(self.data)
         tabs.addTab(self.tab_informes, "Informes BI")
 
+        # Tab Informes Custom
+        self.tab_informes_custom = InformesPersonalizadosView(self.data)
+        tabs.addTab(self.tab_informes_custom, "Informes Custom")
+
+        # Tab Resumen de Tesorería
+        self.tab_tesoreria = TesoreriaView(self.data)
+        tabs.addTab(self.tab_tesoreria, "Resumen de Tesorería")
+
         layout.addWidget(tabs)
 
     def actualizar(self):
         # Propaga actualización a la pestaña activa
-        for view in [self.tab_libro, self.tab_cierre, self.tab_anual, self.tab_informes]:
+        for view in [self.tab_libro, self.tab_cierre, self.tab_anual, self.tab_informes,
+                     self.tab_informes_custom, self.tab_tesoreria]:
             if hasattr(view, "actualizar"):
                 view.actualizar()
             elif hasattr(view, "actualizar_datos"):
