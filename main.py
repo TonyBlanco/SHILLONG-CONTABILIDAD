@@ -61,7 +61,7 @@ from models.ContabilidadData import ContabilidadData
 from ui.MainWindow import MainWindow
 
 # --- CONSTANTES ---
-APP_VERSION = "3.8.0"
+APP_VERSION = "3.8.4"
 
 # ============================================================
 #  SISTEMA DE LOGS (LA CAJA NEGRA) 📦
