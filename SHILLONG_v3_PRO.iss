@@ -72,9 +72,10 @@ function InitializeSetup(): Boolean;
 var
   Respuesta: Integer;
 begin
-  // En instalacion silenciosa no se muestran MsgBox (bloquearian /VERYSILENT);
-  // el flujo interactivo conserva el saludo y la confirmacion.
-  if WizardSilent then
+  // En instalacion silenciosa no se muestran MsgBox (bloquearian /VERYSILENT).
+  // NOTA: WizardSilent no es fiable durante InitializeSetup (Inno 6.6),
+  // asi que se detecta la opcion real de linea de comandos.
+  if (Pos('/VERYSILENT', UpperCase(GetCmdTail())) > 0) or (Pos('/SILENT', UpperCase(GetCmdTail())) > 0) then
   begin
     Result := True;
     Exit;
@@ -128,7 +129,7 @@ begin
 
   // Inform the user where backups were stored (solo en desinstalación interactiva;
   // en silenciosa un MsgBox bloquearía /VERYSILENT)
-  if not WizardSilent then
+  if not ((Pos('/VERYSILENT', UpperCase(GetCmdTail())) > 0) or (Pos('/SILENT', UpperCase(GetCmdTail())) > 0)) then
     MsgBox('Se han guardado copias de seguridad de sus archivos de datos (JSON) en:'#13#10 + BackupRoot + #13#10#13#10 +
            'IMPORTANTE: Los datos del usuario no serán borrados automáticamente. Revise ' + BackupRoot + ' si necesita recuperar archivos.', mbInformation, MB_OK);
 end;
