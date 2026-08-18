@@ -81,6 +81,8 @@ class TestInformesView(unittest.TestCase):
         self.assertEqual(ruta.name, "Resumen_Tesoreria_20260101_20260630.xlsx")
 
         self.view.cbo_tipo.setCurrentIndex(7)
+        self.view.fecha_ini.setDate(QDate(2026, 1, 1))
+        self.view.fecha_fin.setDate(QDate(2026, 6, 30))
         ruta = Path(self.view._ruta_exporte_por_defecto())
         self.assertEqual(ruta.name, "CashFlow_Mensual_20260101_20260630.xlsx")
 
