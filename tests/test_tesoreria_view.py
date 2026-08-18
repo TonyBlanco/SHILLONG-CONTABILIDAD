@@ -270,17 +270,17 @@ def test_valores_concretos_noviembre_y_diciembre_vacio(view):
     """
     Último mes con data (test_clean.json solo tiene noviembre 2025):
     saldo inicial real de nov. 2025 (saldos_mensuales.json) + movimientos.
-    Caja: 248655.01 − 72708.00 = 175947.01 · Union Bank: 56278.81 − 9237.90 = 47040.91
-    TOTAL: 175947.01 + 47040.91 + 1572.30 + 5109.14 = 229669.36
+    Caja: 248655.01 − 72708.00 = 175947.01 · Union Bank: 56278.81 − 9237.90 + 20000.00 (SIN-DOC-91289) = 67040.91
+    TOTAL: 175947.01 + 67040.91 + 1572.30 + 5109.14 = 249669.36
     Diciembre queda VACÍO (sin movimientos reales en el año).
     """
     tabla = _obtener_tabla(view)
     filas = _fila_por_nombre(tabla)
 
     assert _celda_float(tabla, filas["Caja"], 11) == pytest.approx(175947.01, abs=0.01)
-    assert _celda_float(tabla, filas["Union Bank"], 11) == pytest.approx(47040.91, abs=0.01)
+    assert _celda_float(tabla, filas["Union Bank"], 11) == pytest.approx(67040.91, abs=0.01)
     assert _celda_float(tabla, filas["Federal Bank"], 11) == pytest.approx(1572.30, abs=0.01)
-    assert _celda_float(tabla, filas["TOTAL"], 11) == pytest.approx(229669.36, abs=0.01)
+    assert _celda_float(tabla, filas["TOTAL"], 11) == pytest.approx(249669.36, abs=0.01)
 
     # Meses posteriores al último con data → celdas vacías
     assert _celda_float(tabla, filas["Caja"], 12) is None
@@ -358,8 +358,8 @@ def test_pestaña_propia_en_cierr_hub(qapp, data):
     widget.cbo_anio.setCurrentText("2025")
     filas = _fila_por_nombre(widget.tabla)
     assert _celda_float(widget.tabla, filas["Caja"], 11) == pytest.approx(175947.01, abs=0.01)
-    assert _celda_float(widget.tabla, filas["Union Bank"], 11) == pytest.approx(47040.91, abs=0.01)
-    assert _celda_float(widget.tabla, filas["TOTAL"], 11) == pytest.approx(229669.36, abs=0.01)
+    assert _celda_float(widget.tabla, filas["Union Bank"], 11) == pytest.approx(67040.91, abs=0.01)
+    assert _celda_float(widget.tabla, filas["TOTAL"], 11) == pytest.approx(249669.36, abs=0.01)
     # Diciembre vacío (misma regla de corte en la pestaña del hub)
     assert _celda_float(widget.tabla, filas["Caja"], 12) is None
     assert _celda_float(widget.tabla, filas["TOTAL"], 12) is None
@@ -391,5 +391,5 @@ def test_exportacion_excel(view, tmp_path):
 
     # Última fila = TOTAL con el acumulado del último mes con data
     assert ws.cell(ws.max_row, 1).value == "TOTAL"
-    assert ws.cell(ws.max_row, 12).value == pytest.approx(229669.36, abs=0.01)
+    assert ws.cell(ws.max_row, 12).value == pytest.approx(249669.36, abs=0.01)
     assert ws.cell(ws.max_row, 13).value is None
