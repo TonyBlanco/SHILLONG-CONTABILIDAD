@@ -70,6 +70,7 @@ class TestInformesView(unittest.TestCase):
         self.assertEqual(len(datos[0][2]), 2)
 
     def test_ruta_exporte_por_defecto_usa_reportes_y_nombre_del_informe(self):
+        # Indices del combo fusionado: 6 = Resumen de Tesorería, 7 = Flujo de Caja Mensual
         self.view.cbo_tipo.setCurrentIndex(6)
         self.view.fecha_ini.setDate(QDate(2026, 1, 1))
         self.view.fecha_fin.setDate(QDate(2026, 6, 30))
@@ -77,6 +78,10 @@ class TestInformesView(unittest.TestCase):
         ruta = Path(self.view._ruta_exporte_por_defecto())
 
         self.assertEqual(ruta.parent.name, "reportes")
+        self.assertEqual(ruta.name, "Resumen_Tesoreria_20260101_20260630.xlsx")
+
+        self.view.cbo_tipo.setCurrentIndex(7)
+        ruta = Path(self.view._ruta_exporte_por_defecto())
         self.assertEqual(ruta.name, "CashFlow_Mensual_20260101_20260630.xlsx")
 
     def test_balance_sumas_saldos_respeta_rango_fechas(self):
